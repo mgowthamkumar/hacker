@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Analyzer & Grader (RAG Powered)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(22, 30, 49, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            --primary-glow: rgba(99, 102, 241, 0.25);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image:
+                radial-gradient(at 20% 20%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 80% 80%, rgba(168, 85, 247, 0.12) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 50px 20px;
+        }
+
+        .container {
+            max-width: 880px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 40px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+        }
+
+        .gradient-text {
+            background: var(--accent-gradient);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 16px;
+            max-width: 500px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .dropzone {
+            background: var(--card-bg);
+            border: 2px dashed rgba(99, 102, 241, 0.4);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 50px 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        .dropzone:hover,
+        .dropzone.dragover {
+            border-color: #a855f7;
+            background: rgba(30, 41, 69, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px -15px var(--primary-glow);
+        }
+
+        .icon-circle {
+            width: 70px;
+            height: 70px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 30px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .dropzone h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 15px;
+            font-weight: 600;
+            color: #38bdf8;
+            font-size: 15px;
+        }
+
+        .btn-analyze {
+            width: 100%;
+            margin-top: 24px;
+            padding: 16px;
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px -5px var(--primary-glow);
+        }
+
+        .btn-analyze:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px -5px rgba(168, 85, 247, 0.4);
+        }
+
+        .btn-analyze:disabled {
+            background: #1e293b;
+            color: #64748b;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            display: none;
+            margin-top: 35px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 35px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .score-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--card-border);
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .score-num {
+            font-size: 42px;
+            font-weight: 800;
+            color: #38bdf8;
+            letter-spacing: -0.02em;
+        }
+
+        .grade-badge {
+            font-size: 28px;
+            font-weight: 800;
+            padding: 12px 28px;
+            border-radius: 14px;
+            color: #fff;
+            box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.3);
+        }
+
+        .metrics-grid {
+            margin-top: 30px;
+            display: grid;
+            gap: 18px;
+        }
+
+        .metric-item {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .metric-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-gradient);
+            border-radius: 10px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .feedback-box,
+        .suggestions-box {
+            margin-top: 30px;
+        }
+
+        .feedback-box h3,
+        .suggestions-box h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .feedback-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .feedback-list li {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.5;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feedback-list li.pass {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .feedback-list li.fail {
+            background: rgba(249, 115, 22, 0.1);
+            color: #fb923c;
+            border: 1px solid rgba(249, 115, 22, 0.2);
+        }
+
+        .company-input {
+            width: 100%;
+            margin-top: 18px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        .company-input:focus {
+            outline: none;
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+
+        .suggestions-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .suggestion-card {
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .suggestion-card strong {
+            color: #38bdf8;
+        }
+
+        .suggestion-meta {
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>RAG AI Resume <span class="gradient-text">Analyzer & Grader</span></h1>
+            <p>Upload your PDF or TXT resume for ML-driven RAG analysis.</p>
+        </div>
+
+        <div class="dropzone" id="dropzone">
+            <div class="icon-circle">🤖</div>
+            <h3>Drop your Resume here</h3>
+            <p style="color: var(--text-muted); font-size: 14px;">Supports standard PDF or TXT files</p>
+            <input type="file" id="file-input" class="file-input" accept=".pdf,.txt">
+            <div id="file-info" class="file-info"></div>
+        </div>
+
+        <label for="company-skills" style="display:block; margin-top: 18px; font-weight: 600; color: #cbd5e1;">Company
+            wanted skills (optional)</label>
+        <textarea id="company-skills" class="company-input" placeholder="Example: Python, SQL, FastAPI, AWS"></textarea>
+
+        <button id="btn-analyze" class="btn-analyze" disabled>Analyze & Grade Resume</button>
+
+        <div id="results-section" class="results-section">
+            <div class="score-card">
+                <div>
+                    <h2 style="font-size: 22px; font-weight: 700;">Overall Resume Score</h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">Powered by FAISS Vector
+                        Embeddings & RAG</p>
+                </div>
+                <div class="score-display">
+                    <div id="score-num" class="score-num">0 / 100</div>
+                    <div id="grade-badge" class="grade-badge">N/A</div>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <div class="metric-label">
+                        <span>Action Verbs & Impact</span>
+                        <span id="score-action">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="bar-action" class="progress-fill"></div>
+                    </div>
+                </div>
+
+                <div class="metric-item">
+                    <div class="metric-label">
+                        <span>Quantifiable Metrics (Numbers & %)</span>
+                        <span id="score-metrics">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="bar-metrics" class="progress-fill"></div>
+                    </div>
+                </div>
+
+                <div class="metric-item">
+                    <div class="metric-label">
+                        <span>Section Structure</span>
+                        <span id="score-structure">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="bar-structure" class="progress-fill"></div>
+                    </div>
+                </div>
+
+                <div class="metric-item">
+                    <div class="metric-label">
+                        <span>Word Count Balance</span>
+                        <span id="score-length">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="bar-length" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feedback-box">
+                <h3>Key Recommendations</h3>
+                <ul id="feedback-list" class="feedback-list"></ul>
+            </div>
+
+            <div class="suggestions-box">
+                <h3>Suggested Job Roles</h3>
+                <div id="job-suggestions" class="suggestions-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('file-input');
+        const fileInfo = document.getElementById('file-info');
+        const btnAnalyze = document.getElementById('btn-analyze');
+        const companySkillsInput = document.getElementById('company-skills');
+        const resultsSection = document.getElementById('results-section');
+
+        let selectedFile = null;
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            fileInfo.innerText = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            btnAnalyze.disabled = false;
+        }
+
+        btnAnalyze.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            btnAnalyze.innerText = "Running Vector Retrieval & ML Embeddings...";
+            btnAnalyze.disabled = true;
+
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+            formData.append("company_skills", companySkillsInput.value);
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/analyzer", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error("Server error processing resume.");
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (err) {
+                alert("Error connecting to ML backend (app1.py). Ensure the backend is running.");
+                console.error(err);
+            } finally {
+                btnAnalyze.innerText = "Analyze & Grade Resume";
+                btnAnalyze.disabled = false;
+            }
+        });
+
+        function displayResults(data) {
+            let gradeColor = '#eab308';
+            if (data.grade === 'A') gradeColor = '#10b981';
+            else if (data.grade === 'B') gradeColor = '#3b82f6';
+            else if (data.grade === 'C') gradeColor = '#eab308';
+            else gradeColor = '#f97316';
+
+            resultsSection.style.display = "block";
+            document.getElementById('score-num').innerText = `${data.total_score} / 100`;
+
+            const badge = document.getElementById('grade-badge');
+            badge.innerText = data.grade;
+            badge.style.backgroundColor = gradeColor;
+
+            setMetricBar('action', data.action_score);
+            setMetricBar('metrics', data.metrics_score);
+            setMetricBar('structure', data.structure_score);
+            setMetricBar('length', data.length_score);
+
+            const feedbackList = document.getElementById('feedback-list');
+            feedbackList.innerHTML = '';
+            data.feedback.forEach(item => {
+                const li = document.createElement('li');
+                li.className = item.type;
+                li.innerText = (item.type === 'pass' ? '✓ ' : '💡 ') + item.text;
+                feedbackList.appendChild(li);
+            });
+
+            renderJobSuggestions(data.suggested_jobs || []);
+        }
+
+        function renderJobSuggestions(jobs) {
+            const container = document.getElementById('job-suggestions');
+            container.innerHTML = '';
+
+            if (!jobs.length) {
+                container.innerHTML = '<div class="suggestion-card">No strong job matches were found yet. Add more relevant skills to your resume.</div>';
+                return;
+            }
+
+            jobs.forEach(job => {
+                const card = document.createElement('div');
+                card.className = 'suggestion-card';
+                card.innerHTML = `
+                    <strong>${job.title}</strong>
+                    <div class="suggestion-meta">Match: ${job.match_score}%<br>${job.reason}</div>
+                    <div class="suggestion-meta">Matched skills: ${job.matched_skills.join(', ') || 'None'}<br>Missing skills: ${job.missing_skills.join(', ') || 'None'}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function setMetricBar(id, score) {
+            const rounded = Math.round(score);
+            document.getElementById(`score-${id}`).innerText = `${rounded}%`;
+            document.getElementById(`bar-${id}`).style.width = `${rounded}%`;
+        }
+    </script>
+</body>
+
+</html>

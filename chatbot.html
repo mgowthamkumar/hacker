@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Opportunities - AI Career Companion</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background-color: #0f172a;
+        color: #e2e8f0;
+        padding: 20px;
+      }
+
+      /* Navbar / Header */
+      .header {
+        text-align: center;
+        padding: 20px 0 40px 0;
+      }
+
+      .header h1 {
+        font-size: 36px;
+        color: #fff;
+      }
+
+      .header span {
+        color: #38bdf8;
+      }
+
+      /* Layout: Sidebar on Left, Jobs on Right */
+      .layout-container {
+        display: flex;
+        max-width: 1200px;
+        margin: 0 auto;
+        gap: 30px;
+      }
+
+      /* --- SIDEBAR FILTERS --- */
+      .sidebar {
+        width: 25%;
+        background: #1e293b;
+        padding: 20px;
+        border-radius: 12px;
+        height: fit-content;
+      }
+
+      .sidebar h3 {
+        margin-bottom: 15px;
+        color: #fff;
+        border-bottom: 1px solid #334155;
+        padding-bottom: 10px;
+      }
+
+      .filter-group {
+        margin-bottom: 15px;
+      }
+
+      .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #cbd5e1;
+      }
+
+      .filter-group textarea {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        background: #0f172a;
+        color: #fff;
+        outline: none;
+        resize: vertical;
+      }
+
+      .filter-group textarea:focus {
+        border-color: #38bdf8;
+      }
+
+      /* --- JOB LISTINGS AREA --- */
+      .jobs-list {
+        width: 75%;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      /* Individual Job Card */
+      .job-card {
+        background: #1e293b;
+        padding: 25px;
+        border-radius: 12px;
+        border: 1px solid #334155;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .job-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        border-color: #38bdf8;
+      }
+
+      .ribbon {
+        position: absolute;
+        top: 15px;
+        right: -35px;
+        background: #eab308;
+        color: #000;
+        padding: 5px 40px;
+        font-weight: bold;
+        font-size: 12px;
+        transform: rotate(45deg);
+      }
+
+      .ribbon.hackathon {
+        background: #a855f7;
+        color: #fff;
+      }
+
+      .ribbon.intern {
+        background: #3b82f6;
+        color: #fff;
+      }
+
+      .company-name {
+        color: #eab308;
+        font-size: 14px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+      }
+
+      .job-title {
+        font-size: 24px;
+        color: #fff;
+        margin-bottom: 20px;
+      }
+
+      .apply-btn {
+        background: transparent;
+        color: #eab308;
+        border: 2px solid #eab308;
+        padding: 10px 25px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.3s;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+        width: fit-content;
+      }
+
+      .apply-btn:hover {
+        background: #eab308;
+        color: #000;
+      }
+
+      /* Status Messages (Loading, Error, Empty) */
+      .status-message {
+        text-align: center;
+        padding: 40px;
+        color: #94a3b8;
+        font-size: 18px;
+        background: #1e293b;
+        border-radius: 12px;
+        border: 1px dashed #334155;
+      }
+
+      @media (max-width: 768px) {
+        .layout-container {
+          flex-direction: column;
+        }
+
+        .sidebar,
+        .jobs-list {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="header">
+      <h1>Explore <span>Opportunities</span></h1>
+      <p>Find real Jobs, Internships, and Hackathons powered by AI</p>
+    </div>
+
+    <div class="layout-container">
+      <div class="sidebar">
+        <h3>🤖 AI Career Agent</h3>
+        <p style="font-size: 13px; color: #94a3b8; margin-bottom: 15px">
+          Type what you're looking for, and let the AI find it for you!
+        </p>
+
+        <div class="filter-group">
+          <label>Ask the Agent</label>
+          <textarea
+            id="aiPromptInput"
+            rows="4"
+            placeholder="e.g., I need a python internship..."
+          ></textarea>
+        </div>
+
+        <button
+          id="askAgentBtn"
+          class="apply-btn"
+          style="width: 100%; text-align: center; margin-top: 5px"
+        >
+          Ask AI Agent
+        </button>
+      </div>
+
+      <div class="jobs-list">
+        <div
+          id="agentMessage"
+          style="
+            background: #1e293b;
+            color: #38bdf8;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+            display: none;
+            border: 1px solid #334155;
+          "
+        ></div>
+        <div id="jobsContainer">
+          <div class="status-message">Loading opportunities...</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 1. Get HTML Elements (Declared Only Once)
+      const aiPromptInput = document.getElementById("aiPromptInput");
+      const askAgentBtn = document.getElementById("askAgentBtn");
+      const jobsContainer = document.getElementById("jobsContainer");
+      const agentMessage = document.getElementById("agentMessage");
+
+      // 2. Fetch Data from Python Backend AI Agent
+      async function fetchAgentJobs() {
+        jobsContainer.innerHTML =
+          '<div class="status-message">🤖 AI Agent is thinking and analyzing your request...</div>';
+        agentMessage.style.display = "none"; // Hide message while loading
+
+        const userQuery = aiPromptInput.value.trim() || "Software Engineer";
+
+        try {
+          const response = await fetch(
+            `http://127.0.0.1:8000/api/jobs?prompt=${encodeURIComponent(userQuery)}`,
+          );
+
+          if (!response.ok) {
+            throw new Error("Backend connection failed");
+          }
+
+          const data = await response.json();
+
+          // Show the AI agent's conversational response
+          agentMessage.innerText = `🤖 Agent: I analyzed your prompt and found ${data.length} live opportunities matching your request!`;
+          agentMessage.style.display = "block";
+
+          displayJobs(data);
+        } catch (error) {
+          jobsContainer.innerHTML = `
+            <div class="status-message" style="color: #ef4444; border-color: #ef4444;">
+                <h3>⚠️ Cannot connect to the Python Backend.</h3>
+                <p style="font-size: 14px; color: #94a3b8; margin-top: 10px;">
+                    Make sure your FastAPI server is running on port 8000!
+                </p>
+            </div>
+        `;
+        }
+      }
+
+      // 3. Draw the cards on the screen
+      function displayJobs(jobs) {
+        jobsContainer.innerHTML = "";
+
+        if (jobs.length === 0) {
+          jobsContainer.innerHTML = `<div class="status-message">No matching opportunities found right now.</div>`;
+          return;
+        }
+
+        for (let i = 0; i < jobs.length; i++) {
+          let job = jobs[i];
+
+          let cardHTML = `
+            <div class="job-card">
+                <div class="company-name">${job.company}</div>
+                <div class="job-title">${job.title}</div>
+                <span class="ribbon ${job.ribbonClass}">${job.ribbonText}</span>
+                <a href="${job.apply_link}" target="_blank" class="apply-btn">Apply Now</a>
+            </div>
+        `;
+
+          jobsContainer.innerHTML += cardHTML;
+        }
+      }
+
+      // 4. Event Listeners & Initial Load
+      askAgentBtn.addEventListener("click", fetchAgentJobs);
+      fetchAgentJobs();
+    </script>
+  </body>
+</html>

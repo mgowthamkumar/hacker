@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoHire AI Career Platform</title>
+    <style>
+        :root {
+            --primary-yellow: #FACC15; 
+            --bg-dark: #111827;
+            --bg-darker: #0B0F19;
+            --card-bg: #1F2937;
+            --text-light: #F9FAFB;
+            --text-muted: #9CA3AF;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            background-color: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(5px);
+            padding: 1rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(250, 204, 21, 0.2);
+            z-index: 1000;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-light);
+            flex-shrink: 0;
+        }
+
+        .logo span {
+            color: var(--primary-yellow);
+        }
+
+        /* Hamburger Menu Icon for Mobile */
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .nav-container {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .nav-links a {
+            color: var(--text-light);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-yellow);
+        }
+
+        .auth-links {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-left: 0.5rem;
+            padding-left: 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-profile-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--card-bg);
+            border: 2px solid var(--primary-yellow);
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        .btn-profile-logo:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
+        }
+
+        .btn-profile-logo svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--primary-yellow);
+        }
+
+        .login-link {
+            color: var(--text-light);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .login-link:hover {
+            color: var(--primary-yellow);
+        }
+
+        .btn-register {
+            background-color: var(--primary-yellow);
+            color: var(--bg-dark);
+            text-decoration: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(250, 204, 21, 0.3);
+        }
+
+        .hero {
+            text-align: center;
+            padding: 5rem 1.5rem 6rem 1.5rem; 
+            position: relative;
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%),
+                        url('https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+            border-bottom: 4px solid var(--primary-yellow);
+        }
+
+        .hero h1 {
+            font-size: clamp(2.2rem, 5vw, 4rem);
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            color: var(--text-light);
+            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .hero h1 span {
+            color: var(--primary-yellow);
+        }
+
+        .hero p {
+            font-size: clamp(1rem, 2.5vw, 1.4rem);
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-hero-primary, .btn-hero-secondary {
+            padding: 0.8rem 1.8rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s, color 0.3s;
+            border: 2px solid var(--primary-yellow);
+            text-align: center;
+        }
+
+        .btn-hero-primary {
+            background-color: var(--primary-yellow);
+            color: var(--bg-dark); 
+        }
+
+        .btn-hero-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(250, 204, 21, 0.3);
+        }
+
+        .btn-hero-secondary {
+            background-color: transparent;
+            color: var(--primary-yellow);
+        }
+
+        .btn-hero-secondary:hover {
+            background-color: var(--primary-yellow);
+            color: var(--bg-dark);
+            transform: translateY(-3px);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 5%;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: clamp(1.8rem, 4vw, 2.2rem);
+            margin-bottom: 2.5rem;
+            color: var(--text-light);
+        }
+
+        .section-title span {
+            color: var(--primary-yellow);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-card {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.3s, border-color 0.3s;
+            text-decoration: none;
+            display: block;
+            color: inherit;
+        }
+
+        .feature-card.clickable {
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-yellow);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            margin: 0 0 0.8rem 0;
+            color: var(--text-light);
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        .stats-section {
+            background-color: var(--bg-darker);
+            padding: 3rem 5%;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .stats-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: clamp(2.2rem, 5vw, 3.5rem);
+            font-weight: 900;
+            color: var(--primary-yellow);
+            margin-bottom: 0.5rem;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .opp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .opp-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 1.8rem;
+            position: relative; 
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .opp-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-yellow);
+        }
+
+        .opp-badge {
+            position: absolute;
+            top: 15px;
+            right: -35px;
+            background-color: var(--primary-yellow);
+            color: var(--bg-dark);
+            padding: 5px 40px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            transform: rotate(45deg);
+        }
+
+        .opp-company {
+            color: var(--primary-yellow);
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            padding-right: 40px; /* Space for absolute badge */
+        }
+
+        .opp-card h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.3rem;
+        }
+
+        .opp-details {
+            margin-bottom: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .btn-apply {
+            margin-top: auto;
+            display: block;
+            text-align: center;
+            background-color: rgba(250, 204, 21, 0.1);
+            color: var(--primary-yellow);
+            padding: 0.8rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.2s;
+            border: 1px solid var(--primary-yellow);
+        }
+
+        .btn-apply:hover {
+            background-color: var(--primary-yellow);
+            color: var(--bg-dark);
+        }
+
+        footer {
+            background-color: var(--bg-darker);
+            padding: 3rem 5% 2rem 5%;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            margin-top: 3rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+        }
+
+        .footer-column h4 {
+            color: var(--text-light);
+            margin-bottom: 1.2rem;
+            font-size: 1.1rem;
+        }
+
+        .footer-column a {
+            display: block;
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-bottom: 0.8rem;
+            transition: color 0.3s;
+        }
+
+        .footer-column a:hover {
+            color: var(--primary-yellow);
+        }
+
+        .footer-column p {
+            color: var(--text-muted);
+            margin-bottom: 0.8rem;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            margin-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* MEDIA QUERIES FOR MOBILE & TABLET COMPATIBILITY */
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+
+            .nav-container {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background-color: var(--bg-darker);
+                padding: 1.5rem;
+                border-bottom: 1px solid rgba(250, 204, 21, 0.2);
+                gap: 1.2rem;
+                align-items: stretch;
+            }
+
+            .nav-container.active {
+                display: flex;
+            }
+
+            .nav-links {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .auth-links {
+                flex-direction: column;
+                margin-left: 0;
+                padding-left: 0;
+                border-left: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                padding-top: 1rem;
+                gap: 1rem;
+            }
+
+            .btn-profile-logo {
+                margin: 0 auto;
+            }
+
+            .btn-register, .login-link {
+                text-align: center;
+                width: 100%;
+            }
+
+            .hero {
+                padding: 3rem 1rem 4rem 1rem;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn-hero-primary, .btn-hero-secondary {
+                width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 2rem 1rem;
+            }
+
+            .opp-badge {
+                top: 10px;
+                right: -40px;
+                font-size: 0.75rem;
+                padding: 4px 35px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">Auto<span>Hire</span> AI</div>
+        <button class="mobile-menu-toggle" id="mobile-menu-btn" aria-label="Toggle navigation">☰</button>
+        <div class="nav-container" id="nav-container">
+            <nav class="nav-links">
+                <a href="dashboard.html">Home</a>
+                <a href="#features">AI Assistant</a>
+            </nav>
+            <div class="auth-links">
+                <a href="profile.html" class="btn-profile-logo" id="profile-logo-btn" title="View Profile">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </a>
+                <a href="index.html" class="login-link">Login</a>
+                <a href="register.html" class="btn-register">Register</a>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero" id="home">
+        <h1>Your <span>AI Career</span> Companion</h1>
+        <p>Discover Jobs, Internships, and Hackathons with AI-powered recommendations.</p>
+        <div class="hero-buttons">
+            <a href="getstarted.html" class="btn-hero-primary">Get Started</a>
+            <a href="#opportunities" class="btn-hero-secondary">Explore Opportunities</a>
+        </div>
+    </section>
+
+    <div class="container" id="features">
+        <h2 class="section-title">Why Use <span>AutoHire AI?</span></h2>
+        <div class="features-grid">
+            <a href="chatbot.html" class="feature-card clickable">
+                <div class="feature-icon">🤖</div>
+                <h3>AI Recommendations</h3>
+                <p>Smart matching algorithms that find opportunities perfectly aligned with your profile.</p>
+            </a>
+            
+            <div class="feature-card">
+                <div class="feature-icon">💼</div>
+                <h3>Latest Jobs</h3>
+                <p>Real-time scraping of the newest full-time roles in tech and engineering.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🎓</div>
+                <h3>Internship Finder</h3>
+                <p>Curated list of early-career roles designed for students and fresh graduates.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🏆</div>
+                <h3>Hackathon Discovery</h3>
+                <p>Find local and global competitions to build your portfolio and win prizes.</p>
+            </div>
+            
+            <a href="analyzer.html" class="feature-card clickable">
+                <div class="feature-icon">📄</div>
+                <h3>CV Optimization</h3>
+                <p>Our Profiler Agent reviews your CV and suggests high-impact keyword optimizations.</p>
+            </a>
+
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Skill Matching</h3>
+                <p>See exactly what percentage of a job's requirements match your current abilities.</p>
+            </div>
+        </div>
+    </div>
+
+    <section class="stats-section">
+        <div class="stats-grid">
+            <div>
+                <div class="stat-number">10K+</div>
+                <div class="stat-label">Jobs</div>
+            </div>
+            <div>
+                <div class="stat-number">5K+</div>
+                <div class="stat-label">Internships</div>
+            </div>
+            <div>
+                <div class="stat-number">1.2K+</div>
+                <div class="stat-label">Hackathons</div>
+            </div>
+            <div>
+                <div class="stat-number">50K+</div>
+                <div class="stat-label">Users</div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container" id="opportunities">
+        <h2 class="section-title">Featured <span>Opportunities</span></h2>
+        
+        <div class="opp-grid">
+            <div class="opp-card">
+                <div class="opp-badge">Trending</div>
+                <div class="opp-company">TechNova Solutions</div>
+                <h3>Backend Developer</h3>
+                <div class="opp-details">
+                    <p>Build robust backend APIs and cloud architectures.</p>
+                </div>
+                <a href="getstarted.html" class="btn-apply">Get Started</a>
+            </div>
+
+            <div class="opp-card">
+                <div class="opp-badge">98% Match</div>
+                <div class="opp-company">AI Dynamics Labs</div>
+                <h3>Agentic AI Engineering Intern</h3>
+                <div class="opp-details">
+                    <p>Work directly on autonomous AI agent systems.</p>
+                </div>
+                <a href="getstarted.html" class="btn-apply">Get Started</a>
+            </div>
+
+            <div class="opp-card">
+                <div class="opp-badge">New</div>
+                <div class="opp-company">Global DevCorp</div>
+                <h3>AI Hackathon</h3>
+                <div class="opp-details">
+                    <p>Compete in a 48-hour global AI build sprint.</p>
+                </div>
+                <a href="getstarted.html" class="btn-apply">Get Started</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-column">
+                <h4>AutoHire AI</h4>
+                <p>Your AI Career Companion. Discover Jobs, Internships, and Hackathons with AI-powered recommendations.</p>
+            </div>
+            <div class="footer-column">
+                <h4>Quick Links</h4>
+                <a href="#about">About Us</a>
+                <a href="#privacy">Privacy Policy</a>
+                <a href="#terms">Terms & Conditions</a>
+                <a href="#contact">Contact</a>
+            </div>
+            <div class="footer-column">
+                <h4>Contact</h4>
+                <p>Email: contact@autohireai.com</p>
+                <p>Phone: +1 (555) 123-4567</p>
+            </div>
+            <div class="footer-column">
+                <h4>Connect</h4>
+                <a href="#linkedin">LinkedIn</a>
+                <a href="#github">GitHub</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 AutoHire AI. All rights reserved.
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const profileBtn = document.getElementById('profile-logo-btn');
+            
+            const userAvatar = localStorage.getItem('userAvatar') || localStorage.getItem('profilePic');
+            const username = localStorage.getItem('username') || localStorage.getItem('user');
+
+            if (userAvatar) {
+                profileBtn.innerHTML = `<img src="${userAvatar}" alt="User Profile" style="width:100%;height:100%;object-fit:cover;">`;
+            } else if (username) {
+                profileBtn.innerHTML = `<span style="font-weight: bold; color: var(--primary-yellow);">${username.charAt(0).toUpperCase()}</span>`;
+            }
+
+            // Mobile menu toggle functionality
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            const navContainer = document.getElementById('nav-container');
+
+            menuBtn.addEventListener('click', () => {
+                navContainer.classList.toggle('active');
+                menuBtn.textContent = navContainer.classList.contains('active') ? '✕' : '☰';
+            });
+        });
+    </script>
+</body>
+</html>

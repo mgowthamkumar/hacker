@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Source Hackathons & Opportunities Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0 30px 0;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            color: #fff;
+        }
+
+        .header span {
+            color: #a855f7;
+        }
+
+        .layout-container {
+            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
+            gap: 30px;
+        }
+
+        .sidebar {
+            width: 28%;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            height: fit-content;
+        }
+
+        .sidebar h3 {
+            margin-bottom: 15px;
+            color: #fff;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #cbd5e1;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #fff;
+            outline: none;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: #a855f7;
+        }
+
+        .jobs-list {
+            width: 72%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .job-card {
+            background: #1e293b;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border-color: #a855f7;
+        }
+
+        .ribbon {
+            position: absolute;
+            top: 15px;
+            right: -35px;
+            background: #eab308;
+            color: #000;
+            padding: 5px 40px;
+            font-weight: bold;
+            font-size: 12px;
+            transform: rotate(45deg);
+        }
+
+        .ribbon.devpost {
+            background: #a855f7;
+            color: #fff;
+        }
+
+        .ribbon.devfolio {
+            background: #3730a3;
+            color: #fff;
+        }
+
+        .ribbon.hackerearth {
+            background: #15803d;
+            color: #fff;
+        }
+
+        .ribbon.intern {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .company-name {
+            color: #a855f7;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .job-title {
+            font-size: 22px;
+            color: #fff;
+            margin-bottom: 15px;
+            padding-right: 40px;
+        }
+
+        .tags-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            background: #334155;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .tag.package {
+            background: #059669;
+            color: white;
+            font-weight: bold;
+        }
+
+        .tag.domain {
+            background: #2563eb;
+            color: white;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #334155;
+            padding-top: 15px;
+            margin-top: 10px;
+        }
+
+        .location {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .apply-btn {
+            background: #a855f7;
+            color: #fff;
+            border: 2px solid #a855f7;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .apply-btn:hover {
+            background: #9333ea;
+            border-color: #9333ea;
+        }
+
+        .bookmark-btn {
+            background: #334155;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .bookmark-btn.saved {
+            background: #eab308;
+            color: #000;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            background: #1e293b;
+            border-radius: 12px;
+            color: #94a3b8;
+        }
+
+        @media(max-width: 768px) {
+            .layout-container {
+                flex-direction: column;
+            }
+
+            .sidebar,
+            .jobs-list {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>Explore <span>Multi-Source Hackathons</span>, Internships & Jobs</h1>
+        <p>The Opportunity To Build Yourself</p>
+    </div>
+
+    <div class="layout-container">
+
+        <div class="sidebar">
+            <h3>Search & Filters</h3>
+
+            <div class="filter-group">
+                <label for="search-input">Search Keywords</label>
+                <input type="text" id="search-input" placeholder="e.g. AI, Devfolio, React...">
+            </div>
+
+            <div class="filter-group">
+                <label for="type-filter">Opportunity Type</label>
+                <select id="type-filter">
+                    <option value="all">All Opportunities</option>
+                    <option value="hackathons">🏆 All Hackathons</option>
+                    <option value="jobs">💼 Full-Time Jobs</option>
+                    <option value="internships">🎓 Internships</option>
+                    <option value="saved">⭐ Saved / Bookmarked</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="domain-filter">Domain</label>
+                <select id="domain-filter">
+                    <option value="all">All Domains</option>
+                    <option value="backend">Backend Development</option>
+                    <option value="frontend">Frontend Development</option>
+                    <option value="ai">Data Science / AI</option>
+                    <option value="cybersecurity">Cybersecurity</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="location-filter">Location / Work Mode</label>
+                <select id="location-filter">
+                    <option value="all">All Locations</option>
+                    <option value="remote">Remote / Online Only</option>
+                    <option value="onsite">On-Site / Hybrid</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="jobs-list" id="jobs-container"></div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('jobs-container');
+        const searchInput = document.getElementById('search-input');
+        const typeFilter = document.getElementById('type-filter');
+        const domainFilter = document.getElementById('domain-filter');
+        const locationFilter = document.getElementById('location-filter');
+
+        let allData = [];
+        let savedIds = JSON.parse(localStorage.getItem('saved_multi_opps') || '[]');
+
+        const fallbackHackathons = [
+            {
+                id: "devpost-fb-1",
+                type: "hackathons",
+                domain: "ai",
+                isRemote: true,
+                ribbonText: "Devpost",
+                ribbonClass: "devpost",
+                company: "DEVPOST HACKATHON",
+                title: "Generative AI & Agentic Innovation Hackathon",
+                typeTag: "🏆 Devpost Hackathon",
+                domainTag: "🧠 Artificial Intelligence",
+                packageTag: "💰 $25,000 Prize Pool",
+                extraTag: "🌐 Online Entry",
+                location: "📍 Global / Virtual",
+                buttonText: "Apply Directly",
+                url: "https://devpost.com/hackathons?open_to[]=public&status[]=upcoming&status[]=open"
+            },
+            {
+                id: "devfolio-fb-1",
+                type: "hackathons",
+                domain: "frontend",
+                isRemote: true,
+                ribbonText: "Devfolio",
+                ribbonClass: "devfolio",
+                company: "DEVFOLIO COMMUNITY",
+                title: "ETHIndia Hackathon",
+                typeTag: "🏆 Devfolio Hackathon",
+                domainTag: "⚙️ Web Development",
+                packageTag: "💰 Cash Prizes & Swag",
+                extraTag: "🌐 Online Entry",
+                location: "📍 Global / Virtual",
+                buttonText: "Apply Directly",
+                url: "https://ethindia.devfolio.co/"
+            },
+            {
+                id: "hackerearth-fb-1",
+                type: "hackathons",
+                domain: "cybersecurity",
+                isRemote: true,
+                ribbonText: "HackerEarth",
+                ribbonClass: "hackerearth",
+                company: "HACKEREARTH GLOBAL",
+                title: "International Cybersecurity & Defense Sprint",
+                typeTag: "🏆 HackerEarth Challenge",
+                domainTag: "🛡️ Cybersecurity",
+                packageTag: "💰 $15,000 Cash Pool",
+                extraTag: "🌐 Online Entry",
+                location: "📍 Global / Virtual",
+                buttonText: "Apply Directly",
+                url: "https://www.hackerearth.com/challenges/hackathon/"
+            }
+        ];
+
+        function detectDomain(text = '') {
+            const lower = text.toLowerCase();
+            if (lower.includes('front') || lower.includes('react') || lower.includes('css') || lower.includes('web') || lower.includes('ui') || lower.includes('vue')) return 'frontend';
+            if (lower.includes('data') || lower.includes('ai') || lower.includes('ml') || lower.includes('python') || lower.includes('learning')) return 'ai';
+            if (lower.includes('sec') || lower.includes('cyber') || lower.includes('hack') || lower.includes('audit')) return 'cybersecurity';
+            return 'backend';
+        }
+
+        function getDirectApplyUrl(source, item) {
+            const itemUrl = item.link || item.url || '';
+            const slug = item.slug || item.username || '';
+            const title = encodeURIComponent(item.title || '');
+
+            if (source === 'devpost') {
+                if (itemUrl.includes('devpost.com')) {
+                    return itemUrl;
+                }
+                return `https://devpost.com/hackathons?search=${title}`;
+            }
+
+            if (source === 'devfolio') {
+                // If direct slug exists, route directly to the specific devfolio event page
+                if (slug) {
+                    return `https://${slug}.devfolio.co/`;
+                }
+                if (itemUrl && itemUrl.includes('.devfolio.co')) {
+                    return itemUrl;
+                }
+                return `https://devfolio.co/hackathons?q=${title}`;
+            }
+
+            if (source === 'hackerearth') {
+                if (itemUrl.includes('/challenges/')) {
+                    return itemUrl;
+                }
+                return `https://www.hackerearth.com/challenges/hackathon/`;
+            }
+
+            return itemUrl;
+        }
+
+        async function fetchAllSources() {
+            container.innerHTML = '<div class="no-results"><h3>Fetching Hackathons & Jobs...</h3></div>';
+
+            try {
+                const proxy = "https://api.allorigins.win/raw?url=";
+
+                const [devpostRes, devfolioRes, hackerearthRes, remotiveRes, arbeitnowRes] = await Promise.allSettled([
+                    fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fdevpost.com%2Ffeed'),
+                    // Fetch direct JSON list from Devfolio to capture exact unique event slugs
+                    fetch(`${proxy}${encodeURIComponent('https://devfolio.co/api/hackathons?type=open&limit=15')}`),
+                    fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.hackerearth.com%2Fblog%2Fdevelopers%2Cfeed%2F'),
+                    fetch(`${proxy}${encodeURIComponent('https://remotive.com/api/remote-jobs?limit=30')}`),
+                    fetch('https://www.arbeitnow.com/api/job-board-api')
+                ]);
+
+                let processedData = [];
+
+                // 1. Devpost Hackathons
+                if (devpostRes.status === 'fulfilled') {
+                    try {
+                        const json = await devpostRes.value.json();
+                        if (json && json.items && json.items.length > 0) {
+                            json.items.forEach((item, idx) => {
+                                processedData.push({
+                                    id: `devpost-${idx}`,
+                                    type: 'hackathons',
+                                    domain: detectDomain(item.title + ' ' + (item.description || '')),
+                                    isRemote: true,
+                                    ribbonText: 'Devpost',
+                                    ribbonClass: 'devpost',
+                                    company: 'DEVPOST HACKATHON',
+                                    title: item.title || 'Devpost Challenge',
+                                    typeTag: '🏆 Devpost Hackathon',
+                                    domainTag: '🧠 Coding Challenge',
+                                    packageTag: '💰 Cash & Prizes',
+                                    extraTag: '🌐 Online',
+                                    location: '📍 Global / Virtual',
+                                    buttonText: 'Apply Directly',
+                                    url: getDirectApplyUrl('devpost', item)
+                                });
+                            });
+                        }
+                    } catch (e) { console.error(e); }
+                }
+
+                // 2. Devfolio Hackathons (Direct Target URLs)
+                if (devfolioRes.status === 'fulfilled') {
+                    try {
+                        const json = await devfolioRes.value.json();
+                        const items = Array.isArray(json) ? json : (json.result || json.data || []);
+                        if (items.length > 0) {
+                            items.forEach((item, idx) => {
+                                const isIntern = (item.name || '').toLowerCase().includes('intern');
+                                processedData.push({
+                                    id: `devfolio-${item.id || idx}`,
+                                    type: isIntern ? 'internships' : 'hackathons',
+                                    domain: detectDomain(item.name || item.title || ''),
+                                    isRemote: item.is_online !== false,
+                                    ribbonText: 'Devfolio',
+                                    ribbonClass: 'devfolio',
+                                    company: (item.organisation_name || 'DEVFOLIO').toUpperCase(),
+                                    title: item.name || item.title || 'Devfolio Event',
+                                    typeTag: isIntern ? '🎓 Devfolio Internship' : '🏆 Devfolio Hackathon',
+                                    domainTag: '⚙️ Developer Sprint',
+                                    packageTag: item.prizes_total ? `💰 ${item.prizes_total}` : '💰 Cash & Perks',
+                                    extraTag: item.is_online ? '🌐 Online' : '🏢 In-Person',
+                                    location: item.location || (item.is_online ? '📍 Virtual' : '📍 On-Site'),
+                                    buttonText: 'Apply Directly',
+                                    url: getDirectApplyUrl('devfolio', item)
+                                });
+                            });
+                        }
+                    } catch (e) { console.error(e); }
+                }
+
+                // 3. HackerEarth Challenges
+                if (hackerearthRes.status === 'fulfilled') {
+                    try {
+                        const json = await hackerearthRes.value.json();
+                        if (json && json.items && json.items.length > 0) {
+                            json.items.forEach((item, idx) => {
+                                processedData.push({
+                                    id: `hackerearth-${idx}`,
+                                    type: 'hackathons',
+                                    domain: detectDomain(item.title || ''),
+                                    isRemote: true,
+                                    ribbonText: 'HackerEarth',
+                                    ribbonClass: 'hackerearth',
+                                    company: 'HACKEREARTH',
+                                    title: item.title || 'HackerEarth Competition',
+                                    typeTag: '🏆 HackerEarth Sprint',
+                                    domainTag: '🧠 Competitive Coding',
+                                    packageTag: '💰 Cash Prizes',
+                                    extraTag: '🌐 Online',
+                                    location: '📍 Virtual',
+                                    buttonText: 'Apply Directly',
+                                    url: getDirectApplyUrl('hackerearth', item)
+                                });
+                            });
+                        }
+                    } catch (e) { console.error(e); }
+                }
+
+                // Fallbacks if list is minimal
+                if (processedData.length < 3) {
+                    processedData = processedData.concat(fallbackHackathons);
+                }
+
+                // 4. Remotive Jobs & Internships
+                if (remotiveRes.status === 'fulfilled') {
+                    try {
+                        const json = await remotiveRes.value.json();
+                        if (json && json.jobs) {
+                            json.jobs.forEach(job => {
+                                const title = job.title || 'Software Developer';
+                                const titleLower = title.toLowerCase();
+                                const isIntern = titleLower.includes('intern') || titleLower.includes('trainee');
+
+                                processedData.push({
+                                    id: `remotive-${job.id}`,
+                                    type: isIntern ? 'internships' : 'jobs',
+                                    domain: detectDomain(title + ' ' + (job.category || '')),
+                                    isRemote: true,
+                                    ribbonText: isIntern ? 'Internship' : 'Live Job',
+                                    ribbonClass: isIntern ? 'intern' : '',
+                                    company: (job.company_name || 'TECH').toUpperCase(),
+                                    title: title,
+                                    typeTag: isIntern ? '🎓 Internship' : '💼 Full-Time Job',
+                                    domainTag: `⚙️ ${job.category || 'Tech'}`,
+                                    packageTag: (job.salary && job.salary.trim()) ? `💰 ${job.salary}` : '💰 Competitive Pay',
+                                    extraTag: '🌐 Remote',
+                                    location: `📍 ${job.candidate_required_location || 'Remote'}`,
+                                    buttonText: 'Apply Directly',
+                                    url: job.url
+                                });
+                            });
+                        }
+                    } catch (e) { console.error(e); }
+                }
+
+                // 5. Arbeitnow Jobs & Internships
+                if (arbeitnowRes.status === 'fulfilled') {
+                    try {
+                        const json = await arbeitnowRes.value.json();
+                        if (json && json.data) {
+                            json.data.forEach((job, idx) => {
+                                const title = job.title || 'Developer';
+                                const titleLower = title.toLowerCase();
+                                const isIntern = titleLower.includes('intern') || titleLower.includes('trainee');
+
+                                processedData.push({
+                                    id: `arbeitnow-${idx}`,
+                                    type: isIntern ? 'internships' : 'jobs',
+                                    domain: detectDomain(title),
+                                    isRemote: job.remote === true,
+                                    ribbonText: isIntern ? 'Internship' : 'Global Job',
+                                    ribbonClass: isIntern ? 'intern' : '',
+                                    company: (job.company_name || 'GLOBAL TECH').toUpperCase(),
+                                    title: title,
+                                    typeTag: isIntern ? '🎓 Internship' : '💼 Full-Time Job',
+                                    domainTag: '⚙️ Software',
+                                    packageTag: '💰 Market Rate',
+                                    extraTag: job.remote ? '🌐 Remote' : '🏢 On-Site',
+                                    location: `📍 ${job.location || 'Remote'}`,
+                                    buttonText: 'Apply Directly',
+                                    url: job.url
+                                });
+                            });
+                        }
+                    } catch (e) { console.error(e); }
+                }
+
+                allData = processedData;
+                renderCards();
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                allData = fallbackHackathons;
+                renderCards();
+            }
+        }
+
+        function toggleBookmark(id) {
+            if (savedIds.includes(id)) {
+                savedIds = savedIds.filter(item => item !== id);
+            } else {
+                savedIds.push(id);
+            }
+            localStorage.setItem('saved_multi_opps', JSON.stringify(savedIds));
+            renderCards();
+        }
+
+        function renderCards() {
+            const query = searchInput.value.toLowerCase().trim();
+            const selectedType = typeFilter ? typeFilter.value : 'all';
+            const selectedDomain = domainFilter ? domainFilter.value : 'all';
+            const selectedLocation = locationFilter ? locationFilter.value : 'all';
+
+            const filtered = allData.filter(item => {
+                const matchesQuery = query === '' ||
+                    item.title.toLowerCase().includes(query) ||
+                    item.company.toLowerCase().includes(query) ||
+                    item.domainTag.toLowerCase().includes(query);
+
+                let matchesType = (selectedType === 'all' || item.type === selectedType);
+                if (selectedType === 'saved') {
+                    matchesType = savedIds.includes(item.id);
+                }
+
+                const matchesDomain = (selectedDomain === 'all' || item.domain === selectedDomain);
+
+                let matchesLocation = true;
+                if (selectedLocation === 'remote') matchesLocation = item.isRemote === true;
+                if (selectedLocation === 'onsite') matchesLocation = item.isRemote === false;
+
+                return matchesQuery && matchesType && matchesDomain && matchesLocation;
+            });
+
+            container.innerHTML = '';
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="no-results"><h3>No opportunities match your current filters. Try setting Domain or Work Mode to "All".</h3></div>';
+                return;
+            }
+
+            filtered.forEach(item => {
+                const isSaved = savedIds.includes(item.id);
+                const html = `
+                    <div class="job-card" data-type="${item.type}" data-domain="${item.domain}">
+                        <div class="ribbon ${item.ribbonClass}">${item.ribbonText}</div>
+                        <div class="company-name">${item.company}</div>
+                        <h2 class="job-title">${item.title}</h2>
+                        
+                        <div class="tags-container">
+                            <span class="tag domain">${item.typeTag}</span>
+                            <span class="tag">${item.domainTag}</span>
+                            <span class="tag package">${item.packageTag}</span>
+                            ${item.extraTag ? `<span class="tag">${item.extraTag}</span>` : ''}
+                        </div>
+
+                        <div class="card-footer">
+                            <div class="location">${item.location}</div>
+                            <div class="action-btns">
+                                <button class="bookmark-btn ${isSaved ? 'saved' : ''}" onclick="toggleBookmark('${item.id}')">
+                                    ${isSaved ? '★ Saved' : '☆ Save'}
+                                </button>
+                                <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="apply-btn">${item.buttonText}</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        searchInput.addEventListener('input', renderCards);
+        if (typeFilter) typeFilter.addEventListener('change', renderCards);
+        if (domainFilter) domainFilter.addEventListener('change', renderCards);
+        if (locationFilter) locationFilter.addEventListener('change', renderCards);
+
+        document.addEventListener('DOMContentLoaded', fetchAllSources);
+    </script>
+</body>
+
+</html>
