@@ -280,11 +280,12 @@ async def analyze_resume(file: UploadFile = File(...), company_skills: str = For
 
 if __name__ == "__main__":
     import uvicorn
+    import os
 
     uvicorn.run(
         "app1:app",
         host="127.0.0.1",
-        port=8000,
+        port=int(os.getenv("PORT", "5503")),
         root_path="/",
         reload=True
     )

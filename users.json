@@ -1,0 +1,30 @@
+[
+  {
+    "id": "92a31615-3ead-4f82-a31b-cec94b628ddd",
+    "name": "Gowtham Kumar",
+    "email": "mgowthamkumar472008@gmail.com",
+    "passwordSalt": "",
+    "passwordHash": ""
+  },
+  {
+    "id": "3782344b-27ac-4f11-b19a-95acbe6e81a8",
+    "name": "Dashboard Test",
+    "email": "dashboardc3c44d122d004d028a8ea94b15fc62c0@example.com",
+    "passwordSalt": "6a0768f6de5ecc93cbbdc39171233b94",
+    "passwordHash": "37e3c32bcf1660152eb51c20e9ccf6c7436a2561ae5c48ecb510fe4b24deb478f7fab9a84faccf6fa802c177d1efe8eff88d81a4b623f45da5c5bb588810f259"
+  },
+  {
+    "id": "ebb6c1e4-3556-40ef-a4a9-b26c9db06c2c",
+    "name": "gowtham",
+    "email": "mgowthamkkumar472008@gmail.com",
+    "passwordSalt": "",
+    "passwordHash": ""
+  },
+  {
+    "id": "52e2a7e0-58a9-4868-942e-d0ea903c4ca6",
+    "name": "Isanth",
+    "email": "isanth521@gmail.com",
+    "passwordSalt": "",
+    "passwordHash": ""
+  }
+]

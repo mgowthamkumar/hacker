@@ -274,6 +274,7 @@
                     <option value="hackathons">🏆 All Hackathons</option>
                     <option value="jobs">💼 Full-Time Jobs</option>
                     <option value="internships">🎓 Internships</option>
+                    <option value="companies">🏢 Company Career Pages</option>
                     <option value="saved">⭐ Saved / Bookmarked</option>
                 </select>
             </div>
@@ -414,13 +415,14 @@
             try {
                 const proxy = "https://api.allorigins.win/raw?url=";
 
-                const [devpostRes, devfolioRes, hackerearthRes, remotiveRes, arbeitnowRes] = await Promise.allSettled([
+                const [devpostRes, devfolioRes, hackerearthRes, remotiveRes, arbeitnowRes, companiesRes] = await Promise.allSettled([
                     fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fdevpost.com%2Ffeed'),
                     // Fetch direct JSON list from Devfolio to capture exact unique event slugs
                     fetch(`${proxy}${encodeURIComponent('https://devfolio.co/api/hackathons?type=open&limit=15')}`),
                     fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.hackerearth.com%2Fblog%2Fdevelopers%2Cfeed%2F'),
                     fetch(`${proxy}${encodeURIComponent('https://remotive.com/api/remote-jobs?limit=30')}`),
-                    fetch('https://www.arbeitnow.com/api/job-board-api')
+                    fetch('https://www.arbeitnow.com/api/job-board-api'),
+                    fetch('http://127.0.0.1:5501/api/jobs?prompt=companies')
                 ]);
 
                 let processedData = [];
@@ -574,6 +576,22 @@
                                     location: `📍 ${job.location || 'Remote'}`,
                                     buttonText: 'Apply Directly',
                                     url: job.url
+                                });
+                            });
+                        }
+                    } catch (e) { console.error(e); }
+                }
+
+                // 6. Official company career pages from the FastAPI backend
+                if (companiesRes.status === 'fulfilled') {
+                    try {
+                        const companies = await companiesRes.value.json();
+                        if (Array.isArray(companies)) {
+                            companies.forEach(company => {
+                                processedData.push({
+                                    ...company,
+                                    url: company.apply_link,
+                                    buttonText: company.buttonText || 'View Careers'
                                 });
                             });
                         }

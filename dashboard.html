@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AutoHire AI Career Platform</title>
     <style>
         :root {
-            --primary-yellow: #FACC15; 
+            --primary-yellow: #FACC15;
             --bg-dark: #111827;
             --bg-darker: #0B0F19;
             --card-bg: #1F2937;
@@ -154,10 +155,10 @@
 
         .hero {
             text-align: center;
-            padding: 5rem 1.5rem 6rem 1.5rem; 
+            padding: 5rem 1.5rem 6rem 1.5rem;
             position: relative;
             background: linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(31, 41, 55, 0.85) 100%),
-                        url('https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+                url('https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
             border-bottom: 4px solid var(--primary-yellow);
         }
 
@@ -166,7 +167,7 @@
             margin-bottom: 1rem;
             line-height: 1.2;
             color: var(--text-light);
-            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
         }
 
         .hero h1 span {
@@ -189,7 +190,8 @@
             flex-wrap: wrap;
         }
 
-        .btn-hero-primary, .btn-hero-secondary {
+        .btn-hero-primary,
+        .btn-hero-secondary {
             padding: 0.8rem 1.8rem;
             border-radius: 8px;
             text-decoration: none;
@@ -202,7 +204,7 @@
 
         .btn-hero-primary {
             background-color: var(--primary-yellow);
-            color: var(--bg-dark); 
+            color: var(--bg-dark);
         }
 
         .btn-hero-primary:hover {
@@ -284,8 +286,8 @@
         .stats-section {
             background-color: var(--bg-darker);
             padding: 3rem 5%;
-            border-top: 1px solid rgba(255,255,255,0.05);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .stats-grid {
@@ -323,7 +325,7 @@
             background-color: var(--card-bg);
             border-radius: 10px;
             padding: 1.8rem;
-            position: relative; 
+            position: relative;
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.05);
             transition: transform 0.3s ease;
@@ -354,7 +356,8 @@
             font-weight: bold;
             text-transform: uppercase;
             margin-bottom: 0.5rem;
-            padding-right: 40px; /* Space for absolute badge */
+            padding-right: 40px;
+            /* Space for absolute badge */
         }
 
         .opp-card h3 {
@@ -390,7 +393,7 @@
         footer {
             background-color: var(--bg-darker);
             padding: 3rem 5% 2rem 5%;
-            border-top: 1px solid rgba(255,255,255,0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
             margin-top: 3rem;
         }
 
@@ -429,7 +432,7 @@
             text-align: center;
             padding-top: 2rem;
             margin-top: 2rem;
-            border-top: 1px solid rgba(255,255,255,0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
             color: var(--text-muted);
             font-size: 0.9rem;
         }
@@ -478,7 +481,8 @@
                 margin: 0 auto;
             }
 
-            .btn-register, .login-link {
+            .btn-register,
+            .login-link {
                 text-align: center;
                 width: 100%;
             }
@@ -492,7 +496,8 @@
                 width: 100%;
             }
 
-            .btn-hero-primary, .btn-hero-secondary {
+            .btn-hero-primary,
+            .btn-hero-secondary {
                 width: 100%;
             }
 
@@ -516,6 +521,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <header>
@@ -529,10 +535,11 @@
             <div class="auth-links">
                 <a href="profile.html" class="btn-profile-logo" id="profile-logo-btn" title="View Profile">
                     <svg viewBox="0 0 24 24">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        <path
+                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                     </svg>
                 </a>
-                <a href="index.html" class="login-link">Login</a>
+                <a href="index.html" class="login-link" id="logout-link">Logout</a>
                 <a href="register.html" class="btn-register">Register</a>
             </div>
         </div>
@@ -555,25 +562,25 @@
                 <h3>AI Recommendations</h3>
                 <p>Smart matching algorithms that find opportunities perfectly aligned with your profile.</p>
             </a>
-            
+
             <div class="feature-card">
                 <div class="feature-icon">💼</div>
                 <h3>Latest Jobs</h3>
                 <p>Real-time scraping of the newest full-time roles in tech and engineering.</p>
             </div>
-            
+
             <div class="feature-card">
                 <div class="feature-icon">🎓</div>
                 <h3>Internship Finder</h3>
                 <p>Curated list of early-career roles designed for students and fresh graduates.</p>
             </div>
-            
+
             <div class="feature-card">
                 <div class="feature-icon">🏆</div>
                 <h3>Hackathon Discovery</h3>
                 <p>Find local and global competitions to build your portfolio and win prizes.</p>
             </div>
-            
+
             <a href="analyzer.html" class="feature-card clickable">
                 <div class="feature-icon">📄</div>
                 <h3>CV Optimization</h3>
@@ -611,7 +618,7 @@
 
     <div class="container" id="opportunities">
         <h2 class="section-title">Featured <span>Opportunities</span></h2>
-        
+
         <div class="opp-grid">
             <div class="opp-card">
                 <div class="opp-badge">Trending</div>
@@ -649,7 +656,8 @@
         <div class="footer-content">
             <div class="footer-column">
                 <h4>AutoHire AI</h4>
-                <p>Your AI Career Companion. Discover Jobs, Internships, and Hackathons with AI-powered recommendations.</p>
+                <p>Your AI Career Companion. Discover Jobs, Internships, and Hackathons with AI-powered recommendations.
+                </p>
             </div>
             <div class="footer-column">
                 <h4>Quick Links</h4>
@@ -676,8 +684,20 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const apiUrl = `${window.location.protocol === 'file:' ? 'http://localhost:5500' : window.location.origin}/api/auth`;
+
+            fetch(`${apiUrl}/me`, { credentials: 'include' }).then(response => {
+                if (!response.ok) window.location.href = 'index.html';
+            });
+
+            document.getElementById('logout-link').addEventListener('click', async event => {
+                event.preventDefault();
+                await fetch(`${apiUrl}/logout`, { method: 'POST', credentials: 'include' });
+                window.location.href = 'index.html';
+            });
+
             const profileBtn = document.getElementById('profile-logo-btn');
-            
+
             const userAvatar = localStorage.getItem('userAvatar') || localStorage.getItem('profilePic');
             const username = localStorage.getItem('username') || localStorage.getItem('user');
 
@@ -698,4 +718,5 @@
         });
     </script>
 </body>
+
 </html>

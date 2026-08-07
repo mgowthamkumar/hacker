@@ -205,31 +205,19 @@
 
     <script>
 
-        let user = JSON.parse(localStorage.getItem("loggedInUser"));
+        const apiUrl = "http://localhost:5500/api/auth";
 
-        if (user) {
-
-            document.getElementById("username").innerHTML = user.name;
-
-            document.getElementById("email").innerHTML = user.email;
-
-            if (user.picture) {
-                document.getElementById("avatar").src = user.picture;
+        fetch(`${apiUrl}/me`, { credentials: "include" }).then(async response => {
+            if (!response.ok) {
+                window.location.href = "index.html";
+                return;
             }
 
-        } else {
-
-            alert("Please Login First");
-
-            window.location.href = "index.html";
-
-        }
-
-        document.getElementById("username").innerHTML = user.name;
-
-        document.getElementById("email").innerHTML = user.email;
-
-        document.getElementById("avatar").innerHTML = user.name.charAt(0).toUpperCase();
+            const { user } = await response.json();
+            document.getElementById("username").innerHTML = user.name;
+            document.getElementById("email").innerHTML = user.email;
+            document.getElementById("avatar").innerHTML = user.name.charAt(0).toUpperCase();
+        });
 
         function goHome() {
 
@@ -239,11 +227,9 @@
 
         function logout() {
 
-            localStorage.removeItem("loggedInUser");
-
-            alert("Logged Out Successfully");
-
-            window.location.href = "index.html";
+            fetch(`${apiUrl}/logout`, { method: "POST", credentials: "include" }).finally(() => {
+                window.location.href = "index.html";
+            });
 
         }
 

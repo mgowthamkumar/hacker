@@ -1,210 +1,227 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Create Account</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account</title>
 
-<script src="https://accounts.google.com/gsi/client" async></script>
+    <script src="https://accounts.google.com/gsi/client" async></script>
 
-<style>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Arial,sans-serif;
-}
+        body {
+            background: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
 
-body{
-    background:#f4f4f4;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-}
+        .container {
+            width: 380px;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, .2);
+        }
 
-.container{
-    width:380px;
-    background:white;
-    padding:30px;
-    border-radius:10px;
-    box-shadow:0 0 15px rgba(0,0,0,.2);
-}
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+        }
 
-h2{
-    text-align:center;
-    margin-bottom:25px;
-}
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
 
-input{
-    width:100%;
-    padding:12px;
-    margin:10px 0;
-    border:1px solid #ccc;
-    border-radius:5px;
-    font-size:16px;
-}
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            background: #28a745;
+            color: white;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
 
-button{
-    width:100%;
-    padding:12px;
-    border:none;
-    background:#28a745;
-    color:white;
-    font-size:16px;
-    border-radius:5px;
-    cursor:pointer;
-}
+        button:hover {
+            background: #218838;
+        }
 
-button:hover{
-    background:#218838;
-}
+        .or {
+            text-align: center;
+            margin: 20px 0;
+            color: gray;
+            font-weight: bold;
+        }
 
-.or{
-    text-align:center;
-    margin:20px 0;
-    color:gray;
-    font-weight:bold;
-}
+        .login {
+            text-align: center;
+            margin-top: 20px;
+        }
 
-.login{
-    text-align:center;
-    margin-top:20px;
-}
+        .login a {
+            text-decoration: none;
+            color: #007BFF;
+            font-weight: bold;
+        }
 
-.login a{
-    text-decoration:none;
-    color:#007BFF;
-    font-weight:bold;
-}
+        .login a:hover {
+            text-decoration: underline;
+        }
 
-.login a:hover{
-    text-decoration:underline;
-}
+        .show-password {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #333;
+        }
 
-.g_id_signin{
-    display:flex;
-    justify-content:center;
-}
+        .show-password input {
+            margin-right: 8px;
+        }
 
-</style>
+        .g_id_signin {
+            display: flex;
+            justify-content: center;
+        }
+    </style>
 
 </head>
+
 <body>
 
-<div class="container">
+    <div class="container">
 
-<h2>Create Account</h2>
+        <h2>Create Account</h2>
 
-<form id="signupForm">
+        <form id="signupForm">
 
-<input
-type="text"
-id="name"
-placeholder="Full Name"
-required>
+            <input type="text" id="name" placeholder="Full Name" required>
 
-<input
-type="email"
-id="email"
-placeholder="Enter Gmail"
-required>
+            <input type="email" id="email" placeholder="Enter Gmail" required>
 
-<input
-type="password"
-id="password"
-placeholder="Create Password"
-required>
+            <input type="password" id="password" placeholder="Create Password" required>
 
-<input
-type="password"
-id="confirmPassword"
-placeholder="Confirm Password"
-required>
+            <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
 
-<button type="submit">
-Create Account
-</button>
+            <div class="show-password">
+                <label>
+                    <input type="checkbox" id="showPassword">
+                    Show Passwords
+                </label>
+            </div>
 
-</form>
+            <button type="submit">
+                Create Account
+            </button>
 
-<div class="or">
-------------- OR -------------
-</div>
+        </form>
 
-<!-- Google Sign In -->
+        <div class="or">
+            ------------- OR -------------
+        </div>
 
-<div id="g_id_onload"
-data-client_id="985018230796-l4mivu7or4h81n86na3rpgu0c8ru53ot.apps.googleusercontent.com"
-data-callback="handleCredentialResponse">
-</div>
+        <!-- Google Sign In -->
 
-<div class="g_id_signin"
-data-type="standard"
-data-size="large">
-</div>
+        <div id="g_id_onload" data-client_id="985018230796-l4mivu7or4h81n86na3rpgu0c8ru53ot.apps.googleusercontent.com"
+            data-callback="handleCredentialResponse">
+        </div>
 
-<div class="login">
-Already have an account?
-<a href="index.html">Login</a>
-</div>
+        <div class="g_id_signin" data-type="standard" data-size="large">
+        </div>
 
-</div>
+        <div class="login">
+            Already have an account?
+            <a href="index.html">Login</a>
+        </div>
 
-<script>
+    </div>
 
-function handleCredentialResponse(response){
+    <script>
 
-    console.log(response.credential);
+        const apiUrl = `${window.location.protocol === "file:" ? "http://localhost:5500" : window.location.origin}/api/auth`;
+        const landingPage = "profile.html";
+        const loginPage = "index.html";
 
-    alert("Google Sign In Successful!");
+        fetch(`${apiUrl}/me`, { credentials: "include" }).then(response => {
+            if (response.ok) window.location.href = landingPage;
+        });
 
-}
+        async function handleCredentialResponse(response) {
+            try {
+                const loginResponse = await fetch(`${apiUrl}/google`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ credential: response.credential })
+                });
+                const data = await loginResponse.json();
+                if (!loginResponse.ok) return alert(data.message || "Google sign-in failed.");
+                window.location.href = landingPage;
+            } catch (error) {
+                alert("Cannot connect to the authentication server. Start server.js first.");
+            }
+        }
 
-// Create Account
-document.getElementById("signupForm").addEventListener("submit", function(e){
+        document.getElementById("showPassword").addEventListener("change", function () {
+            const type = this.checked ? "text" : "password";
+            document.getElementById("password").type = type;
+            document.getElementById("confirmPassword").type = type;
+        });
 
-    e.preventDefault();
+        // Create Account
+        document.getElementById("signupForm").addEventListener("submit", async function (e) {
 
-    let name = document.getElementById("name").value.trim();
-    let email = document.getElementById("email").value.trim();
-    let password = document.getElementById("password").value;
-    let confirmPassword = document.getElementById("confirmPassword").value;
+            e.preventDefault();
 
-    if(name === "" || email === "" || password === "" || confirmPassword === ""){
-        alert("Please fill all fields.");
-        return;
-    }
+            let name = document.getElementById("name").value.trim();
+            let email = document.getElementById("email").value.trim();
+            let password = document.getElementById("password").value;
+            let confirmPassword = document.getElementById("confirmPassword").value;
 
-    if(password !== confirmPassword){
-        alert("Passwords do not match!");
-        return;
-    }
+            if (name === "" || email === "" || password === "" || confirmPassword === "") {
+                alert("Please fill all fields.");
+                return;
+            }
 
-    // Check if account already exists
-    if(localStorage.getItem(email)){
-        alert("Account already exists!");
-        return;
-    }
+            if (password !== confirmPassword) {
+                alert("Passwords do not match!");
+                return;
+            }
 
-    // Create user object
-    let user = {
-        name: name,
-        email: email,
-        password: password
-    };
+            try {
+                const response = await fetch(`${apiUrl}/register`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ name, email, password })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    alert(data.message);
+                    return;
+                }
+                alert("Registration successful! Please log in.");
+                window.location.href = loginPage;
+            } catch (error) {
+                alert("Cannot connect to the backend. Start server.js first.");
+            }
+        });
 
-    // Save user in Local Storage
-    localStorage.setItem(email, JSON.stringify(user));
-
-    alert("Account Created Successfully!");
-
-    // Redirect to Login Page
-    window.location.href = "index.html";
-
-});
-
-</script>
+    </script>
 </body>
+
 </html>

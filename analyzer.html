@@ -450,7 +450,7 @@
             formData.append("company_skills", companySkillsInput.value);
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/analyzer", {
+                const response = await fetch("http://127.0.0.1:5503/analyzer", {
                     method: "POST",
                     body: formData
                 });
