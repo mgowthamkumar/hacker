@@ -684,7 +684,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const apiUrl = `${window.location.protocol === 'file:' ? 'http://localhost:5500' : window.location.origin}/api/auth`;
+            const apiUrl = `${window.location.protocol === 'file:' ? 'http://localhost:8800' : window.location.origin}/api/auth`;
 
             fetch(`${apiUrl}/me`, { credentials: 'include' }).then(response => {
                 if (!response.ok) window.location.href = 'index.html';

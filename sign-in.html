@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sign in to your AutoHire career workspace.">
+    <title>Sign in | AutoHire</title>
+    <script src="https://accounts.google.com/gsi/client" async></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --ink: #17211f;
+            --muted: #66736e;
+            --paper: #f4f6ef;
+            --surface: #ffffff;
+            --lime: #d8f05c;
+            --teal: #0e776d;
+            --line: #dce3d8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            color: var(--ink);
+            background: var(--paper) url("background.png.jpeg") center/cover fixed;
+            font-family: "DM Sans", sans-serif;
+        }
+
+        .shell {
+            width: min(430px, 100%);
+            padding: 34px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, .96);
+            box-shadow: 0 22px 60px rgba(23, 33, 31, .2);
+        }
+
+        .brand {
+            display: inline-block;
+            color: var(--ink);
+            font: 700 1.45rem "Space Grotesk", sans-serif;
+            letter-spacing: -.04em;
+            text-decoration: none;
+        }
+
+        .brand span {
+            color: var(--teal);
+        }
+
+        h1 {
+            margin: 38px 0 7px;
+            font: 700 2.2rem "Space Grotesk", sans-serif;
+            letter-spacing: -.05em;
+        }
+
+        .intro {
+            margin: 0 0 24px;
+            color: var(--muted);
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 6px;
+            font-size: .84rem;
+            font-weight: 700;
+        }
+
+        input {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            background: #fbfcf8;
+            color: var(--ink);
+            font: inherit;
+        }
+
+        input:focus {
+            outline: 2px solid var(--lime);
+            border-color: var(--teal);
+        }
+
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 13px 18px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--teal);
+            color: #fff;
+            font: 700 .95rem "DM Sans", sans-serif;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #095e57;
+        }
+
+        button:disabled {
+            cursor: wait;
+            opacity: .65;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 22px 0;
+            color: var(--muted);
+            font-size: .8rem;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            height: 1px;
+            flex: 1;
+            background: var(--line);
+        }
+
+        .google-button {
+            min-height: 42px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .message {
+            min-height: 20px;
+            margin: 12px 0 0;
+            color: #b42318;
+            font-size: .84rem;
+        }
+
+        .footer {
+            margin: 24px 0 0;
+            color: var(--muted);
+            text-align: center;
+            font-size: .88rem;
+        }
+
+        .footer a {
+            color: var(--teal);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        @media (max-width: 480px) {
+            .shell {
+                padding: 28px 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="shell">
+        <a class="brand" href="index.html">Auto<span>Hire</span></a>
+        <h1>Sign in</h1>
+        <p class="intro">Continue to your career workspace.</p>
+
+        <form id="loginForm">
+            <label for="emailInput">Email address</label>
+            <input id="emailInput" type="email" autocomplete="email" required>
+            <label for="passInput">Password</label>
+            <input id="passInput" type="password" autocomplete="current-password" required>
+            <button id="loginButton" type="submit">Sign in</button>
+            <div class="message" id="loginMessage" role="status"></div>
+        </form>
+
+        <div class="divider">or</div>
+        <div id="g_id_onload" data-client_id="985018230796-l4mivu7or4h81n86na3rpgu0c8ru53ot.apps.googleusercontent.com"
+            data-callback="handleCredentialResponse"></div>
+        <div class="google-button">
+            <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"
+                data-text="continue_with"></div>
+        </div>
+
+        <p class="footer">New to AutoHire? <a href="create-account.html">Create an account</a></p>
+    </main>
+
+    <script>
+        const isLocalPage = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+        const apiOrigin = window.location.protocol === "file:" || isLocalPage
+            ? "http://localhost:8800"
+            : window.location.origin;
+        const apiUrl = `${apiOrigin}/api/auth`;
+        const loginMessage = document.getElementById("loginMessage");
+
+        async function handleCredentialResponse(response) {
+            try {
+                const loginResponse = await fetch(`${apiUrl}/google`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ credential: response.credential })
+                });
+                const data = await loginResponse.json();
+                if (!loginResponse.ok) {
+                    loginMessage.textContent = data.message || "Google sign-in failed.";
+                    return;
+                }
+                window.location.href = "index.html";
+            } catch (error) {
+                loginMessage.textContent = "Cannot connect to the AutoHire server.";
+            }
+        }
+
+        document.getElementById("loginForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const loginButton = document.getElementById("loginButton");
+            loginButton.disabled = true;
+            loginButton.textContent = "Signing in...";
+            loginMessage.textContent = "";
+
+            try {
+                const response = await fetch(`${apiUrl}/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        email: document.getElementById("emailInput").value.trim(),
+                        password: document.getElementById("passInput").value
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    loginMessage.textContent = data.message || "Invalid email or password.";
+                    return;
+                }
+                window.location.href = "index.html";
+            } catch (error) {
+                loginMessage.textContent = "Cannot connect to the AutoHire server.";
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = "Sign in";
+            }
+        });
+
+        fetch(`${apiUrl}/me`, { credentials: "include" }).then(async (response) => {
+            if (response.ok) window.location.href = "index.html";
+        }).catch(() => { });
+    </script>
+</body>
+
+</html>

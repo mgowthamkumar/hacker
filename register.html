@@ -282,6 +282,38 @@
     </div>
 
     <script>
+        const isLocalPage = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+        const apiOrigin = window.location.protocol === "file:" || isLocalPage
+            ? "http://localhost:8800"
+            : window.location.origin;
+
+        fetch(`${apiOrigin}/api/profile`, { credentials: "include" })
+            .then(response => response.ok ? response.json() : null)
+            .then(data => {
+                const profile = data && data.profile;
+                if (!profile) return;
+
+                const fields = {
+                    fullName: profile.fullName,
+                    emailAddress: profile.emailAddress,
+                    mobileNumber: profile.mobileNumber,
+                    userType: profile.userType,
+                    dob: profile.dob,
+                    preferredDomain: profile.preferredDomain,
+                    experienceLevel: profile.experienceLevel,
+                    githubProfile: profile.githubProfile,
+                    linkedinProfile: profile.linkedinProfile
+                };
+
+                Object.entries(fields).forEach(([id, value]) => {
+                    if (value !== undefined && value !== null) {
+                        const field = document.getElementById(id);
+                        if (field) field.value = value;
+                    }
+                });
+            })
+            .catch(() => { });
+
         document.getElementById('registrationForm').addEventListener('submit', async function (event) {
             event.preventDefault();
 
@@ -300,7 +332,7 @@
             const formData = new FormData(this);
 
             try {
-                const response = await fetch("http://localhost:5500/submit-registration", {
+                const response = await fetch(`${apiOrigin}/submit-registration`, {
                     method: "POST",
                     body: formData
                 });
@@ -311,16 +343,14 @@
                     : { message: await response.text() };
 
                 if (response.ok) {
-                    alert("Registration Successful!\n" + data.message);
-
                     localStorage.setItem("loggedInUser", JSON.stringify(data.user));
-                    window.location.href = "profile.html";
+                    window.location.assign("index.html");
                 } else {
                     alert("Error: " + (data.detail || data.message || "Registration failed."));
                 }
             } catch (error) {
                 console.error("Connection Error:", error);
-                alert("Could not connect to server.js. Make sure it is running on port 5500.");
+                alert("Could not connect to server.js. Make sure it is running on port 8800.");
             } finally {
                 submitBtn.innerText = "Register & Index Profile";
                 submitBtn.disabled = false;

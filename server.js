@@ -75,7 +75,12 @@ function getSessionUser(req) {
 }
 
 function publicUser(user) {
-    return { id: user.id, name: user.name, email: user.email };
+    return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        profile: user.profile || null
+    };
 }
 
 app.post("/api/auth/register", (req, res) => {
@@ -97,7 +102,11 @@ app.post("/api/auth/register", (req, res) => {
     users.push(user);
     writeUsers(users);
     createSession(res, user);
-    return res.status(201).json({ user: publicUser(user) });
+    return res.status(201).json({
+        message: "Account created successfully.",
+        redirect: "index.html",
+        user: publicUser(user)
+    });
 });
 
 app.post("/api/auth/login", (req, res) => {
@@ -151,6 +160,44 @@ app.post("/api/auth/google", async (req, res) => {
 app.get("/api/auth/me", (req, res) => {
     const user = getSessionUser(req);
     return user ? res.json({ user: publicUser(user) }) : res.status(401).json({ message: "Not authenticated." });
+});
+
+app.get("/api/profile", (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ message: "Not authenticated." });
+
+    return res.json({
+        user: publicUser(user),
+        profile: user.profile || {
+            fullName: user.name,
+            emailAddress: user.email
+        }
+    });
+});
+
+app.put("/api/profile", (req, res) => {
+    const user = getSessionUser(req);
+    if (!user) return res.status(401).json({ message: "Not authenticated." });
+
+    const profile = req.body || {};
+    const fullName = String(profile.fullName || user.name).trim();
+    const emailAddress = String(profile.emailAddress || user.email).trim().toLowerCase();
+    if (!fullName || !emailAddress) {
+        return res.status(400).json({ message: "Full name and email are required." });
+    }
+
+    const users = readUsers();
+    const duplicate = users.find(candidate => candidate.email === emailAddress && candidate.id !== user.id);
+    if (duplicate) return res.status(409).json({ message: "An account with this email already exists." });
+
+    user.name = fullName;
+    user.email = emailAddress;
+    user.profile = { ...profile, fullName, emailAddress };
+    const userIndex = users.findIndex(candidate => candidate.id === user.id);
+    users[userIndex] = user;
+    writeUsers(users);
+
+    return res.json({ message: "Profile updated successfully.", user: publicUser(user) });
 });
 
 app.post("/api/auth/logout", (req, res) => {
@@ -208,7 +255,7 @@ app.post("/submit-registration", upload.single("resumeFile"), (req, res) => {
     const fullName = (req.body.fullName && req.body.fullName.trim()) || detectedIdentity.fullName;
     const dob = (req.body.dob && req.body.dob.trim()) || detectedIdentity.dob;
 
-    const user = {
+    const profile = {
         fullName,
         emailAddress: req.body.emailAddress,
         mobileNumber: req.body.mobileNumber,
@@ -223,7 +270,7 @@ app.post("/submit-registration", upload.single("resumeFile"), (req, res) => {
         resume: req.file ? req.file.filename : null
     };
 
-    const accountEmail = String(user.emailAddress || "").trim().toLowerCase();
+    const accountEmail = String(profile.emailAddress || "").trim().toLowerCase();
     if (accountEmail) {
         const users = readUsers();
         let accountUser = users.find(candidate => candidate.email === accountEmail);
@@ -237,33 +284,50 @@ app.post("/submit-registration", upload.single("resumeFile"), (req, res) => {
                 passwordHash: ""
             };
             users.push(accountUser);
-            writeUsers(users);
         }
 
+        accountUser.name = fullName || accountUser.name;
+        accountUser.profile = profile;
+        writeUsers(users);
         createSession(res, accountUser);
     }
 
     console.log("--------------------------------");
     console.log("New Registration");
-    console.log(user);
+    console.log(profile);
     console.log("--------------------------------");
 
     res.json({
         status: "success",
         message: `Registration successful for ${fullName}`,
-        user
+        redirect: "index.html",
+        user: profile
     });
 });
 
 
 // Start Server
 
-const PORT = Number(process.env.PORT || 5500);
-
-app.listen(PORT, () => {
-
+const PORT = Number(process.env.PORT || 9999);
+const server = app.listen(PORT, () => {
     console.log("Server Running");
     console.log(`http://localhost:${PORT}/register.html`);
     console.log(`http://localhost:${PORT}/create-account.html`);
+});
 
+server.on("error", error => {
+    if (error.code === "EADDRINUSE") {
+        console.error(`Port ${PORT} is already in use. Stop the other process or use a different PORT.`);
+    } else {
+        console.error("Server error:", error);
+    }
+    process.exitCode = 1;
+});
+
+process.on("uncaughtException", error => {
+    console.error("Unexpected server error:", error);
+});
+
+process.on("unhandledRejection", error => {
+    console.error("Unhandled promise rejection:", error);
 });
