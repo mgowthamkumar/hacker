@@ -1,7 +1,7 @@
 (() => {
     const localHosts = ["localhost", "127.0.0.1", "::1"];
     const isLocalPage = localHosts.includes(window.location.hostname);
-    const deployedApiOrigin = "https://autohire-api.onrender.com";
+    const deployedApiOrigin = "https://YOUR-VERCEL-APP.vercel.app";
     const apiOrigin = window.location.protocol === "file:" || isLocalPage
         ? "http://localhost:8800"
         : deployedApiOrigin;

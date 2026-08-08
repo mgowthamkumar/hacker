@@ -354,51 +354,53 @@ app.post("/submit-registration", upload.single("resumeFile"), (req, res) => {
 });
 
 
-// Start Server
+if (require.main === module) {
+    const PORT = Number(process.env.PORT || 8800);
+    const HOST = process.env.HOST || "0.0.0.0";
+    const server = app.listen(PORT, HOST, () => {
+        console.log("Server Running");
+        console.log(`Local: http://localhost:${PORT}/register.html`);
+        console.log(`Network: http://<your-computer-ip>:${PORT}/register.html`);
+        startAnalyzerBackend();
+        startJobsBackend();
+    });
 
-const PORT = Number(process.env.PORT || 8800);
-const HOST = process.env.HOST || "0.0.0.0";
-const server = app.listen(PORT, HOST, () => {
-    console.log("Server Running");
-    console.log(`Local: http://localhost:${PORT}/register.html`);
-    console.log(`Network: http://<your-computer-ip>:${PORT}/register.html`);
-    startAnalyzerBackend();
-    startJobsBackend();
-});
+    server.on("error", error => {
+        if (error.code === "EADDRINUSE") {
+            console.error(`Port ${PORT} is already in use. Stop the other process or use a different PORT.`);
+        } else {
+            console.error("Server error:", error);
+        }
+        process.exitCode = 1;
+    });
 
-server.on("error", error => {
-    if (error.code === "EADDRINUSE") {
-        console.error(`Port ${PORT} is already in use. Stop the other process or use a different PORT.`);
-    } else {
-        console.error("Server error:", error);
+    process.on("uncaughtException", error => {
+        console.error("Unexpected server error:", error);
+    });
+
+    process.on("unhandledRejection", error => {
+        console.error("Unhandled promise rejection:", error);
+    });
+
+    function stopAnalyzerBackend() {
+        if (analyzerProcess && !analyzerProcess.killed) analyzerProcess.kill();
     }
-    process.exitCode = 1;
-});
 
-process.on("uncaughtException", error => {
-    console.error("Unexpected server error:", error);
-});
+    function stopJobsBackend() {
+        if (jobsProcess && !jobsProcess.killed) jobsProcess.kill();
+    }
 
-process.on("unhandledRejection", error => {
-    console.error("Unhandled promise rejection:", error);
-});
+    process.on("SIGINT", () => {
+        stopAnalyzerBackend();
+        stopJobsBackend();
+        server.close(() => process.exit(0));
+    });
 
-function stopAnalyzerBackend() {
-    if (analyzerProcess && !analyzerProcess.killed) analyzerProcess.kill();
+    process.on("SIGTERM", () => {
+        stopAnalyzerBackend();
+        stopJobsBackend();
+        server.close(() => process.exit(0));
+    });
 }
 
-function stopJobsBackend() {
-    if (jobsProcess && !jobsProcess.killed) jobsProcess.kill();
-}
-
-process.on("SIGINT", () => {
-    stopAnalyzerBackend();
-    stopJobsBackend();
-    server.close(() => process.exit(0));
-});
-
-process.on("SIGTERM", () => {
-    stopAnalyzerBackend();
-    stopJobsBackend();
-    server.close(() => process.exit(0));
-});
+module.exports = app;
