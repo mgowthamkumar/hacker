@@ -176,7 +176,24 @@
                 }
                 window.location.href = data.redirect || landingPage;
             } catch (error) {
-                alert("Cannot connect to the backend. Start server.js first.");
+                const users = JSON.parse(localStorage.getItem("autoHireUsers") || "[]");
+                if (users.some(user => user.email === email.toLowerCase())) {
+                    alert("An account with this email already exists.");
+                    return;
+                }
+
+                const user = {
+                    id: crypto.randomUUID(),
+                    name,
+                    email: email.toLowerCase(),
+                    password,
+                    profile: { fullName: name, emailAddress: email.toLowerCase() }
+                };
+                users.push(user);
+                localStorage.setItem("autoHireUsers", JSON.stringify(users));
+                localStorage.setItem("autoHireProfile", JSON.stringify(user));
+                localStorage.setItem("loggedInUser", JSON.stringify(user));
+                window.location.href = landingPage;
             }
         });
 

@@ -208,15 +208,20 @@
         const apiUrl = "http://localhost:8800/api/auth";
 
         fetch(`${apiUrl}/me`, { credentials: "include" }).then(async response => {
-            if (!response.ok) {
+            const localUser = JSON.parse(localStorage.getItem("autoHireProfile") || localStorage.getItem("loggedInUser") || "null");
+            if (!response.ok && !localUser) {
                 window.location.href = "index.html";
                 return;
             }
 
-            const { user } = await response.json();
+            const { user } = response.ok ? await response.json() : { user: localUser };
             document.getElementById("username").innerHTML = user.name;
             document.getElementById("email").innerHTML = user.email;
             document.getElementById("avatar").innerHTML = user.name.charAt(0).toUpperCase();
+        }).catch(() => {
+            if (!localStorage.getItem("autoHireProfile") && !localStorage.getItem("loggedInUser")) {
+                window.location.href = "index.html";
+            }
         });
 
         function goHome() {
@@ -228,6 +233,8 @@
         function logout() {
 
             fetch(`${apiUrl}/logout`, { method: "POST", credentials: "include" }).finally(() => {
+                localStorage.removeItem("loggedInUser");
+                localStorage.removeItem("autoHireProfile");
                 window.location.href = "index.html";
             });
 

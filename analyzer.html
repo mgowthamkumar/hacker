@@ -450,7 +450,10 @@
             formData.append("company_skills", companySkillsInput.value);
 
             try {
-                const response = await fetch("http://127.0.0.1:5503/analyzer", {
+                const analyzerOrigin = window.location.protocol === "file:"
+                    ? "http://127.0.0.1:5503"
+                    : `${window.location.protocol}//${window.location.hostname}:5503`;
+                const response = await fetch(`${analyzerOrigin}/analyzer`, {
                     method: "POST",
                     body: formData
                 });

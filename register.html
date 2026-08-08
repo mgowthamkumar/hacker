@@ -350,7 +350,19 @@
                 }
             } catch (error) {
                 console.error("Connection Error:", error);
-                alert("Could not connect to server.js. Make sure it is running on port 8800.");
+                const profile = Object.fromEntries(formData.entries());
+                delete profile.resumeFile;
+                profile.resume = document.getElementById("resumeFile").files[0]?.name || null;
+                const user = {
+                    id: crypto.randomUUID(),
+                    name: profile.fullName || profile.emailAddress.split("@")[0],
+                    email: profile.emailAddress.toLowerCase(),
+                    profile
+                };
+                localStorage.setItem("loggedInUser", JSON.stringify(user));
+                localStorage.setItem("autoHireProfile", JSON.stringify(user));
+                alert("Your profile was saved in this browser. Start the backend later to enable server storage and resume uploads.");
+                window.location.assign("index.html");
             } finally {
                 submitBtn.innerText = "Register & Index Profile";
                 submitBtn.disabled = false;

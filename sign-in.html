@@ -197,6 +197,10 @@
         const apiUrl = `${apiOrigin}/api/auth`;
         const loginMessage = document.getElementById("loginMessage");
 
+        function showServerError() {
+            loginMessage.textContent = `Cannot connect to AutoHire. Start the server with "npm start" and try again (${apiOrigin}).`;
+        }
+
         async function handleCredentialResponse(response) {
             try {
                 const loginResponse = await fetch(`${apiUrl}/google`, {
@@ -212,7 +216,7 @@
                 }
                 window.location.href = "index.html";
             } catch (error) {
-                loginMessage.textContent = "Cannot connect to the AutoHire server.";
+                showServerError();
             }
         }
 
@@ -240,7 +244,17 @@
                 }
                 window.location.href = "index.html";
             } catch (error) {
-                loginMessage.textContent = "Cannot connect to the AutoHire server.";
+                const email = document.getElementById("emailInput").value.trim().toLowerCase();
+                const password = document.getElementById("passInput").value;
+                const users = JSON.parse(localStorage.getItem("autoHireUsers") || "[]");
+                const user = users.find(candidate => candidate.email === email && candidate.password === password);
+                if (!user) {
+                    loginMessage.textContent = "Invalid email or password.";
+                    return;
+                }
+                localStorage.setItem("autoHireProfile", JSON.stringify(user));
+                localStorage.setItem("loggedInUser", JSON.stringify(user));
+                window.location.href = "index.html";
             } finally {
                 loginButton.disabled = false;
                 loginButton.textContent = "Sign in";

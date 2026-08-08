@@ -525,6 +525,8 @@
         fetch(`${apiOrigin}/api/profile`, { credentials: "include" })
             .then(response => response.ok ? response.json() : null)
             .then(data => {
+                const localUser = JSON.parse(localStorage.getItem("autoHireProfile") || localStorage.getItem("loggedInUser") || "null");
+                if (!data || !data.user) data = localUser ? { user: localUser, profile: localUser.profile } : null;
                 if (!data || !data.user) return;
                 const name = data.user.name || data.user.email;
                 const profile = data.profile || {};
@@ -557,6 +559,8 @@
                     credentials: "include"
                 });
             } finally {
+                localStorage.removeItem("loggedInUser");
+                localStorage.removeItem("autoHireProfile");
                 window.location.href = "index.html";
             }
         });

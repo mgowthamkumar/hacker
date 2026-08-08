@@ -4,8 +4,49 @@ const path = require("path");
 const fs = require("fs");
 const cors = require("cors");
 const crypto = require("crypto");
+const { spawn } = require("child_process");
 
 const app = express();
+let analyzerProcess;
+let jobsProcess;
+
+function startAnalyzerBackend() {
+    const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === "win32" ? "python" : "python3");
+    analyzerProcess = spawn(pythonCommand, [path.join(__dirname, "app1.py")], {
+        cwd: __dirname,
+        env: { ...process.env, PORT: "5503" },
+        stdio: "inherit",
+        windowsHide: true
+    });
+
+    analyzerProcess.on("error", error => {
+        console.error("Could not start app1.py automatically:", error.message);
+    });
+    analyzerProcess.on("exit", (code, signal) => {
+        if (code !== 0 && signal !== "SIGTERM") {
+            console.error(`app1.py stopped (code ${code}, signal ${signal || "none"}).`);
+        }
+    });
+}
+
+function startJobsBackend() {
+    const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === "win32" ? "python" : "python3");
+    jobsProcess = spawn(pythonCommand, [path.join(__dirname, "backendreal.py")], {
+        cwd: __dirname,
+        env: { ...process.env, PORT: "5501" },
+        stdio: "inherit",
+        windowsHide: true
+    });
+
+    jobsProcess.on("error", error => {
+        console.error("Could not start backendreal.py automatically:", error.message);
+    });
+    jobsProcess.on("exit", (code, signal) => {
+        if (code !== 0 && signal !== "SIGTERM") {
+            console.error(`backendreal.py stopped (code ${code}, signal ${signal || "none"}).`);
+        }
+    });
+}
 
 app.use(cors({ origin: true, credentials: true }));
 
@@ -14,6 +55,10 @@ app.use(express.json());
 
 // Serve HTML file
 app.use(express.static(__dirname));
+
+app.get("/health", (req, res) => {
+    res.json({ status: "ok" });
+});
 
 app.get("/create-account", (req, res) => {
     res.sendFile(path.join(__dirname, "create-account.html"));
@@ -308,11 +353,14 @@ app.post("/submit-registration", upload.single("resumeFile"), (req, res) => {
 
 // Start Server
 
-const PORT = Number(process.env.PORT || 9999);
-const server = app.listen(PORT, () => {
+const PORT = Number(process.env.PORT || 8800);
+const HOST = process.env.HOST || "0.0.0.0";
+const server = app.listen(PORT, HOST, () => {
     console.log("Server Running");
-    console.log(`http://localhost:${PORT}/register.html`);
-    console.log(`http://localhost:${PORT}/create-account.html`);
+    console.log(`Local: http://localhost:${PORT}/register.html`);
+    console.log(`Network: http://<your-computer-ip>:${PORT}/register.html`);
+    startAnalyzerBackend();
+    startJobsBackend();
 });
 
 server.on("error", error => {
@@ -330,4 +378,24 @@ process.on("uncaughtException", error => {
 
 process.on("unhandledRejection", error => {
     console.error("Unhandled promise rejection:", error);
+});
+
+function stopAnalyzerBackend() {
+    if (analyzerProcess && !analyzerProcess.killed) analyzerProcess.kill();
+}
+
+function stopJobsBackend() {
+    if (jobsProcess && !jobsProcess.killed) jobsProcess.kill();
+}
+
+process.on("SIGINT", () => {
+    stopAnalyzerBackend();
+    stopJobsBackend();
+    server.close(() => process.exit(0));
+});
+
+process.on("SIGTERM", () => {
+    stopAnalyzerBackend();
+    stopJobsBackend();
+    server.close(() => process.exit(0));
 });
