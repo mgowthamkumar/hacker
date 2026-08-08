@@ -410,6 +410,7 @@
         </div>
     </div>
 
+    <script src="api-config.js"></script>
     <script>
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('file-input');
@@ -450,10 +451,13 @@
             formData.append("company_skills", companySkillsInput.value);
 
             try {
-                const analyzerOrigin = window.location.protocol === "file:"
+                const analyzerOrigin = window.location.protocol === "file:" || ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
                     ? "http://127.0.0.1:5503"
-                    : `${window.location.protocol}//${window.location.hostname}:5503`;
-                const response = await fetch(`${analyzerOrigin}/analyzer`, {
+                    : window.AUTOHIRE_API_ORIGIN;
+                const analyzerPath = window.location.protocol === "file:" || ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
+                    ? "/analyzer"
+                    : "/api/analyzer";
+                const response = await fetch(`${analyzerOrigin}${analyzerPath}`, {
                     method: "POST",
                     body: formData
                 });

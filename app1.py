@@ -182,6 +182,7 @@ def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
 
 
 @app.post("/analyzer", response_model=AnalysisResult)
+@app.post("/api/analyzer", response_model=AnalysisResult)
 async def analyze_resume(file: UploadFile = File(...), company_skills: str = Form("")):
     contents = await file.read()
     raw_text = extract_text_from_file(contents, file.filename)
