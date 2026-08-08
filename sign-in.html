@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Sign in to your AutoHire career workspace.">
-    <meta name="autohire-api-origin" content="">
     <title>Sign in | AutoHire</title>
     <script src="https://accounts.google.com/gsi/client" async></script>
+    <script src="api-config.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -191,26 +191,15 @@
     </main>
 
     <script>
-        const isLocalPage = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-        const configuredApiOrigin = document.querySelector('meta[name="autohire-api-origin"]').content.trim().replace(/\/$/, "");
-        const isGitHubPages = window.location.hostname.endsWith(".github.io");
-        const apiOrigin = configuredApiOrigin || (window.location.protocol === "file:" || isLocalPage
-            ? "http://localhost:8800"
-            : isGitHubPages ? "" : window.location.origin);
-        const apiUrl = apiOrigin ? `${apiOrigin}/api/auth` : "";
+        const apiOrigin = window.AUTOHIRE_API_ORIGIN;
+        const apiUrl = window.AUTOHIRE_API_URL;
         const loginMessage = document.getElementById("loginMessage");
 
         function showServerError() {
-            loginMessage.textContent = apiOrigin
-                ? `Cannot connect to the AutoHire backend at ${apiOrigin}.`
-                : "Google sign-in needs a deployed AutoHire backend. Set the autohire-api-origin value in sign-in.html.";
+            loginMessage.textContent = `Cannot connect to the AutoHire backend at ${apiOrigin}.`;
         }
 
         async function handleCredentialResponse(response) {
-            if (!apiUrl) {
-                showServerError();
-                return;
-            }
             try {
                 const loginResponse = await fetch(`${apiUrl}/google`, {
                     method: "POST",

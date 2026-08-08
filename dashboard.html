@@ -682,9 +682,10 @@
         </div>
     </footer>
 
+    <script src="api-config.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const apiUrl = `${window.location.protocol === 'file:' ? 'http://localhost:8800' : window.location.origin}/api/auth`;
+            const apiUrl = window.AUTOHIRE_API_URL;
 
             fetch(`${apiUrl}/me`, { credentials: 'include' }).then(response => {
                 if (!response.ok) window.location.href = 'index.html';
@@ -717,6 +718,5 @@
             });
         });
     </script>
-</body>
 
 </html>

@@ -501,12 +501,10 @@
 
     <footer>AutoHire · A focused starting point for your career journey</footer>
 
+    <script src="api-config.js"></script>
     <script>
-        const isLocalPage = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-        const apiOrigin = window.location.protocol === "file:" || isLocalPage
-            ? "http://localhost:8800"
-            : window.location.origin;
-        const apiUrl = `${apiOrigin}/api/auth`;
+        const apiOrigin = window.AUTOHIRE_API_ORIGIN;
+        const apiUrl = window.AUTOHIRE_API_URL;
         const accountButton = document.getElementById("accountButton");
         const accountLogo = document.getElementById("accountLogo");
         const accountName = document.getElementById("accountName");

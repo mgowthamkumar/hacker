@@ -281,11 +281,9 @@
         </form>
     </div>
 
+    <script src="api-config.js"></script>
     <script>
-        const isLocalPage = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-        const apiOrigin = window.location.protocol === "file:" || isLocalPage
-            ? "http://localhost:8800"
-            : window.location.origin;
+        const apiOrigin = window.AUTOHIRE_API_ORIGIN;
 
         fetch(`${apiOrigin}/api/profile`, { credentials: "include" })
             .then(response => response.ok ? response.json() : null)

@@ -203,9 +203,10 @@
 
     </div>
 
+    <script src="api-config.js"></script>
     <script>
 
-        const apiUrl = "http://localhost:8800/api/auth";
+        const apiUrl = window.AUTOHIRE_API_URL;
 
         fetch(`${apiUrl}/me`, { credentials: "include" }).then(async response => {
             const localUser = JSON.parse(localStorage.getItem("autoHireProfile") || localStorage.getItem("loggedInUser") || "null");
