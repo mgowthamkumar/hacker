@@ -49,6 +49,7 @@ function startJobsBackend() {
 }
 
 app.use(cors({ origin: true, credentials: true }));
+app.set("trust proxy", 1);
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -100,11 +101,13 @@ function parseCookies(req) {
     }));
 }
 
-function createSession(res, user) {
+function createSession(req, res, user) {
     const sessionId = crypto.randomBytes(32).toString("hex");
     const signature = crypto.createHmac("sha256", sessionSecret).update(sessionId).digest("hex");
     sessions.set(sessionId, user.id);
-    res.setHeader("Set-Cookie", `session=${sessionId}.${signature}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`);
+    const isHttps = req.secure || req.headers["x-forwarded-proto"] === "https";
+    const cookieOptions = `HttpOnly; SameSite=${isHttps ? "None" : "Lax"}; Path=/; Max-Age=86400${isHttps ? "; Secure" : ""}`;
+    res.setHeader("Set-Cookie", `session=${sessionId}.${signature}; ${cookieOptions}`);
 }
 
 function getSessionUser(req) {
@@ -146,7 +149,7 @@ app.post("/api/auth/register", (req, res) => {
     const user = { id: crypto.randomUUID(), name, email, passwordSalt: passwordData.salt, passwordHash: passwordData.hash };
     users.push(user);
     writeUsers(users);
-    createSession(res, user);
+    createSession(req, res, user);
     return res.status(201).json({
         message: "Account created successfully.",
         redirect: "index.html",
@@ -163,7 +166,7 @@ app.post("/api/auth/login", (req, res) => {
         return res.status(401).json({ message: "Invalid email or password." });
     }
 
-    createSession(res, user);
+    createSession(req, res, user);
     return res.json({ user: publicUser(user) });
 });
 
@@ -194,7 +197,7 @@ app.post("/api/auth/google", async (req, res) => {
             writeUsers(users);
         }
 
-        createSession(res, user);
+        createSession(req, res, user);
         return res.json({ user: publicUser(user) });
     } catch (error) {
         console.error("Google sign-in error:", error.message);
@@ -334,7 +337,7 @@ app.post("/submit-registration", upload.single("resumeFile"), (req, res) => {
         accountUser.name = fullName || accountUser.name;
         accountUser.profile = profile;
         writeUsers(users);
-        createSession(res, accountUser);
+        createSession(req, res, accountUser);
     }
 
     console.log("--------------------------------");
