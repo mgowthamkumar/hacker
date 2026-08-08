@@ -67,7 +67,7 @@ app.get("/create-account", (req, res) => {
 const usersFile = path.join(__dirname, "users.json");
 const sessions = new Map();
 const sessionSecret = process.env.SESSION_SECRET || "autohire-development-secret";
-const googleClientId = process.env.GOOGLE_CLIENT_ID || "985018230796-l4mivu7or4h81n86na3rpgu0c8ru53ot.apps.googleusercontent.com";
+const googleClientId = process.env.GOOGLE_CLIENT_ID || "869568422226-14fcbs1j1esdl1f0phijfhoude5il7qk.apps.googleusercontent.com";
 fs.mkdirSync(path.join(__dirname, "uploads"), { recursive: true });
 
 function readUsers() {
