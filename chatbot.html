@@ -241,7 +241,7 @@
     const agentMessage = document.getElementById("agentMessage");
 
     // 2. Fetch Data from Python Backend AI Agent
-    const backendBaseUrl = window.location.origin || "http://127.0.0.1:5501";
+    const backendBaseUrl = window.location.port === "8800" ? window.location.origin : "http://127.0.0.1:8800";
 
     function getFallbackJobs(userQuery) {
       const query = (userQuery || "").toLowerCase();
@@ -317,11 +317,28 @@
       agentMessage.style.display = "none";
 
       const userQuery = aiPromptInput.value.trim() || "Software Engineer";
-      const fallbackData = getFallbackJobs(userQuery);
 
-      agentMessage.innerText = `🤖 Agent: Showing curated opportunities for "${userQuery}".`;
-      agentMessage.style.display = "block";
-      displayJobs(fallbackData);
+      try {
+        const response = await fetch(
+          `${backendBaseUrl}/api/jobs?prompt=${encodeURIComponent(userQuery)}`,
+        );
+
+        if (!response.ok) {
+          throw new Error("Backend connection failed");
+        }
+
+        const data = await response.json();
+        const opportunities = Array.isArray(data) ? data : [];
+
+        agentMessage.innerText = `🤖 Agent: I analyzed your prompt and found ${opportunities.length} opportunities matching your request!`;
+        agentMessage.style.display = "block";
+        displayJobs(opportunities);
+      } catch (error) {
+        const fallbackData = getFallbackJobs(userQuery);
+        agentMessage.innerText = `🤖 Agent: Backend unavailable, showing suggested opportunities for "${userQuery}".`;
+        agentMessage.style.display = "block";
+        displayJobs(fallbackData);
+      }
     }
 
     // 3. Draw the cards on the screen
