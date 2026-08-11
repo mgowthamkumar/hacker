@@ -61,6 +61,30 @@ app.get("/health", (req, res) => {
     res.json({ status: "ok" });
 });
 
+app.get("/api/jobs", async (req, res) => {
+    try {
+        const jobsBackendPort = process.env.JOBS_BACKEND_PORT || "5501";
+        const upstreamUrl = new URL(`http://127.0.0.1:${jobsBackendPort}/api/jobs`);
+        upstreamUrl.search = req.originalUrl.replace(/^\/api\/jobs/, "") || "";
+
+        const response = await fetch(upstreamUrl.toString(), {
+            headers: {
+                Accept: "application/json"
+            }
+        });
+
+        const payload = await response.text();
+        res.status(response.status);
+        res.set("content-type", response.headers.get("content-type") || "application/json");
+        res.send(payload);
+    } catch (error) {
+        res.status(502).json({
+            error: "Jobs backend unavailable",
+            detail: error.message
+        });
+    }
+});
+
 app.get("/create-account", (req, res) => {
     res.sendFile(path.join(__dirname, "create-account.html"));
 });

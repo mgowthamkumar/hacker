@@ -241,9 +241,75 @@
     const agentMessage = document.getElementById("agentMessage");
 
     // 2. Fetch Data from Python Backend AI Agent
-    const backendHost = "127.0.0.1";
-    const backendPort = "5501";
-    const backendBaseUrl = `http://${backendHost}:${backendPort}`;
+    const backendBaseUrl = window.location.origin || "http://127.0.0.1:5501";
+
+    function getFallbackJobs(userQuery) {
+      const query = (userQuery || "").toLowerCase();
+      const fallbackJobs = [
+        {
+          company: "GOOGLE",
+          title: "Software Engineer",
+          type: "Job",
+          domain: "Technology",
+          ribbonText: "Featured",
+          ribbonClass: "",
+          apply_link: "https://careers.google.com/",
+        },
+        {
+          company: "MICROSOFT",
+          title: "Product Manager Intern",
+          type: "Internship",
+          domain: "Product",
+          ribbonText: "Internship",
+          ribbonClass: "intern",
+          apply_link: "https://careers.microsoft.com/",
+        },
+        {
+          company: "MLH",
+          title: "Global Hackathon Season",
+          type: "Hackathon",
+          domain: "Build",
+          ribbonText: "Register Now",
+          ribbonClass: "hackathon",
+          apply_link: "https://mlh.io/",
+        },
+        {
+          company: "OPENAI",
+          title: "Research Engineer",
+          type: "Job",
+          domain: "AI",
+          ribbonText: "High Demand",
+          ribbonClass: "",
+          apply_link: "https://openai.com/careers/",
+        },
+      ];
+
+      if (query.includes("hackathon") || query.includes("contest")) {
+        return [fallbackJobs[2], fallbackJobs[0], fallbackJobs[3]];
+      }
+
+      if (query.includes("intern")) {
+        return [fallbackJobs[1], fallbackJobs[0], fallbackJobs[3]];
+      }
+
+      if (query.includes("backend")) {
+        return [{ ...fallbackJobs[0], title: "Backend Developer" }];
+      }
+
+      if (query.includes("frontend")) {
+        return [{ ...fallbackJobs[0], title: "Frontend Developer" }];
+      }
+
+      if (query.includes("data") || query.includes("ai") || query.includes("ml")) {
+        return [{ ...fallbackJobs[3], title: "AI / ML Engineer" }];
+      }
+
+      if (query.includes("cyber")) {
+        return [{ ...fallbackJobs[0], title: "Cybersecurity Analyst" }];
+      }
+
+      return fallbackJobs;
+    }
 
     async function fetchAgentJobs() {
       jobsContainer.innerHTML =
@@ -262,21 +328,18 @@
         }
 
         const data = await response.json();
+        const opportunities = Array.isArray(data) ? data : [];
 
         // Show the AI agent's conversational response
-        agentMessage.innerText = `🤖 Agent: I analyzed your prompt and found ${data.length} live opportunities matching your request!`;
+        agentMessage.innerText = `🤖 Agent: I analyzed your prompt and found ${opportunities.length} live opportunities matching your request!`;
         agentMessage.style.display = "block";
 
-        displayJobs(data);
+        displayJobs(opportunities);
       } catch (error) {
-        jobsContainer.innerHTML = `
-            <div class="status-message" style="color: #ef4444; border-color: #ef4444;">
-                <h3>⚠️ Cannot connect to the Python Backend.</h3>
-                <p style="font-size: 14px; color: #94a3b8; margin-top: 10px;">
-                    Make sure your FastAPI server is running on port 5501!
-                </p>
-            </div>
-        `;
+        const fallbackData = getFallbackJobs(userQuery);
+        agentMessage.innerText = `🤖 Agent: Backend unavailable, showing suggested opportunities for "${userQuery}".`;
+        agentMessage.style.display = "block";
+        displayJobs(fallbackData);
       }
     }
 
