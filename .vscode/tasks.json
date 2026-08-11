@@ -17,6 +17,32 @@
             "runOptions": {
                 "runOn": "folderOpen"
             }
+        },
+        {
+            "label": "Start Python FastAPI backend",
+            "type": "shell",
+            "command": "py",
+            "args": [
+                "-m",
+                "uvicorn",
+                "backendreal:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "5501"
+            ],
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "never",
+                "focus": false,
+                "panel": "dedicated",
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
         }
     ]
 }
