@@ -241,6 +241,10 @@
     const agentMessage = document.getElementById("agentMessage");
 
     // 2. Fetch Data from Python Backend AI Agent
+    const backendHost = window.location.hostname || "127.0.0.1";
+    const backendPort = "5501";
+    const backendBaseUrl = `http://${backendHost}:${backendPort}`;
+
     async function fetchAgentJobs() {
       jobsContainer.innerHTML =
         '<div class="status-message">🤖 AI Agent is thinking and analyzing your request...</div>';
@@ -250,7 +254,7 @@
 
       try {
         const response = await fetch(
-          `http://127.0.0.1:5501/api/jobs?prompt=${encodeURIComponent(userQuery)}`,
+          `${backendBaseUrl}/api/jobs?prompt=${encodeURIComponent(userQuery)}`,
         );
 
         if (!response.ok) {
