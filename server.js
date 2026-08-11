@@ -30,8 +30,8 @@ function startAnalyzerBackend() {
 }
 
 function startJobsBackend() {
-    const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === "win32" ? "python" : "python3");
-    jobsProcess = spawn(pythonCommand, [path.join(__dirname, "backendreal.py")], {
+    const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === "win32" ? "py" : "python3");
+    jobsProcess = spawn(pythonCommand, ["-m", "uvicorn", "backendreal:app", "--host", "127.0.0.1", "--port", "5501"], {
         cwd: __dirname,
         env: { ...process.env, PORT: "5501" },
         stdio: "inherit",
