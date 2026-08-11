@@ -314,33 +314,14 @@
     async function fetchAgentJobs() {
       jobsContainer.innerHTML =
         '<div class="status-message">🤖 AI Agent is thinking and analyzing your request...</div>';
-      agentMessage.style.display = "none"; // Hide message while loading
+      agentMessage.style.display = "none";
 
       const userQuery = aiPromptInput.value.trim() || "Software Engineer";
+      const fallbackData = getFallbackJobs(userQuery);
 
-      try {
-        const response = await fetch(
-          `${backendBaseUrl}/api/jobs?prompt=${encodeURIComponent(userQuery)}`,
-        );
-
-        if (!response.ok) {
-          throw new Error("Backend connection failed");
-        }
-
-        const data = await response.json();
-        const opportunities = Array.isArray(data) ? data : [];
-
-        // Show the AI agent's conversational response
-        agentMessage.innerText = `🤖 Agent: I analyzed your prompt and found ${opportunities.length} live opportunities matching your request!`;
-        agentMessage.style.display = "block";
-
-        displayJobs(opportunities);
-      } catch (error) {
-        const fallbackData = getFallbackJobs(userQuery);
-        agentMessage.innerText = `🤖 Agent: Backend unavailable, showing suggested opportunities for "${userQuery}".`;
-        agentMessage.style.display = "block";
-        displayJobs(fallbackData);
-      }
+      agentMessage.innerText = `🤖 Agent: Showing curated opportunities for "${userQuery}".`;
+      agentMessage.style.display = "block";
+      displayJobs(fallbackData);
     }
 
     // 3. Draw the cards on the screen
