@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run backendreal.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/backendreal.py",
+            "console": "internalConsole",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PORT": "5501"
+            }
+        }
+    ]
+}

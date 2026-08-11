@@ -21,16 +21,16 @@
         {
             "label": "Start Python FastAPI backend",
             "type": "shell",
-            "command": "py",
+            "command": "python",
             "args": [
-                "-m",
-                "uvicorn",
-                "backendreal:app",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                "5501"
+                "backendreal.py"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "PORT": "5501"
+                }
+            },
             "isBackground": true,
             "problemMatcher": [],
             "presentation": {
