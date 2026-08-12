@@ -27,8 +27,10 @@ vercel --prod
 ```
 
 4) Environment variables
-- The container listens on port `5501`. Vercel provides the port; the Dockerfile exposes `5501` and `uvicorn` binds to `0.0.0.0`.
-- To override host or port, set `HOST` or `PORT` environment variables in the Vercel project settings.
+- The container listens on port `5501`. The Dockerfile exposes `5501`.
+- By default the containerized app binds to `127.0.0.1` (localhost) to match local development environments. This avoids exposing the server unintentionally when running locally.
+- To allow external access from the container (required for many cloud/container platforms), set `HOST=0.0.0.0` in your deployment environment.
+- To override port, set `PORT` (default `5501`).
 
 5) Notes
 - This uses a container (Docker) build which may consume build minutes on Vercel depending on your plan.

@@ -12,4 +12,6 @@ COPY . /app
 
 EXPOSE 5501
 
-CMD ["uvicorn", "backendreal:app", "--host", "0.0.0.0", "--port", "5501"]
+# Use environment variables for host/port. Default host is localhost to match local-only setups.
+# To allow external access from the container (e.g., when deploying), set HOST=0.0.0.0.
+CMD ["sh", "-c", "uvicorn backendreal:app --host ${HOST:-127.0.0.1} --port ${PORT:-5501}"]
