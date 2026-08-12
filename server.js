@@ -31,7 +31,7 @@ function startAnalyzerBackend() {
 
 function startJobsBackend() {
     const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === "win32" ? "py" : "python3");
-    const jobsHost = process.env.JOBS_BACKEND_HOST || "0.0.0.0";
+    const jobsHost = process.env.JOBS_BACKEND_HOST || "127.0.0.1";
     jobsProcess = spawn(pythonCommand, ["-m", "uvicorn", "backendreal:app", "--host", jobsHost, "--port", "5501"], {
         cwd: __dirname,
         env: { ...process.env, PORT: "5501" },
@@ -381,7 +381,7 @@ app.post("/submit-registration", upload.single("resumeFile"), (req, res) => {
 
 if (require.main === module) {
     const PORT = Number(process.env.PORT || 8800);
-    const HOST = process.env.HOST || "0.0.0.0";
+    const HOST = process.env.HOST || "127.0.0.1";
     const server = app.listen(PORT, HOST, () => {
         console.log("Server Running");
         console.log(`Local: http://localhost:${PORT}/register.html`);
