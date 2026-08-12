@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi import Request
 from pathlib import Path
 import os
 import requests
@@ -117,6 +118,35 @@ def get_company_links():
         }
         for index, (company, link) in enumerate(COMPANY_CAREER_LINKS, start=1)
     ]
+
+
+@app.post("/api/track_apply")
+async def track_apply(request: Request):
+    """Receive application tracking events from the frontend and persist them to applications.json"""
+    try:
+        payload = await request.json()
+    except Exception:
+        return {"status": "error", "message": "invalid json"}
+
+    out_file = BASE_DIR / "applications.json"
+    try:
+        existing = []
+        if out_file.exists():
+            import json
+            existing = json.loads(out_file.read_text(encoding="utf-8") or "[]")
+
+        import json
+        entry = {
+            "company": payload.get("company"),
+            "title": payload.get("title"),
+            "apply_link": payload.get("apply_link"),
+            "timestamp": __import__("time").time(),
+        }
+        existing.append(entry)
+        out_file.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+        return {"status": "ok", "entry": entry}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 @app.get("/")

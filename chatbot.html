@@ -241,7 +241,9 @@
     const agentMessage = document.getElementById("agentMessage");
 
     // 2. Fetch Data from Python Backend AI Agent
-    const backendBaseUrl = window.location.port === "8800" ? window.location.origin : "http://127.0.0.1:8800";
+    // Use local backend for localhost; otherwise use deployed Vercel backend
+    const DEPLOYED_BACKEND = "https://hacker-2t6h3vhn1-aihack.vercel.app";
+    const backendBaseUrl = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://127.0.0.1:8800" : DEPLOYED_BACKEND;
 
     function getFallbackJobs(userQuery) {
       const query = (userQuery || "").toLowerCase();
@@ -372,12 +374,30 @@
                 <div class="company-name">${job.company}</div>
                 <div class="job-title">${job.title}</div>
                 <span class="ribbon ${job.ribbonClass}">${job.ribbonText}</span>
-                <a href="${job.apply_link}" target="_blank" class="apply-btn">Apply Now</a>
+                <button class="apply-btn" data-link="${job.apply_link}" data-company="${job.company}" data-title="${job.title}">Apply Now</button>
             </div>
         `;
 
         jobsContainer.innerHTML += cardHTML;
       }
+
+      // Attach a single event listener for Apply buttons (delegation)
+      jobsContainer.onclick = function (e) {
+        const btn = e.target.closest && e.target.closest('.apply-btn');
+        if (!btn) return;
+        const link = btn.getAttribute('data-link');
+        const company = btn.getAttribute('data-company');
+        const title = btn.getAttribute('data-title');
+
+        // Track application attempt (fire-and-forget), then open link
+        fetch(`${backendBaseUrl}/api/track_apply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ company, title, apply_link: link })
+        }).catch(() => { });
+
+        if (link) window.open(link, '_blank');
+      };
     }
 
     // 4. Event Listeners & Initial Load
