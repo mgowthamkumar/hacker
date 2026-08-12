@@ -308,6 +308,20 @@
         return [{ ...fallbackJobs[0], title: "Cybersecurity Analyst" }];
       }
 
+      if (query.includes("teacher") || query.includes("teaching")) {
+        return [
+          {
+            company: "LOCAL SCHOOLS",
+            title: "Teacher",
+            type: "Job",
+            domain: "Education",
+            ribbonText: "Apply",
+            ribbonClass: "",
+            apply_link: "https://www.indeed.com/q-teacher-jobs.html",
+          },
+        ];
+      }
+
       return fallbackJobs;
     }
 
