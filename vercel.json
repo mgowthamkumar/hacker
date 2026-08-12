@@ -6,6 +6,9 @@
             "use": "@vercel/docker"
         }
     ],
+    "env": {
+        "HOST": "0.0.0.0"
+    },
     "rewrites": [
         {
             "source": "/analyzer",
