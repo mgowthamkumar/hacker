@@ -21,6 +21,9 @@ ADZUNA_APP_ID = "d1f4b68d"
 ADZUNA_APP_KEY = "e5ffc11dd8e1b50c11a3b48cfa7149b7"
 COUNTRY_CODE = "in"
 
+# Previously deployed backend URL (Vercel) — used as an external service endpoint
+EXTERNAL_BACKEND_URL = "https://hacker-2t6h3vhn1-aihack.vercel.app"
+
 COMPANY_CAREER_LINKS = [
     ("Google", "https://careers.google.com/"),
     ("Microsoft", "https://careers.microsoft.com/"),
@@ -240,7 +243,7 @@ if __name__ == "__main__":
 
     uvicorn.run(
         app,
-        host="127.0.0.1",
+        host=os.getenv("HOST", "0.0.0.0"),
         port=int(os.getenv("PORT", "5501")),
         log_level="info",
     )
