@@ -65,7 +65,7 @@ app.get("/health", (req, res) => {
 app.get("/api/jobs", async (req, res) => {
     try {
         const jobsBackendPort = process.env.JOBS_BACKEND_PORT || "5501";
-        const upstreamUrl = new URL(`http://127.0.0.1:${jobsBackendPort}/api/jobs`);
+        const upstreamUrl = new URL(`http://${jobsHost}:${jobsBackendPort}/api/jobs`);
         upstreamUrl.search = req.originalUrl.replace(/^\/api\/jobs/, "") || "";
 
         const response = await fetch(upstreamUrl.toString(), {
