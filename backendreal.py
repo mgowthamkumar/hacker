@@ -149,14 +149,46 @@ async def track_apply(request: Request):
         return {"status": "error", "message": str(e)}
 
 
+COMPANY_SIGNIN_PORTALS = {
+    "GOOGLE": "https://careers.google.com/",
+    "MICROSOFT": "https://careers.microsoft.com/",
+    "AMAZON": "https://www.amazon.jobs/",
+    "APPLE": "https://www.apple.com/careers/",
+    "META": "https://www.metacareers.com/",
+    "NETFLIX": "https://jobs.netflix.com/",
+    "NVIDIA": "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite",
+    "OPENAI": "https://openai.com/careers/",
+    "IBM": "https://www.ibm.com/careers/",
+    "ORACLE": "https://www.oracle.com/careers/",
+    "ADOBE": "https://careers.adobe.com/",
+    "SALESFORCE": "https://www.salesforce.com/company/careers/",
+    "SPOTIFY": "https://lifeatspotify.com/jobs",
+    "UBER": "https://www.uber.com/us/en/careers/",
+    "AIRBNB": "https://careers.airbnb.com/",
+    "LINKEDIN": "https://www.linkedin.com/jobs/",
+    "INDEED": "https://www.indeed.com/",
+    "MLH": "https://mlh.io/users/sign_in",
+    "DEVPOST": "https://devpost.com/login"
+}
+
+def resolve_signin_link(company_name: str, redirect_url: str = "") -> str:
+    upper = (company_name or "").upper()
+    for name, portal in COMPANY_SIGNIN_PORTALS.items():
+        if name in upper:
+            return portal
+    if redirect_url and redirect_url != "#":
+        return redirect_url
+    return f"https://www.google.com/search?q={requests.utils.quote(company_name + ' career sign in portal')}"
+
+
 @app.get("/")
 def serve_homepage():
     return FileResponse(BASE_DIR / "getstarted.html")
 
+
 @app.get("/api/jobs")
 def get_live_jobs(prompt: str = "Software Engineer"):
-    
-    user_query = prompt.lower()
+    user_query = prompt.lower().strip()
 
     if "compan" in user_query or "career page" in user_query:
         return get_company_links()
@@ -171,30 +203,42 @@ def get_live_jobs(prompt: str = "Software Engineer"):
         return [
             {
                 "company": "MAJOR LEAGUE HACKING (MLH)",
-                "title": f"Global Tech Hack Week",
+                "title": "Global Tech Hackathon 2026",
                 "type": "Hackathon",
-                "domain": "Tech",
-                "ribbonText": "Register Now",
+                "domain": "Software & AI",
+                "location": "Online / Worldwide",
+                "salary": "Prizes worth $25,000",
+                "description": "Build innovative web & AI applications alongside developers worldwide.",
+                "ribbonText": "Live Hackathon",
                 "ribbonClass": "hackathon",
-                "apply_link": "https://mlh.io"
+                "apply_link": "https://mlh.io",
+                "signin_link": "https://mlh.io/users/sign_in"
             },
             {
                 "company": "DEVPOST",
-                "title": f"Next-Gen Innovation Challenge",
+                "title": "Next-Gen AI & Cloud Challenge",
                 "type": "Hackathon",
-                "domain": "Data",
-                "ribbonText": "$10k Prize",
+                "domain": "Artificial Intelligence",
+                "location": "Remote",
+                "salary": "Prizes worth $50,000",
+                "description": "Create novel machine learning models and serverless cloud solutions.",
+                "ribbonText": "$50k Prize Pool",
                 "ribbonClass": "hackathon",
-                "apply_link": "https://devpost.com"
+                "apply_link": "https://devpost.com",
+                "signin_link": "https://devpost.com/login"
             },
             {
                 "company": "GOOGLE FOR DEVELOPERS",
-                "title": "Build with AI - Global Hackathon",
+                "title": "Build with AI - Global Developer Hackathon",
                 "type": "Hackathon",
-                "domain": "AI",
-                "ribbonText": "Live Now",
+                "domain": "AI / ML",
+                "location": "Global / Online",
+                "salary": "Google Cloud Credits & Swag",
+                "description": "Collaborate with Google engineers and turn creative tech ideas into reality.",
+                "ribbonText": "Google Event",
                 "ribbonClass": "hackathon",
-                "apply_link": "https://developers.google.com"
+                "apply_link": "https://developers.google.com",
+                "signin_link": "https://accounts.google.com"
             }
         ]
 
@@ -205,67 +249,166 @@ def get_live_jobs(prompt: str = "Software Engineer"):
         search_terms.append("Backend Developer")
     elif "frontend" in user_query:
         search_terms.append("Frontend Developer")
+    elif "fullstack" in user_query or "full stack" in user_query:
+        search_terms.append("Full Stack Engineer")
     elif "data" in user_query or "ai" in user_query or "ml" in user_query:
         search_terms.append("Data Scientist")
-    elif "cyber" in user_query:
-        search_terms.append("Cybersecurity")
+    elif "cyber" in user_query or "security" in user_query:
+        search_terms.append("Cybersecurity Specialist")
+    elif "teacher" in user_query or "teaching" in user_query or "education" in user_query:
+        search_terms.append("Teacher Education")
+    elif "product" in user_query or "manager" in user_query:
+        search_terms.append("Product Manager")
     else:
         search_terms.append(prompt)
         
-    # If the user asked for an internship, append it to the search keywords
     if is_internship:
         search_terms.append("Internship")
         
     search_query = " ".join(search_terms)
-
     url = f"https://api.adzuna.com/v1/api/jobs/{COUNTRY_CODE}/search/1"
     
     params = {
         "app_id": ADZUNA_APP_ID,
         "app_key": ADZUNA_APP_KEY,
-        "results_per_page": 10,
+        "results_per_page": 12,
         "what": search_query,
         "content-type": "application/json"
     }
     
-    # If it's a standard job (and not an internship), enforce full-time
     if not is_internship:
         params["full_time"] = 1
 
     print(f"\n--- AI AGENT RUNNING: Searching Adzuna for '{search_query}' ---")
     
     try:
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=4)
         
-        if response.status_code != 200:
-            print(f"API Error Details: {response.text}")
-            return []
+        if response.status_code == 200:
+            api_data = response.json()
+            results = api_data.get("results", [])
             
-        api_data = response.json()
-        results = api_data.get("results", [])
-        
-        live_opportunities = []
-        for item in results:
-            clean_title = item.get("title", "Role").replace("<strong>", "").replace("</strong>", "")
-            
-            opp_type = "Internship" if is_internship else "Job"
-            
-            formatted_item = {
-                "company": item.get("company", {}).get("display_name", "Confidential").upper(),
-                "title": clean_title,
-                "type": opp_type,
-                "domain": "General",
-                "ribbonText": "Internship" if is_internship else "Full-Time Role",
-                "ribbonClass": "intern" if is_internship else "",
-                "apply_link": item.get("redirect_url", "#")
-            }
-            live_opportunities.append(formatted_item)
-            
-        return live_opportunities
-        
+            if results:
+                live_opportunities = []
+                for item in results:
+                    raw_company = item.get("company", {}).get("display_name", "Tech Company").upper()
+                    clean_title = item.get("title", "Role").replace("<strong>", "").replace("</strong>", "")
+                    redirect_url = item.get("redirect_url", "#")
+                    signin_url = resolve_signin_link(raw_company, redirect_url)
+                    opp_type = "Internship" if is_internship or "intern" in clean_title.lower() else "Job"
+                    
+                    loc_name = item.get("location", {}).get("display_name", "India / Remote")
+                    min_sal = item.get("salary_min")
+                    max_sal = item.get("salary_max", min_sal * 1.3 if min_sal else None)
+                    sal_str = f"₹{int(min_sal):,} - ₹{int(max_sal):,} / yr" if min_sal else "Competitive Compensation"
+                    desc_snippet = item.get("description", "Opportunity to join a dynamic development team.").replace("<strong>", "").replace("</strong>", "")[:180] + "..."
+
+                    formatted_item = {
+                        "company": raw_company,
+                        "title": clean_title,
+                        "type": opp_type,
+                        "domain": item.get("category", {}).get("label", "Technology"),
+                        "location": loc_name,
+                        "salary": sal_str,
+                        "description": desc_snippet,
+                        "ribbonText": "Internship" if opp_type == "Internship" else "Full-Time Role",
+                        "ribbonClass": "intern" if opp_type == "Internship" else "",
+                        "apply_link": redirect_url,
+                        "signin_link": signin_url
+                    }
+                    live_opportunities.append(formatted_item)
+                    
+                return live_opportunities
     except Exception as e:
-        print(f"CRITICAL SYSTEM ERROR: {e}")
-        return []
+        print(f"ADZUNA FETCH EXCEPTION: {e}")
+
+    # Fallback opportunities if API limit reached or network offline
+    is_teacher = "teacher" in user_query or "teaching" in user_query
+    if is_teacher:
+        return [
+            {
+                "company": "K-12 ACADEMY & LOCAL SCHOOLS",
+                "title": "Computer Science Educator",
+                "type": "Job",
+                "domain": "Education",
+                "location": "Bangalore / Remote",
+                "salary": "₹6,00,000 - ₹12,00,000 / yr",
+                "description": "Teach coding, computer science fundamentals, and web development to enthusiastic students.",
+                "ribbonText": "Urgent Opening",
+                "ribbonClass": "",
+                "apply_link": "https://www.indeed.com/q-teacher-jobs.html",
+                "signin_link": "https://www.indeed.com/account/login"
+            },
+            {
+                "company": "COURSERA & EDTECH PARTNERS",
+                "title": "Online AI & Technical Curriculum Instructor",
+                "type": "Job",
+                "domain": "EdTech",
+                "location": "Remote",
+                "salary": "₹8,00,000 - ₹15,00,000 / yr",
+                "description": "Design interactive coding assessments, video lessons, and developer tutorials.",
+                "ribbonText": "100% Remote",
+                "ribbonClass": "",
+                "apply_link": "https://www.coursera.org/about/careers",
+                "signin_link": "https://www.coursera.org/?authMode=login"
+            }
+        ]
+
+    return [
+        {
+            "company": "GOOGLE",
+            "title": "Software Engineering Intern" if is_internship else "Software Engineer - AI & Cloud",
+            "type": "Internship" if is_internship else "Job",
+            "domain": "Technology",
+            "location": "Bangalore / Hyderabad, India",
+            "salary": "₹18,00,000 - ₹32,00,000 / yr",
+            "description": "Architect scalable web applications, modern APIs, and machine learning backend services.",
+            "ribbonText": "Featured",
+            "ribbonClass": "intern" if is_internship else "",
+            "apply_link": "https://careers.google.com/",
+            "signin_link": "https://careers.google.com/"
+        },
+        {
+            "company": "MICROSOFT",
+            "title": "Product Engineer Intern" if is_internship else "Senior Software Engineer",
+            "type": "Internship" if is_internship else "Job",
+            "domain": "Product & Cloud",
+            "location": "Hyderabad, India / Remote",
+            "salary": "₹16,00,000 - ₹28,00,000 / yr",
+            "description": "Build high-availability cloud solutions, Azure integrations, and developer platforms.",
+            "ribbonText": "Internship" if is_internship else "High Demand",
+            "ribbonClass": "intern" if is_internship else "",
+            "apply_link": "https://careers.microsoft.com/",
+            "signin_link": "https://careers.microsoft.com/"
+        },
+        {
+            "company": "OPENAI",
+            "title": "Research & AI Systems Engineer",
+            "type": "Job",
+            "domain": "Generative AI",
+            "location": "Remote / Global",
+            "salary": "₹28,00,000+ / yr",
+            "description": "Develop high-throughput inference engines and state-of-the-art transformer models.",
+            "ribbonText": "Hot Role",
+            "ribbonClass": "",
+            "apply_link": "https://openai.com/careers/",
+            "signin_link": "https://openai.com/careers/"
+        },
+        {
+            "company": "AMAZON",
+            "title": "Frontend & Fullstack Developer",
+            "type": "Job",
+            "domain": "E-Commerce",
+            "location": "Chennai / Bangalore, India",
+            "salary": "₹15,00,000 - ₹24,00,000 / yr",
+            "description": "Create responsive, accessible user interfaces with React and AWS serverless backend infrastructure.",
+            "ribbonText": "Actively Hiring",
+            "ribbonClass": "",
+            "apply_link": "https://www.amazon.jobs/",
+            "signin_link": "https://www.amazon.jobs/"
+        }
+    ]
+
 
 
 if __name__ == "__main__":

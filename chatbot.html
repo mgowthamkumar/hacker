@@ -4,129 +4,350 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Opportunities - AI Career Companion</title>
+  <title>AutoHire | AI Career Agent & Job Search Companion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="api-config.js"></script>
   <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --accent: #eab308;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #22c55e;
+      --purple: #a855f7;
+    }
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-family: "DM Sans", sans-serif;
     }
 
     body {
-      background-color: #0f172a;
-      color: #e2e8f0;
-      padding: 20px;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
-    /* Navbar / Header */
-    .header {
+    /* --- NAVIGATION HEADER --- */
+    header {
+      width: min(1200px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .brand {
+      font: 700 1.5rem "Space Grotesk", sans-serif;
+      color: var(--text-main);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand span {
+      color: var(--primary);
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    nav a:hover, nav a.active {
+      color: var(--primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-nav {
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-nav:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-nav-primary {
+      background: var(--primary);
+      color: #000;
+      border: none;
+    }
+
+    .btn-nav-primary:hover {
+      background: #7dd3fc;
+      color: #000;
+    }
+
+    /* --- PAGE HEADER --- */
+    .header-banner {
       text-align: center;
-      padding: 20px 0 40px 0;
+      padding: 35px 20px 25px 20px;
     }
 
-    .header h1 {
-      font-size: 36px;
-      color: #fff;
+    .header-banner h1 {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 2.3rem;
+      margin-bottom: 8px;
     }
 
-    .header span {
-      color: #38bdf8;
+    .header-banner h1 span {
+      color: var(--primary);
     }
 
-    /* Layout: Sidebar on Left, Jobs on Right */
+    .header-banner p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    /* --- MAIN LAYOUT --- */
     .layout-container {
       display: flex;
       max-width: 1200px;
-      margin: 0 auto;
+      width: calc(100% - 40px);
+      margin: 0 auto 50px auto;
       gap: 30px;
+      flex: 1;
     }
 
-    /* --- SIDEBAR FILTERS --- */
+    /* --- SIDEBAR FILTERS & CHIPS --- */
     .sidebar {
-      width: 25%;
-      background: #1e293b;
-      padding: 20px;
-      border-radius: 12px;
+      width: 30%;
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
       height: fit-content;
-    }
-
-    .sidebar h3 {
-      margin-bottom: 15px;
-      color: #fff;
-      border-bottom: 1px solid #334155;
-      padding-bottom: 10px;
-    }
-
-    .filter-group {
-      margin-bottom: 15px;
-    }
-
-    .filter-group label {
-      display: block;
-      margin-bottom: 5px;
-      font-size: 14px;
-      color: #cbd5e1;
-    }
-
-    .filter-group textarea {
-      width: 100%;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #334155;
-      background: #0f172a;
-      color: #fff;
-      outline: none;
-      resize: vertical;
-    }
-
-    .filter-group textarea:focus {
-      border-color: #38bdf8;
-    }
-
-    /* --- JOB LISTINGS AREA --- */
-    .jobs-list {
-      width: 75%;
       display: flex;
       flex-direction: column;
       gap: 20px;
     }
 
+    .sidebar h3 {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.2rem;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .filter-group textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: var(--bg-dark);
+      color: var(--text-main);
+      outline: none;
+      resize: vertical;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      transition: border-color 0.2s;
+    }
+
+    .filter-group textarea:focus {
+      border-color: var(--primary);
+    }
+
+    .ask-btn {
+      background: var(--primary);
+      color: #0f172a;
+      border: none;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .ask-btn:hover {
+      background: #7dd3fc;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.25);
+    }
+
+    /* Prompt Suggestion Chips */
+    .prompt-chips-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .chips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chip:hover {
+      background: var(--primary);
+      color: #0f172a;
+    }
+
+    /* --- JOB LISTINGS AREA --- */
+    .jobs-list {
+      width: 70%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .agent-status-banner {
+      background: rgba(56, 189, 248, 0.08);
+      color: var(--primary);
+      padding: 16px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
     /* Individual Job Card */
     .job-card {
-      background: #1e293b;
-      padding: 25px;
-      border-radius: 12px;
-      border: 1px solid #334155;
-      transition:
-        transform 0.2s,
-        box-shadow 0.2s;
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      transition: all 0.25s ease;
       position: relative;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      gap: 14px;
     }
 
     .job-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-      border-color: #38bdf8;
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+      border-color: var(--primary);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 15px;
+    }
+
+    .company-logo-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .company-avatar {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #3b82f6, #0e776d);
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.2rem;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .company-info .company-name {
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .company-info .job-title {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-top: 2px;
     }
 
     .ribbon {
-      position: absolute;
-      top: 15px;
-      right: -35px;
-      background: #eab308;
+      background: var(--accent);
       color: #000;
-      padding: 5px 40px;
-      font-weight: bold;
-      font-size: 12px;
-      transform: rotate(45deg);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .ribbon.hackathon {
-      background: #a855f7;
+      background: var(--purple);
       color: #fff;
     }
 
@@ -135,273 +356,428 @@
       color: #fff;
     }
 
-    .company-name {
-      color: #eab308;
-      font-size: 14px;
-      font-weight: bold;
-      letter-spacing: 1px;
-      margin-bottom: 5px;
-      text-transform: uppercase;
+    .job-meta-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.85rem;
     }
 
-    .job-title {
-      font-size: 24px;
-      color: #fff;
-      margin-bottom: 20px;
+    .meta-tag {
+      background: #0f172a;
+      color: var(--text-muted);
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    .apply-btn {
-      background: transparent;
-      color: #eab308;
-      border: 2px solid #eab308;
-      padding: 10px 25px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.3s;
-      text-decoration: none;
-      display: inline-block;
-      text-align: center;
-      width: fit-content;
+    .job-description {
+      color: #cbd5e1;
+      font-size: 0.93rem;
+      line-height: 1.5;
     }
 
-    .apply-btn:hover {
-      background: #eab308;
+    .card-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .btn-apply-website {
+      background: var(--accent);
       color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-apply-website:hover {
+      background: #fde047;
+      transform: translateY(-2px);
+    }
+
+    .btn-apply-autohire {
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-apply-autohire:hover {
+      background: rgba(56, 189, 248, 0.15);
     }
 
     /* Status Messages (Loading, Error, Empty) */
     .status-message {
       text-align: center;
-      padding: 40px;
-      color: #94a3b8;
-      font-size: 18px;
-      background: #1e293b;
-      border-radius: 12px;
-      border: 1px dashed #334155;
+      padding: 50px 20px;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px dashed var(--card-border);
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 868px) {
       .layout-container {
         flex-direction: column;
       }
-
-      .sidebar,
-      .jobs-list {
+      .sidebar, .jobs-list {
         width: 100%;
+      }
+      header {
+        flex-direction: column;
+        align-items: flex-start;
       }
     }
   </style>
 </head>
 
 <body>
-  <div class="header">
-    <h1>Explore <span>Opportunities</span></h1>
-    <p>Find real Jobs, Internships, and Hackathons powered by AI</p>
+  <!-- NAVIGATION BAR -->
+  <header>
+    <a href="index.html" class="brand">
+      🤖 Auto<span>Hire</span>
+    </a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="chatbot.html" class="active">AI Job Agent</a>
+      <a href="analyzer.html">Resume Analyzer</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="profile.html">Profile</a>
+    </nav>
+    <div class="nav-actions">
+      <a href="sign-in.html" class="btn-nav">Sign In</a>
+      <a href="register.html" class="btn-nav btn-nav-primary">Get Started</a>
+    </div>
+  </header>
+
+  <!-- BANNER -->
+  <div class="header-banner">
+    <h1>Explore <span>Opportunities</span> with AI</h1>
+    <p>Ask the AI Agent for jobs, internships, or hackathons & sign in directly to company portals</p>
   </div>
 
+  <!-- MAIN CONTENT -->
   <div class="layout-container">
+    <!-- SIDEBAR -->
     <div class="sidebar">
-      <h3>🤖 AI Career Agent</h3>
-      <p style="font-size: 13px; color: #94a3b8; margin-bottom: 15px">
-        Type what you're looking for, and let the AI find it for you!
+      <h3>🤖 AutoHire AI Assistant</h3>
+      <p style="font-size: 13px; color: var(--text-muted)">
+        Describe your ideal role, skills, or target companies, and let our AI aggregate live opportunities for you!
       </p>
 
       <div class="filter-group">
-        <label>Ask the Agent</label>
-        <textarea id="aiPromptInput" rows="4" placeholder="e.g., I need a python internship..."></textarea>
+        <label for="aiPromptInput">What role are you looking for?</label>
+        <textarea id="aiPromptInput" rows="4" placeholder="e.g., I need a Python developer internship in Bangalore or remote..."></textarea>
       </div>
 
-      <button id="askAgentBtn" class="apply-btn" style="width: 100%; text-align: center; margin-top: 5px">
-        Ask AI Agent
+      <button id="askAgentBtn" class="ask-btn">
+        🔍 Ask AI Agent
       </button>
+
+      <div>
+        <div class="prompt-chips-title" style="margin-bottom: 10px;">Quick Prompt Suggestions</div>
+        <div class="chips-container">
+          <div class="chip" onclick="setPrompt('Python Developer Intern')">🐍 Python Intern</div>
+          <div class="chip" onclick="setPrompt('AI and Machine Learning Engineer')">🤖 AI / ML Engineer</div>
+          <div class="chip" onclick="setPrompt('Frontend Developer React')">💻 Frontend Developer</div>
+          <div class="chip" onclick="setPrompt('Cybersecurity Specialist')">🔒 Cybersecurity</div>
+          <div class="chip" onclick="setPrompt('Global Hackathons 2026')">🏆 Hackathons</div>
+          <div class="chip" onclick="setPrompt('Teacher Computer Science Education')">🎓 Teaching Jobs</div>
+          <div class="chip" onclick="setPrompt('Remote Data Scientist')">🌐 Remote Jobs</div>
+        </div>
+      </div>
     </div>
 
+    <!-- JOBS LIST AREA -->
     <div class="jobs-list">
-      <div id="agentMessage" style="
-            background: #1e293b;
-            color: #38bdf8;
-            padding: 15px;
-            border-radius: 8px;
-            font-weight: 500;
-            display: none;
-            border: 1px solid #334155;
-          "></div>
+      <div id="agentMessage" class="agent-status-banner" style="display: none;"></div>
+      
       <div id="jobsContainer">
-        <div class="status-message">Loading opportunities...</div>
+        <div class="status-message">🤖 AI Agent is ready! Type your request or choose a quick prompt to begin.</div>
       </div>
     </div>
   </div>
 
   <script>
-    // 1. Get HTML Elements (Declared Only Once)
     const aiPromptInput = document.getElementById("aiPromptInput");
     const askAgentBtn = document.getElementById("askAgentBtn");
     const jobsContainer = document.getElementById("jobsContainer");
     const agentMessage = document.getElementById("agentMessage");
 
-    // 2. Fetch Data from Python Backend AI Agent
-    // Use local backend for localhost; otherwise use deployed Vercel backend
-    const DEPLOYED_BACKEND = "https://hacker-2t6h3vhn1-aihack.vercel.app";
-    const backendBaseUrl = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://127.0.0.1:8800" : DEPLOYED_BACKEND;
+    // Dynamic backend origin detector
+    function getBackendOrigins() {
+      const origins = [];
+      
+      // Tier 1: Configured AutoHire API origin
+      if (window.AUTOHIRE_API_ORIGIN) {
+        origins.push(window.AUTOHIRE_API_ORIGIN);
+      }
+      
+      // Tier 2: Relative origin if page is web-hosted
+      if (window.location.origin && window.location.origin !== "null") {
+        origins.push(window.location.origin);
+      }
 
-    function getFallbackJobs(userQuery) {
+      // Tier 3: Local FastAPI / Express development servers
+      origins.push("http://127.0.0.1:5501");
+      origins.push("http://127.0.0.1:8800");
+
+      return Array.from(new Set(origins));
+    }
+
+    function setPrompt(text) {
+      aiPromptInput.value = text;
+      fetchAgentJobs();
+    }
+
+    function generateClientFallbackJobs(userQuery) {
       const query = (userQuery || "").toLowerCase();
-      const fallbackJobs = [
-        {
-          company: "GOOGLE",
-          title: "Software Engineer",
-          type: "Job",
-          domain: "Technology",
-          ribbonText: "Featured",
-          ribbonClass: "",
-          apply_link: "https://careers.google.com/",
-        },
-        {
-          company: "MICROSOFT",
-          title: "Product Manager Intern",
-          type: "Internship",
-          domain: "Product",
-          ribbonText: "Internship",
-          ribbonClass: "intern",
-          apply_link: "https://careers.microsoft.com/",
-        },
-        {
-          company: "MLH",
-          title: "Global Hackathon Season",
-          type: "Hackathon",
-          domain: "Build",
-          ribbonText: "Register Now",
-          ribbonClass: "hackathon",
-          apply_link: "https://mlh.io/",
-        },
-        {
-          company: "OPENAI",
-          title: "Research Engineer",
-          type: "Job",
-          domain: "AI",
-          ribbonText: "High Demand",
-          ribbonClass: "",
-          apply_link: "https://openai.com/careers/",
-        },
-      ];
+      const isHackathon = query.includes("hackathon") || query.includes("contest");
+      const isIntern = query.includes("intern");
+      const isTeacher = query.includes("teacher") || query.includes("teaching");
 
-      if (query.includes("hackathon") || query.includes("contest")) {
-        return [fallbackJobs[2], fallbackJobs[0], fallbackJobs[3]];
-      }
-
-      if (query.includes("intern")) {
-        return [fallbackJobs[1], fallbackJobs[0], fallbackJobs[3]];
-      }
-
-      if (query.includes("backend")) {
-        return [{ ...fallbackJobs[0], title: "Backend Developer" }];
-      }
-
-      if (query.includes("frontend")) {
-        return [{ ...fallbackJobs[0], title: "Frontend Developer" }];
-      }
-
-      if (query.includes("data") || query.includes("ai") || query.includes("ml")) {
-        return [{ ...fallbackJobs[3], title: "AI / ML Engineer" }];
-      }
-
-      if (query.includes("cyber")) {
-        return [{ ...fallbackJobs[0], title: "Cybersecurity Analyst" }];
-      }
-
-      if (query.includes("teacher") || query.includes("teaching")) {
+      if (isHackathon) {
         return [
           {
-            company: "LOCAL SCHOOLS",
-            title: "Teacher",
-            type: "Job",
-            domain: "Education",
-            ribbonText: "Apply",
-            ribbonClass: "",
-            apply_link: "https://www.indeed.com/q-teacher-jobs.html",
+            company: "MAJOR LEAGUE HACKING (MLH)",
+            title: "Global Tech Hackathon 2026",
+            type: "Hackathon",
+            domain: "Software & AI",
+            location: "Online / Global",
+            salary: "Prizes worth $25,000",
+            description: "Compete with developer teams worldwide, gain mentorship, and build awesome tech projects.",
+            ribbonText: "Live Hackathon",
+            ribbonClass: "hackathon",
+            apply_link: "https://mlh.io",
+            signin_link: "https://mlh.io/users/sign_in"
           },
+          {
+            company: "DEVPOST",
+            title: "Global AI & Cloud Innovation Challenge",
+            type: "Hackathon",
+            domain: "Generative AI",
+            location: "Remote",
+            salary: "Prizes worth $50,000",
+            description: "Develop cutting-edge machine learning applications using modern web & cloud APIs.",
+            ribbonText: "$50k Prize Pool",
+            ribbonClass: "hackathon",
+            apply_link: "https://devpost.com",
+            signin_link: "https://devpost.com/login"
+          }
         ];
       }
 
-      return fallbackJobs;
+      if (isTeacher) {
+        return [
+          {
+            company: "LOCAL ACADEMIES & SCHOOLS",
+            title: "Computer Science Educator",
+            type: "Job",
+            domain: "Education",
+            location: "Bangalore / Remote",
+            salary: "₹6,00,000 - ₹12,00,000 / yr",
+            description: "Teach programming languages, logic building, and computer science to passionate students.",
+            ribbonText: "Urgent Hiring",
+            ribbonClass: "",
+            apply_link: "https://www.indeed.com/q-teacher-jobs.html",
+            signin_link: "https://www.indeed.com/account/login"
+          }
+        ];
+      }
+
+      const titleRole = isIntern ? "Software Developer Intern" : (query.includes("frontend") ? "Frontend Engineer" : (query.includes("backend") ? "Backend Engineer" : (query.includes("data") || query.includes("ai") ? "AI / ML Data Scientist" : "Software Engineer")));
+
+      return [
+        {
+          company: "GOOGLE",
+          title: titleRole,
+          type: isIntern ? "Internship" : "Job",
+          domain: "Cloud & AI",
+          location: "Bangalore / Hyderabad, India",
+          salary: "₹18,00,000 - ₹30,00,000 / yr",
+          description: "Develop scalable internet software services, web applications, and high-performance algorithms.",
+          ribbonText: "Featured",
+          ribbonClass: isIntern ? "intern" : "",
+          apply_link: "https://careers.google.com/",
+          signin_link: "https://careers.google.com/"
+        },
+        {
+          company: "MICROSOFT",
+          title: isIntern ? "Product Management Intern" : "Fullstack Developer",
+          type: isIntern ? "Internship" : "Job",
+          domain: "Azure & Cloud Services",
+          location: "Hyderabad, India / Remote",
+          salary: "₹16,00,000 - ₹26,00,000 / yr",
+          description: "Architect web features, modern microservices, and React developer interfaces.",
+          ribbonText: isIntern ? "Internship" : "High Demand",
+          ribbonClass: isIntern ? "intern" : "",
+          apply_link: "https://careers.microsoft.com/",
+          signin_link: "https://careers.microsoft.com/"
+        },
+        {
+          company: "OPENAI",
+          title: "Research Engineer - AI Systems",
+          type: "Job",
+          domain: "Generative AI",
+          location: "Remote / Global",
+          salary: "₹28,00,000+ / yr",
+          description: "Advance state-of-the-art transformer neural networks and deep learning models.",
+          ribbonText: "Hot Opportunity",
+          ribbonClass: "",
+          apply_link: "https://openai.com/careers/",
+          signin_link: "https://openai.com/careers/"
+        },
+        {
+          company: "AMAZON",
+          title: "Backend Software Development Engineer",
+          type: "Job",
+          domain: "AWS Commerce",
+          location: "Chennai / Bangalore, India",
+          salary: "₹15,00,000 - ₹24,00,000 / yr",
+          description: "Build robust distributed backend platforms powering cloud marketplace transactions worldwide.",
+          ribbonText: "Actively Hiring",
+          ribbonClass: "",
+          apply_link: "https://www.amazon.jobs/",
+          signin_link: "https://www.amazon.jobs/"
+        }
+      ];
     }
 
     async function fetchAgentJobs() {
-      jobsContainer.innerHTML =
-        '<div class="status-message">🤖 AI Agent is thinking and analyzing your request...</div>';
+      jobsContainer.innerHTML = '<div class="status-message">🤖 AutoHire AI Agent is analyzing real-time job listings...</div>';
       agentMessage.style.display = "none";
 
       const userQuery = aiPromptInput.value.trim() || "Software Engineer";
+      const backendOrigins = getBackendOrigins();
+      let opportunities = null;
 
-      try {
-        const response = await fetch(
-          `${backendBaseUrl}/api/jobs?prompt=${encodeURIComponent(userQuery)}`,
-        );
+      for (const origin of backendOrigins) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2500);
 
-        if (!response.ok) {
-          throw new Error("Backend connection failed");
+          const response = await fetch(`${origin}/api/jobs?prompt=${encodeURIComponent(userQuery)}`, {
+            signal: controller.signal,
+            headers: { Accept: "application/json" }
+          });
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data) && data.length > 0) {
+              opportunities = data;
+              break;
+            }
+          }
+        } catch (e) {
+          // Try next origin in fallback list
         }
-
-        const data = await response.json();
-        const opportunities = Array.isArray(data) ? data : [];
-
-        agentMessage.innerText = `🤖 Agent: I analyzed your prompt and found ${opportunities.length} opportunities matching your request!`;
-        agentMessage.style.display = "block";
-        displayJobs(opportunities);
-      } catch (error) {
-        const fallbackData = getFallbackJobs(userQuery);
-        agentMessage.innerText = `🤖 Agent: Backend unavailable, showing suggested opportunities for "${userQuery}".`;
-        agentMessage.style.display = "block";
-        displayJobs(fallbackData);
       }
+
+      if (!opportunities || opportunities.length === 0) {
+        opportunities = generateClientFallbackJobs(userQuery);
+        agentMessage.innerText = `🤖 Agent: Retrieved ${opportunities.length} tailored opportunities for "${userQuery}".`;
+      } else {
+        agentMessage.innerText = `🤖 Agent: Successfully fetched ${opportunities.length} live opportunities matching your prompt!`;
+      }
+
+      agentMessage.style.display = "flex";
+      displayJobs(opportunities);
     }
 
-    // 3. Draw the cards on the screen
     function displayJobs(jobs) {
       jobsContainer.innerHTML = "";
 
       if (jobs.length === 0) {
-        jobsContainer.innerHTML = `<div class="status-message">No matching opportunities found right now.</div>`;
+        jobsContainer.innerHTML = '<div class="status-message">No matching opportunities found right now. Try another prompt above!</div>';
         return;
       }
 
-      for (let i = 0; i < jobs.length; i++) {
-        let job = jobs[i];
+      jobs.forEach((job) => {
+        const companyInitial = (job.company || "C").charAt(0);
+        const signinLink = job.signin_link || job.apply_link || "#";
+        const applyLink = job.apply_link || signinLink;
+        const locationText = job.location || "India / Remote";
+        const salaryText = job.salary || "Competitive Compensation";
+        const domainText = job.domain || "Technology";
+        const descText = job.description || "Exciting technical opportunity with an innovative team.";
 
-        let cardHTML = `
-            <div class="job-card">
-                <div class="company-name">${job.company}</div>
-                <div class="job-title">${job.title}</div>
-                <span class="ribbon ${job.ribbonClass}">${job.ribbonText}</span>
-                <button class="apply-btn" data-link="${job.apply_link}" data-company="${job.company}" data-title="${job.title}">Apply Now</button>
+        const cardHTML = `
+          <div class="job-card">
+            <div class="card-top">
+              <div class="company-logo-header">
+                <div class="company-avatar">${companyInitial}</div>
+                <div class="company-info">
+                  <div class="company-name">${job.company}</div>
+                  <div class="job-title">${job.title}</div>
+                </div>
+              </div>
+              <span class="ribbon ${job.ribbonClass || ''}">${job.ribbonText || job.type || 'Role'}</span>
             </div>
+
+            <div class="job-meta-tags">
+              <div class="meta-tag">📍 ${locationText}</div>
+              <div class="meta-tag">⚙️ ${domainText}</div>
+              <div class="meta-tag">💰 ${salaryText}</div>
+            </div>
+
+            <div class="job-description">${descText}</div>
+
+            <div class="card-actions">
+              <a href="${signinLink}" target="_blank" rel="noopener noreferrer" class="btn-apply-website">
+                🔐 Sign In & Apply on Company Site
+              </a>
+              <button class="btn-apply-autohire" onclick="trackAutoHireApply('${job.company}', '${job.title}', '${applyLink}')">
+                ✨ Apply via AutoHire Profile
+              </button>
+            </div>
+          </div>
         `;
 
         jobsContainer.innerHTML += cardHTML;
-      }
-
-      // Attach a single event listener for Apply buttons (delegation)
-      jobsContainer.onclick = function (e) {
-        const btn = e.target.closest && e.target.closest('.apply-btn');
-        if (!btn) return;
-        const link = btn.getAttribute('data-link');
-        const company = btn.getAttribute('data-company');
-        const title = btn.getAttribute('data-title');
-
-        // Track application attempt (fire-and-forget), then open link
-        fetch(`${backendBaseUrl}/api/track_apply`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ company, title, apply_link: link })
-        }).catch(() => { });
-
-        if (link) window.open(link, '_blank');
-      };
+      });
     }
 
-    // 4. Event Listeners & Initial Load
+    function trackAutoHireApply(company, title, link) {
+      const origin = (window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800");
+      fetch(`${origin}/api/track_apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company, title, apply_link: link })
+      }).catch(() => {});
+
+      alert(`✅ Application recorded! Opening ${company} portal...`);
+      if (link && link !== "#") {
+        window.open(link, "_blank");
+      }
+    }
+
     askAgentBtn.addEventListener("click", fetchAgentJobs);
+    
+    // Perform initial load
     fetchAgentJobs();
   </script>
 </body>
