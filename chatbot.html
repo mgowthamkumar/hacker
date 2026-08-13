@@ -1,44 +1,49 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AutoHire | AI Career Agent & Job Search Companion</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <title>AutoHire | AI Job Search Agent</title>
+
   <script src="api-config.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
   <style>
     :root {
       --bg-dark: #0f172a;
       --card-bg: #1e293b;
       --card-border: #334155;
       --primary: #38bdf8;
-      --primary-hover: #0284c7;
-      --accent: #eab308;
+      --accent-purple: #a855f7;
+      --accent-pink: #ec4899;
+      --accent-yellow: #eab308;
+      --success: #22c55e;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --success: #22c55e;
-      --purple: #a855f7;
     }
 
     * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
       font-family: "DM Sans", sans-serif;
     }
 
     body {
       background-color: var(--bg-dark);
+      background-image:
+        radial-gradient(at 10% 10%, rgba(56, 189, 248, 0.12) 0px, transparent 50%),
+        radial-gradient(at 90% 90%, rgba(168, 85, 247, 0.12) 0px, transparent 50%);
       color: var(--text-main);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
 
-    /* --- NAVIGATION HEADER --- */
+    /* HEADER NAVIGATION */
     header {
       width: min(1200px, calc(100% - 40px));
       margin: 0 auto;
@@ -116,111 +121,92 @@
       color: #000;
     }
 
-    /* --- PAGE HEADER --- */
-    .header-banner {
-      text-align: center;
-      padding: 35px 20px 25px 20px;
-    }
-
-    .header-banner h1 {
-      font-family: "Space Grotesk", sans-serif;
-      font-size: 2.3rem;
-      margin-bottom: 8px;
-    }
-
-    .header-banner h1 span {
-      color: var(--primary);
-    }
-
-    .header-banner p {
-      color: var(--text-muted);
-      font-size: 1.05rem;
-    }
-
-    /* --- MAIN LAYOUT --- */
-    .layout-container {
-      display: flex;
-      max-width: 1200px;
-      width: calc(100% - 40px);
-      margin: 0 auto 50px auto;
-      gap: 30px;
+    /* MAIN CONTENT */
+    .container {
+      width: min(1200px, calc(100% - 40px));
+      margin: 30px auto 50px auto;
       flex: 1;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
     }
 
-    /* --- SIDEBAR FILTERS & CHIPS --- */
-    .sidebar {
-      width: 30%;
+    /* SIDEBAR CHAT PANEL */
+    .chat-panel {
       background: var(--card-bg);
-      padding: 24px;
-      border-radius: 16px;
       border: 1px solid var(--card-border);
-      height: fit-content;
+      border-radius: 20px;
+      padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      height: fit-content;
     }
 
-    .sidebar h3 {
+    .chat-header h2 {
       font-family: "Space Grotesk", sans-serif;
-      font-size: 1.2rem;
+      font-size: 1.4rem;
+      font-weight: 700;
       color: var(--text-main);
-      border-bottom: 1px solid var(--card-border);
-      padding-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .filter-group label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 0.9rem;
-      font-weight: 600;
+    .chat-header p {
       color: var(--text-muted);
+      font-size: 0.88rem;
+      margin-top: 4px;
+      line-height: 1.4;
     }
 
-    .filter-group textarea {
+    .input-box-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    textarea.ai-input {
       width: 100%;
-      padding: 12px;
-      border-radius: 10px;
+      height: 100px;
+      padding: 14px;
+      border-radius: 12px;
       border: 1px solid var(--card-border);
       background: var(--bg-dark);
       color: var(--text-main);
-      outline: none;
-      resize: vertical;
       font-size: 0.95rem;
-      line-height: 1.4;
-      transition: border-color 0.2s;
+      outline: none;
+      resize: none;
     }
 
-    .filter-group textarea:focus {
+    textarea.ai-input:focus {
       border-color: var(--primary);
     }
 
-    .ask-btn {
-      background: var(--primary);
-      color: #0f172a;
+    .btn-ask {
+      padding: 14px;
       border: none;
-      padding: 14px 20px;
-      border-radius: 10px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #0284c7 0%, #a855f7 100%);
+      color: #fff;
       font-weight: 700;
       font-size: 1rem;
       cursor: pointer;
-      transition: all 0.2s;
-      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
     }
 
-    .ask-btn:hover {
-      background: #7dd3fc;
+    .btn-ask:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.25);
+      box-shadow: 0 8px 20px rgba(168, 85, 247, 0.4);
     }
 
-    /* Prompt Suggestion Chips */
+    /* QUICK PROMPT CHIPS */
     .prompt-chips-title {
       font-size: 0.85rem;
       font-weight: 700;
@@ -236,9 +222,9 @@
     }
 
     .chip {
-      background: rgba(56, 189, 248, 0.1);
-      color: var(--primary);
-      border: 1px solid rgba(56, 189, 248, 0.25);
+      background: var(--bg-dark);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
       padding: 6px 12px;
       border-radius: 20px;
       font-size: 0.82rem;
@@ -247,204 +233,206 @@
       transition: all 0.2s;
     }
 
-    .chip:hover {
-      background: var(--primary);
-      color: #0f172a;
+    .chip:hover, .chip.active {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(56, 189, 248, 0.1);
     }
 
-    /* --- JOB LISTINGS AREA --- */
+    /* JOBS DISPLAY LIST */
     .jobs-list {
-      width: 70%;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
     }
 
     .agent-status-banner {
-      background: rgba(56, 189, 248, 0.08);
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
       color: var(--primary);
-      padding: 16px 20px;
+      padding: 12px 18px;
       border-radius: 12px;
       font-weight: 600;
       font-size: 0.95rem;
-      border: 1px solid rgba(56, 189, 248, 0.25);
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
     }
 
-    /* Individual Job Card */
     .job-card {
       background: var(--card-bg);
-      padding: 24px;
-      border-radius: 16px;
       border: 1px solid var(--card-border);
-      transition: all 0.25s ease;
-      position: relative;
-      overflow: hidden;
+      border-radius: 16px;
+      padding: 22px;
       display: flex;
       flex-direction: column;
       gap: 14px;
+      position: relative;
+      transition: border-color 0.2s, transform 0.2s;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
     }
 
     .job-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
       border-color: var(--primary);
+      transform: translateY(-2px);
     }
 
     .card-top {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 15px;
+      gap: 12px;
     }
 
     .company-logo-header {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .company-avatar {
-      width: 44px;
-      height: 44px;
-      background: linear-gradient(135deg, #3b82f6, #0e776d);
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
       color: #fff;
-      font-weight: 700;
-      font-size: 1.2rem;
-      border-radius: 10px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .company-info .company-name {
-      color: var(--accent);
+    .company-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .company-name {
       font-size: 0.85rem;
       font-weight: 700;
-      letter-spacing: 1px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
       text-transform: uppercase;
     }
 
-    .company-info .job-title {
+    .job-title {
       font-family: "Space Grotesk", sans-serif;
-      font-size: 1.35rem;
+      font-size: 1.25rem;
       font-weight: 700;
       color: var(--text-main);
-      margin-top: 2px;
     }
 
     .ribbon {
-      background: var(--accent);
-      color: #000;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.3);
       padding: 4px 12px;
       border-radius: 20px;
-      font-weight: 700;
       font-size: 0.78rem;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
-    .ribbon.hackathon {
-      background: var(--purple);
-      color: #fff;
+    .ribbon.intern {
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--accent-purple);
+      border-color: rgba(168, 85, 247, 0.3);
     }
 
-    .ribbon.intern {
-      background: #3b82f6;
-      color: #fff;
+    .ribbon.hackathon {
+      background: rgba(236, 72, 153, 0.15);
+      color: var(--accent-pink);
+      border-color: rgba(236, 72, 153, 0.3);
     }
 
     .job-meta-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      font-size: 0.85rem;
+      gap: 12px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
     }
 
     .meta-tag {
-      background: #0f172a;
-      color: var(--text-muted);
-      padding: 5px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--card-border);
       display: flex;
       align-items: center;
       gap: 6px;
+      background: var(--bg-dark);
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
     }
 
     .job-description {
-      color: #cbd5e1;
       font-size: 0.93rem;
+      color: #cbd5e1;
       line-height: 1.5;
     }
 
     .card-actions {
       display: flex;
+      align-items: center;
       gap: 12px;
       margin-top: 6px;
       flex-wrap: wrap;
     }
 
     .btn-apply-website {
-      background: var(--accent);
-      color: #000;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #4ade80;
       font-weight: 700;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       cursor: pointer;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       transition: all 0.2s;
     }
 
     .btn-apply-website:hover {
-      background: #fde047;
-      transform: translateY(-2px);
+      background: rgba(34, 197, 94, 0.25);
+      color: #fff;
     }
 
     .btn-apply-autohire {
-      background: transparent;
-      color: var(--primary);
-      border: 1px solid var(--primary);
-      padding: 10px 20px;
-      border-radius: 8px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      background: var(--primary);
+      border: none;
+      color: #000;
       font-weight: 700;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       cursor: pointer;
-      text-decoration: none;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       transition: all 0.2s;
     }
 
     .btn-apply-autohire:hover {
-      background: rgba(56, 189, 248, 0.15);
+      background: #7dd3fc;
     }
 
-    /* Status Messages (Loading, Error, Empty) */
     .status-message {
       text-align: center;
-      padding: 50px 20px;
+      padding: 40px;
       color: var(--text-muted);
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       background: var(--card-bg);
       border-radius: 16px;
-      border: 1px dashed var(--card-border);
+      border: 1px solid var(--card-border);
     }
 
-    @media (max-width: 868px) {
-      .layout-container {
-        flex-direction: column;
-      }
-      .sidebar, .jobs-list {
-        width: 100%;
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
       }
       header {
         flex-direction: column;
@@ -455,7 +443,7 @@
 </head>
 
 <body>
-  <!-- NAVIGATION BAR -->
+  <!-- HEADER NAVIGATION -->
   <header>
     <a href="index.html" class="brand">
       🤖 Auto<span>Hire</span>
@@ -473,29 +461,21 @@
     </div>
   </header>
 
-  <!-- BANNER -->
-  <div class="header-banner">
-    <h1>Explore <span>Opportunities</span> with AI</h1>
-    <p>Ask the AI Agent for jobs, internships, or hackathons & sign in directly to company portals</p>
-  </div>
-
-  <!-- MAIN CONTENT -->
-  <div class="layout-container">
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-      <h3>🤖 AutoHire AI Assistant</h3>
-      <p style="font-size: 13px; color: var(--text-muted)">
-        Describe your ideal role, skills, or target companies, and let our AI aggregate live opportunities for you!
-      </p>
-
-      <div class="filter-group">
-        <label for="aiPromptInput">What role are you looking for?</label>
-        <textarea id="aiPromptInput" rows="4" placeholder="e.g., I need a Python developer internship in Bangalore or remote..."></textarea>
+  <!-- MAIN CONTAINER -->
+  <div class="container">
+    <!-- CHAT SIDEBAR PANEL -->
+    <div class="chat-panel">
+      <div class="chat-header">
+        <h2>⚡ Ask AutoHire AI</h2>
+        <p>Type your desired role, skills, hackathons, or company name. AutoHire retrieves 20+ live matches instantly!</p>
       </div>
 
-      <button id="askAgentBtn" class="ask-btn">
-        🔍 Ask AI Agent
-      </button>
+      <div class="input-box-wrapper">
+        <textarea id="aiPromptInput" class="ai-input" placeholder="e.g. Find Python developer internships or top AI hackathons 2026..."></textarea>
+        <button id="askAgentBtn" class="btn-ask">
+          <span>🔍 Fetch 20+ Live Opportunities</span>
+        </button>
+      </div>
 
       <div>
         <div class="prompt-chips-title" style="margin-bottom: 10px;">Quick Prompt Suggestions</div>
@@ -515,6 +495,14 @@
     <div class="jobs-list">
       <div id="agentMessage" class="agent-status-banner" style="display: none;"></div>
       
+      <!-- Category Filter Pills -->
+      <div id="categoryFilterBar" class="chips-container" style="display: none;">
+        <div class="chip active" onclick="filterCategory('all', this)">All Results (<span id="count-all">0</span>)</div>
+        <div class="chip" onclick="filterCategory('Job', this)">Full-Time Jobs (<span id="count-job">0</span>)</div>
+        <div class="chip" onclick="filterCategory('Internship', this)">Internships (<span id="count-intern">0</span>)</div>
+        <div class="chip" onclick="filterCategory('Hackathon', this)">Hackathons (<span id="count-hack">0</span>)</div>
+      </div>
+
       <div id="jobsContainer">
         <div class="status-message">🤖 AI Agent is ready! Type your request or choose a quick prompt to begin.</div>
       </div>
@@ -526,6 +514,9 @@
     const askAgentBtn = document.getElementById("askAgentBtn");
     const jobsContainer = document.getElementById("jobsContainer");
     const agentMessage = document.getElementById("agentMessage");
+    const categoryFilterBar = document.getElementById("categoryFilterBar");
+
+    let allLoadedJobs = [];
 
     // Dynamic backend origin detector
     function getBackendOrigins() {
@@ -561,114 +552,49 @@
 
       if (isHackathon) {
         return [
-          {
-            company: "MAJOR LEAGUE HACKING (MLH)",
-            title: "Global Tech Hackathon 2026",
-            type: "Hackathon",
-            domain: "Software & AI",
-            location: "Online / Global",
-            salary: "Prizes worth $25,000",
-            description: "Compete with developer teams worldwide, gain mentorship, and build awesome tech projects.",
-            ribbonText: "Live Hackathon",
-            ribbonClass: "hackathon",
-            apply_link: "https://mlh.io",
-            signin_link: "https://mlh.io/users/sign_in"
-          },
-          {
-            company: "DEVPOST",
-            title: "Global AI & Cloud Innovation Challenge",
-            type: "Hackathon",
-            domain: "Generative AI",
-            location: "Remote",
-            salary: "Prizes worth $50,000",
-            description: "Develop cutting-edge machine learning applications using modern web & cloud APIs.",
-            ribbonText: "$50k Prize Pool",
-            ribbonClass: "hackathon",
-            apply_link: "https://devpost.com",
-            signin_link: "https://devpost.com/login"
-          }
+          { company: "MAJOR LEAGUE HACKING (MLH)", title: "Global Tech Hackathon 2026", type: "Hackathon", domain: "Software & AI", location: "Online / Global", salary: "Prizes worth $25,000", description: "Compete with developer teams worldwide, gain mentorship, and build awesome tech projects.", ribbonText: "Live Hackathon", ribbonClass: "hackathon", apply_link: "https://mlh.io", signin_link: "https://mlh.io/users/sign_in" },
+          { company: "DEVPOST", title: "Global AI & Cloud Innovation Challenge", type: "Hackathon", domain: "Generative AI", location: "Remote", salary: "Prizes worth $50,000", description: "Develop cutting-edge machine learning applications using modern web & cloud APIs.", ribbonText: "$50k Prize Pool", ribbonClass: "hackathon", apply_link: "https://devpost.com", signin_link: "https://devpost.com/login" },
+          { company: "GOOGLE FOR DEVELOPERS", title: "Build with AI Global Hackathon", type: "Hackathon", domain: "AI / ML", location: "Global / Online", salary: "Google Cloud Credits", description: "Build real-world prototypes with Google engineers using Gemini and TensorFlow.", ribbonText: "Google Official", ribbonClass: "hackathon", apply_link: "https://developers.google.com", signin_link: "https://accounts.google.com" },
+          { company: "META", title: "Meta Hacker Cup 2026", type: "Hackathon", domain: "Algorithmic Coding", location: "Worldwide / Online", salary: "$100,000 Total Purse", description: "Meta's annual global algorithmic programming contest.", ribbonText: "Meta Event", ribbonClass: "hackathon", apply_link: "https://www.facebook.com/codingcompetitions/hacker-cup/", signin_link: "https://www.facebook.com/login/" },
+          { company: "ETHGLOBAL", title: "ETHGlobal Web3 Hackathon", type: "Hackathon", domain: "Smart Contracts", location: "Remote", salary: "$125,000 Bounties", description: "Build decentralized protocols, DeFi dApps, and smart contracts.", ribbonText: "Web3 Flagship", ribbonClass: "hackathon", apply_link: "https://ethglobal.com/", signin_link: "https://ethglobal.com/login" },
+          { company: "MICROSOFT", title: "Imagine Cup Student World Championship", type: "Hackathon", domain: "AI & Cloud", location: "Global Online", salary: "$100,000 Prize + Azure", description: "Global student developer competition to launch AI prototypes.", ribbonText: "World Cup", ribbonClass: "hackathon", apply_link: "https://imaginecup.microsoft.com/", signin_link: "https://imaginecup.microsoft.com/" }
         ];
       }
 
       if (isTeacher) {
         return [
-          {
-            company: "LOCAL ACADEMIES & SCHOOLS",
-            title: "Computer Science Educator",
-            type: "Job",
-            domain: "Education",
-            location: "Bangalore / Remote",
-            salary: "₹6,00,000 - ₹12,00,000 / yr",
-            description: "Teach programming languages, logic building, and computer science to passionate students.",
-            ribbonText: "Urgent Hiring",
-            ribbonClass: "",
-            apply_link: "https://www.indeed.com/q-teacher-jobs.html",
-            signin_link: "https://www.indeed.com/account/login"
-          }
+          { company: "LOCAL ACADEMIES & SCHOOLS", title: "Computer Science Educator", type: "Job", domain: "Education", location: "Bangalore / Remote", salary: "₹6,00,000 - ₹12,00,000 / yr", description: "Teach programming languages, logic building, and computer science to passionate students.", ribbonText: "Urgent Hiring", ribbonClass: "", apply_link: "https://www.indeed.com/q-teacher-jobs.html", signin_link: "https://www.indeed.com/account/login" },
+          { company: "COURSERA PARTNERS", title: "AI & Technical Curriculum Instructor", type: "Job", domain: "EdTech", location: "Remote", salary: "₹8,00,000 - ₹15,00,000 / yr", description: "Design interactive coding assessments and online software courses.", ribbonText: "100% Remote", ribbonClass: "", apply_link: "https://www.coursera.org/about/careers", signin_link: "https://www.coursera.org/?authMode=login" }
         ];
       }
 
-      const titleRole = isIntern ? "Software Developer Intern" : (query.includes("frontend") ? "Frontend Engineer" : (query.includes("backend") ? "Backend Engineer" : (query.includes("data") || query.includes("ai") ? "AI / ML Data Scientist" : "Software Engineer")));
+      const roleStr = isIntern ? "Software Developer Intern" : "Software Engineer";
 
       return [
-        {
-          company: "GOOGLE",
-          title: titleRole,
-          type: isIntern ? "Internship" : "Job",
-          domain: "Cloud & AI",
-          location: "Bangalore / Hyderabad, India",
-          salary: "₹18,00,000 - ₹30,00,000 / yr",
-          description: "Develop scalable internet software services, web applications, and high-performance algorithms.",
-          ribbonText: "Featured",
-          ribbonClass: isIntern ? "intern" : "",
-          apply_link: "https://careers.google.com/",
-          signin_link: "https://careers.google.com/"
-        },
-        {
-          company: "MICROSOFT",
-          title: isIntern ? "Product Management Intern" : "Fullstack Developer",
-          type: isIntern ? "Internship" : "Job",
-          domain: "Azure & Cloud Services",
-          location: "Hyderabad, India / Remote",
-          salary: "₹16,00,000 - ₹26,00,000 / yr",
-          description: "Architect web features, modern microservices, and React developer interfaces.",
-          ribbonText: isIntern ? "Internship" : "High Demand",
-          ribbonClass: isIntern ? "intern" : "",
-          apply_link: "https://careers.microsoft.com/",
-          signin_link: "https://careers.microsoft.com/"
-        },
-        {
-          company: "OPENAI",
-          title: "Research Engineer - AI Systems",
-          type: "Job",
-          domain: "Generative AI",
-          location: "Remote / Global",
-          salary: "₹28,00,000+ / yr",
-          description: "Advance state-of-the-art transformer neural networks and deep learning models.",
-          ribbonText: "Hot Opportunity",
-          ribbonClass: "",
-          apply_link: "https://openai.com/careers/",
-          signin_link: "https://openai.com/careers/"
-        },
-        {
-          company: "AMAZON",
-          title: "Backend Software Development Engineer",
-          type: "Job",
-          domain: "AWS Commerce",
-          location: "Chennai / Bangalore, India",
-          salary: "₹15,00,000 - ₹24,00,000 / yr",
-          description: "Build robust distributed backend platforms powering cloud marketplace transactions worldwide.",
-          ribbonText: "Actively Hiring",
-          ribbonClass: "",
-          apply_link: "https://www.amazon.jobs/",
-          signin_link: "https://www.amazon.jobs/"
-        }
+        { company: "GOOGLE", title: roleStr, type: isIntern ? "Internship" : "Job", domain: "Cloud & AI", location: "Bangalore / Hyderabad, India", salary: "₹18,00,000 - ₹30,00,000 / yr", description: "Develop scalable internet software services, web applications, and high-performance algorithms.", ribbonText: "Featured", ribbonClass: isIntern ? "intern" : "", apply_link: "https://careers.google.com/", signin_link: "https://careers.google.com/" },
+        { company: "MICROSOFT", title: isIntern ? "Product Management Intern" : "Fullstack Developer", type: isIntern ? "Internship" : "Job", domain: "Azure & Cloud Services", location: "Hyderabad, India / Remote", salary: "₹16,00,000 - ₹26,00,000 / yr", description: "Architect web features, modern microservices, and React developer interfaces.", ribbonText: isIntern ? "Internship" : "High Demand", ribbonClass: isIntern ? "intern" : "", apply_link: "https://careers.microsoft.com/", signin_link: "https://careers.microsoft.com/" },
+        { company: "OPENAI", title: "Research Engineer - AI Systems", type: "Job", domain: "Generative AI", location: "Remote / Global", salary: "₹28,00,000+ / yr", description: "Advance state-of-the-art transformer neural networks and deep learning models.", ribbonText: "Hot Opportunity", ribbonClass: "", apply_link: "https://openai.com/careers/", signin_link: "https://openai.com/careers/" },
+        { company: "AMAZON", title: "Backend Software Development Engineer", type: "Job", domain: "AWS Commerce", location: "Chennai / Bangalore, India", salary: "₹15,00,000 - ₹24,00,000 / yr", description: "Build robust distributed backend platforms powering cloud marketplace transactions worldwide.", ribbonText: "Actively Hiring", ribbonClass: "", apply_link: "https://www.amazon.jobs/", signin_link: "https://www.amazon.jobs/" },
+        { company: "META", title: "Production Engineering Intern", type: "Internship", domain: "Infrastructure", location: "Gurgaon, India / Remote", salary: "₹19,00,000 - ₹34,00,000 / yr", description: "Scale global networking infrastructure, data center automation, and distributed web services.", ribbonText: "High Growth", ribbonClass: "intern", apply_link: "https://www.metacareers.com/", signin_link: "https://www.metacareers.com/" },
+        { company: "APPLE", title: "iOS Application Developer", type: "Job", domain: "Mobile Engineering", location: "Hyderabad / Bangalore, India", salary: "₹17,00,000 - ₹30,00,000 / yr", description: "Build high-performance client applications and frameworks for millions of Apple devices.", ribbonText: "Apple Team", ribbonClass: "", apply_link: "https://www.apple.com/careers/", signin_link: "https://www.apple.com/careers/" },
+        { company: "NVIDIA", title: "CUDA & Deep Learning Engineer", type: "Job", domain: "AI Compute", location: "Pune / Bangalore, India", salary: "₹22,00,000 - ₹38,00,000 / yr", description: "Accelerate neural network training pipelines using CUDA C++, PyTorch, and TensorRT.", ribbonText: "AI Leader", ribbonClass: "", apply_link: "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite", signin_link: "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite" },
+        { company: "NETFLIX", title: "Streaming Backend Engineer", type: "Job", domain: "Cloud & Media", location: "Remote / Mumbai", salary: "₹25,00,000 - ₹40,00,000 / yr", description: "Optimize real-time video streaming delivery algorithms and microservices architectures.", ribbonText: "Top Tier", ribbonClass: "", apply_link: "https://jobs.netflix.com/", signin_link: "https://jobs.netflix.com/" },
+        { company: "UBER", title: "Logistics & Systems Engineer", type: "Job", domain: "Transportation Tech", location: "Bangalore, India", salary: "₹16,50,000 - ₹27,00,000 / yr", description: "Engineer low-latency dispatch algorithms, Geospatial routing, and transaction systems.", ribbonText: "Actively Hiring", ribbonClass: "", apply_link: "https://www.uber.com/us/en/careers/", signin_link: "https://www.uber.com/us/en/careers/" },
+        { company: "RAZORPAY", title: "Fintech Platform Engineer", type: "Job", domain: "Fintech", location: "Bangalore, India", salary: "₹14,00,000 - ₹24,00,000 / yr", description: "Build high-reliability payment gateway APIs handling millions of online digital transactions.", ribbonText: "Fintech Leader", ribbonClass: "", apply_link: "https://razorpay.com/jobs/", signin_link: "https://razorpay.com/jobs/" },
+        { company: "AIRBNB", title: "Fullstack Platform Developer", type: "Job", domain: "Hospitality Tech", location: "Remote / Global", salary: "₹20,00,000 - ₹35,00,000 / yr", description: "Build web components, payment integrations, and search recommendation workflows.", ribbonText: "100% Remote", ribbonClass: "", apply_link: "https://careers.airbnb.com/", signin_link: "https://careers.airbnb.com/" },
+        { company: "SPOTIFY", title: "Audio Recommendation Engineer", type: "Job", domain: "Music Tech", location: "Remote / Global", salary: "₹18,00,000 - ₹32,00,000 / yr", description: "Implement machine learning recommendation models and personal audio discovery features.", ribbonText: "Global Remote", ribbonClass: "", apply_link: "https://lifeatspotify.com/jobs", signin_link: "https://lifeatspotify.com/jobs" },
+        { company: "DELOITTE DIGITAL", title: "Cloud Solutions DevOps Specialist", type: "Job", domain: "Consulting Tech", location: "Hyderabad / Pune, India", salary: "₹10,00,000 - ₹18,00,000 / yr", description: "Architect enterprise cloud migrations, CI/CD automated deployment pipelines, and Kubernetes clusters.", ribbonText: "Enterprise", ribbonClass: "", apply_link: "https://www.deloitte.com/global/en/careers.html", signin_link: "https://www.deloitte.com/global/en/careers.html" },
+        { company: "TCS DIGITAL", title: "Graduate Systems Engineer Trainee", type: "Job", domain: "IT Services", location: "Chennai / Mumbai / Kolkata", salary: "₹7,00,000 - ₹11,00,000 / yr", description: "Entry-level software engineering program covering Java, Cloud, Data Engineering, and Web Development.", ribbonText: "Fresher Friendly", ribbonClass: "", apply_link: "https://www.tcs.com/careers", signin_link: "https://www.naukri.com/nlogin/login" },
+        { company: "INFOSYS", title: "Specialist Programmer - Web & Cloud", type: "Job", domain: "Software Services", location: "Bangalore / Mysore", salary: "₹8,00,000 - ₹13,00,000 / yr", description: "Develop fullstack microservices and cloud-native solutions for Fortune 500 enterprise clients.", ribbonText: "Mass Hiring", ribbonClass: "", apply_link: "https://www.infosys.com/careers.html", signin_link: "https://www.naukri.com/nlogin/login" },
+        { company: "SWIGGY", title: "Fullstack Logistics Engineer", type: "Job", domain: "E-Commerce", location: "Bangalore, India", salary: "₹15,00,000 - ₹26,00,000 / yr", description: "Work on quick-commerce order routing, dynamic pricing algorithms, and mobile web clients.", ribbonText: "Fast Paced", ribbonClass: "", apply_link: "https://careers.swiggy.com/", signin_link: "https://careers.swiggy.com/" },
+        { company: "ZOMATO", title: "Data Analyst & Business Intelligence", type: "Job", domain: "Analytics", location: "Gurgaon, India", salary: "₹12,00,000 - ₹20,00,000 / yr", description: "Analyze user metrics, delivery efficiency data, and construct executive dashboards using SQL & Python.", ribbonText: "Data Role", ribbonClass: "", apply_link: "https://www.zomato.com/careers", signin_link: "https://www.zomato.com/careers" }
       ];
     }
 
     async function fetchAgentJobs() {
       jobsContainer.innerHTML = '<div class="status-message">🤖 AutoHire AI Agent is analyzing real-time job listings...</div>';
       agentMessage.style.display = "none";
+      categoryFilterBar.style.display = "none";
 
       const userQuery = aiPromptInput.value.trim() || "Software Engineer";
       const backendOrigins = getBackendOrigins();
@@ -704,15 +630,37 @@
         agentMessage.innerText = `🤖 Agent: Successfully fetched ${opportunities.length} live opportunities matching your prompt!`;
       }
 
+      allLoadedJobs = opportunities;
+      updateFilterCounts(opportunities);
+      categoryFilterBar.style.display = "flex";
       agentMessage.style.display = "flex";
       displayJobs(opportunities);
+    }
+
+    function updateFilterCounts(jobs) {
+      document.getElementById('count-all').innerText = jobs.length;
+      document.getElementById('count-job').innerText = jobs.filter(j => j.type === 'Job').length;
+      document.getElementById('count-intern').innerText = jobs.filter(j => j.type === 'Internship').length;
+      document.getElementById('count-hack').innerText = jobs.filter(j => j.type === 'Hackathon').length;
+    }
+
+    function filterCategory(catType, element) {
+      document.querySelectorAll('#categoryFilterBar .chip').forEach(c => c.classList.remove('active'));
+      if (element) element.classList.add('active');
+
+      if (catType === 'all') {
+        displayJobs(allLoadedJobs);
+      } else {
+        const filtered = allLoadedJobs.filter(j => (j.type || '').toLowerCase() === catType.toLowerCase());
+        displayJobs(filtered);
+      }
     }
 
     function displayJobs(jobs) {
       jobsContainer.innerHTML = "";
 
       if (jobs.length === 0) {
-        jobsContainer.innerHTML = '<div class="status-message">No matching opportunities found right now. Try another prompt above!</div>';
+        jobsContainer.innerHTML = '<div class="status-message">No matching opportunities found for this category filter. Try clicking "All Results" above!</div>';
         return;
       }
 
