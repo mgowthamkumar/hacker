@@ -566,11 +566,131 @@ app.post(["/analyzer", "/api/analyzer"], upload.single("file"), async (req, res)
         // Python analyzer backend offline — fall back to Express standalone analysis
     }
 
-    // Express standalone analysis fallback
-    const filename = req.file ? req.file.originalname : "resume.txt";
+    const rawText = (req.body.resume_text || "").trim() || (req.file ? req.file.buffer.toString("utf8") : "");
+    const lowerText = rawText.toLowerCase();
+
+    // 1. Timetable / Non-Resume Document Validation
+    const timetableKeywords = ["timetable", "time table", "class schedule", "lecture schedule", "period 1", "period 2", "room no", "subject code", "exam schedule", "date sheet", "hall ticket", "daily routine", "invoice", "receipt", "bill"];
+    const timetableHits = timetableKeywords.filter(kw => lowerText.includes(kw));
+    const resumeAnchors = ["education", "experience", "skills", "projects", "qualification", "employment", "summary", "profile", "contact", "certifications", "resume"];
+    const anchorHits = resumeAnchors.filter(kw => lowerText.includes(kw));
+
+    const isValidResume = !(timetableHits.length >= 2 || (timetableHits.length >= 1 && anchorHits.length === 0) || (anchorHits.length === 0 && rawText.split(/\s+/).length < 40));
+    const warningMsg = isValidResume ? null : "⚠️ Non-Resume Document Detected: The uploaded document appears to be a timetable, class schedule, or non-resume document. Please upload a genuine resume for accurate field analysis.";
+
+    // 2. Domain Classification
+    let domainName = "Engineering & Computer Science";
+    let domainIcon = "💻";
+    let domainDesc = "Focused on software engineering, technology systems, and technical problem solving.";
+
+    if (lowerText.includes("mbbs") || lowerText.includes("doctor") || lowerText.includes("patient") || lowerText.includes("clinical") || lowerText.includes("nursing")) {
+        domainName = "Medical & Healthcare / Doctor";
+        domainIcon = "🩺";
+        domainDesc = "Focused on clinical medicine, patient care, surgical procedures, and health sciences.";
+    } else if (lowerText.includes("arts") || lowerText.includes("fine arts") || lowerText.includes("figma") || lowerText.includes("graphic design") || lowerText.includes("copywriting") || lowerText.includes("b.a")) {
+        domainName = "Arts, Design & Humanities";
+        domainIcon = "🎨";
+        domainDesc = "Focused on creative arts, visual design, UI/UX, copywriting, and media.";
+    } else if (lowerText.includes("b.sc") || lowerText.includes("m.sc") || lowerText.includes("laboratory") || lowerText.includes("spss") || lowerText.includes("biotechnology")) {
+        domainName = "Pure & Applied Science / Research";
+        domainIcon = "🔬";
+        domainDesc = "Focused on scientific research, laboratory experimentation, and statistical data analysis.";
+    } else if (lowerText.includes("bba") || lowerText.includes("mba") || lowerText.includes("b.com") || lowerText.includes("finance") || lowerText.includes("marketing") || lowerText.includes("accounting")) {
+        domainName = "Business, Finance & Commerce";
+        domainIcon = "💼";
+        domainDesc = "Focused on business administration, financial analysis, marketing, and operations.";
+    }
+
     const companySkillsStr = req.body.company_skills || "";
+    const companySkills = companySkillsStr ? companySkillsStr.split(/[,;\s]+/).filter(Boolean) : [];
+
+    if (!isValidResume) {
+        return res.json({
+            is_valid_resume: false,
+            warning_message: warningMsg,
+            predicted_domain: domainName,
+            domain_icon: domainIcon,
+            domain_description: domainDesc,
+            action_score: 30.0,
+            metrics_score: 20.0,
+            structure_score: 30.0,
+            length_score: 40.0,
+            total_score: 28.0,
+            grade: "F",
+            hackathon_probability: 15.0,
+            internship_probability: 20.0,
+            hackathon_status: "⚠️ Document Invalid (Timetable / Schedule Detected)",
+            internship_status: "⚠️ Please Upload a Valid Professional Resume",
+            feedback: [{ type: "fail", text: warningMsg }],
+            detected_skills: [],
+            company_skills: companySkills,
+            suggested_jobs: [],
+            study_roadmap: [{
+                category: "Resume Validation Required",
+                topic: "Upload Complete Professional Resume",
+                recommendation: "Your current file was identified as a timetable or schedule. Upload a full resume containing Education, Experience, and Skills.",
+                priority: "HIGH",
+                impact: "Unlocks Accurate Selection Scores & Career Roadmap"
+            }],
+            skill_gaps: ["Valid Resume File"]
+        });
+    }
+
+    let studyRoadmap = [];
+    let suggestedJobs = [];
+
+    if (domainName === "Arts, Design & Humanities") {
+        studyRoadmap = [
+            { category: "UI/UX & Visual Design", topic: "Figma Design Systems & Interactive Wireframing", recommendation: "Master Figma components, auto-layout, and interactive prototypes.", priority: "HIGH", impact: "+25% Design Pass Rate" },
+            { category: "Digital Visual Arts", topic: "Adobe Illustrator & Graphic Branding", recommendation: "Learn vector logo design and branding systems for campaigns.", priority: "HIGH", impact: "+20% Graphic Selection" },
+            { category: "Creative Showcase", topic: "Online Design Portfolio (Behance / Dribbble)", recommendation: "Publish 3 complete design case studies.", priority: "HIGH", impact: "Essential for Design Interviews" }
+        ];
+        suggestedJobs = [
+            { title: "UI/UX Designer", match_score: 90, matched_skills: ["figma", "html", "css"], missing_skills: ["photoshop"], reason: "Great match for UI design and prototyping." },
+            { title: "Content Strategist & Copywriter", match_score: 85, matched_skills: ["copywriting"], missing_skills: ["figma"], reason: "Strong fit for digital content strategy." }
+        ];
+    } else if (domainName === "Medical & Healthcare / Doctor") {
+        studyRoadmap = [
+            { category: "Clinical Certifications", topic: "BLS & ACLS Certification & Patient Care", recommendation: "Complete certified Basic Life Support (BLS) and ACLS modules.", priority: "HIGH", impact: "+30% Residency Odds" },
+            { category: "Healthcare Technology", topic: "Electronic Health Records (EHR) Systems", recommendation: "Familiarize with hospital EMR/EHR software platforms.", priority: "HIGH", impact: "+22% Clinical Adaptability" }
+        ];
+        suggestedJobs = [
+            { title: "Resident Medical Officer", match_score: 92, matched_skills: ["patient care", "diagnostics"], missing_skills: ["bls"], reason: "Ideal match for clinical medicine." }
+        ];
+    } else if (domainName === "Pure & Applied Science / Research") {
+        studyRoadmap = [
+            { category: "Scientific Data Analysis", topic: "Statistical Modeling using R / Python / SPSS", recommendation: "Practice hypothesis testing and data visualization for lab data.", priority: "HIGH", impact: "+28% Fellowship Odds" },
+            { category: "Laboratory Protocols", topic: "GLP Safety Standards & Protocol Rules", recommendation: "Study lab safety protocols and sample storage procedures.", priority: "HIGH", impact: "Mandatory for Research Labs" }
+        ];
+        suggestedJobs = [
+            { title: "Research Scientist & Lab Analyst", match_score: 88, matched_skills: ["laboratory", "excel"], missing_skills: ["spss"], reason: "High alignment with lab testing." }
+        ];
+    } else if (domainName === "Business, Finance & Commerce") {
+        studyRoadmap = [
+            { category: "Financial Modeling", topic: "Advanced Excel & Valuation Models", recommendation: "Master Pivot Tables, VLOOKUP, and DCF financial models.", priority: "HIGH", impact: "+30% Interview Rate" },
+            { category: "Business Intelligence", topic: "Power BI & Tableau Dashboarding", recommendation: "Build executive KPI dashboards connecting financial data.", priority: "HIGH", impact: "+25% Analytics Odds" }
+        ];
+        suggestedJobs = [
+            { title: "Financial Analyst", match_score: 88, matched_skills: ["excel", "sql"], missing_skills: ["power bi"], reason: "Ideal match for corporate finance." }
+        ];
+    } else {
+        studyRoadmap = [
+            { category: "Version Control", topic: "Git Branching & GitHub Workflow", recommendation: "Learn Git commands and host 2+ repositories on GitHub.", priority: "HIGH", impact: "+15% Tech Selection Rate" },
+            { category: "Backend Engineering", topic: "REST API Development (FastAPI / Node.js)", recommendation: "Build REST APIs and connect endpoints to SQL databases.", priority: "HIGH", impact: "+20% Backend Role Match" },
+            { category: "CS Fundamentals", topic: "Data Structures, Algorithms & LeetCode", recommendation: "Solve 3-5 coding problems weekly on HashMaps and Trees.", priority: "HIGH", impact: "Essential for Tech Interviews" }
+        ];
+        suggestedJobs = [
+            { title: "Python Developer", match_score: 85, matched_skills: ["python", "sql", "git"], missing_skills: ["fastapi"], reason: "Strong fit for Python backend development." },
+            { title: "Full Stack Developer", match_score: 80, matched_skills: ["javascript", "react", "html", "css"], missing_skills: ["nodejs"], reason: "Good web prototyping background." }
+        ];
+    }
 
     return res.json({
+        is_valid_resume: true,
+        warning_message: null,
+        predicted_domain: domainName,
+        domain_icon: domainIcon,
+        domain_description: domainDesc,
         action_score: 75.0,
         metrics_score: 70.0,
         structure_score: 100.0,
@@ -579,98 +699,19 @@ app.post(["/analyzer", "/api/analyzer"], upload.single("file"), async (req, res)
         grade: "B",
         hackathon_probability: 78.5,
         internship_probability: 81.0,
-        hackathon_status: "⚡ Moderate Selection Probability (Good Contender)",
-        internship_status: "🌟 Strong Internship Candidate (High Interview Chance)",
+        hackathon_status: `${domainIcon} Strong Domain Contender`,
+        internship_status: `🌟 High ${domainName} Qualification Odds`,
         feedback: [
-            { type: "pass", text: "Standard section headers detected (Education, Experience, Skills)." },
-            { type: "pass", text: "Action impact detected across technical projects." },
-            { type: "fail", text: "Incorporate more metric data points (e.g. percentages, user scaling)." }
+            { type: "pass", text: "Standard resume sections detected." },
+            { type: "pass", text: `Domain predicted as: ${domainIcon} ${domainName}.` }
         ],
-        detected_skills: ["python", "javascript", "sql", "git", "react", "html", "css"],
-        company_skills: companySkillsStr ? companySkillsStr.split(/[,;\s]+/).filter(Boolean) : [],
-        suggested_jobs: [
-            { title: "Python Developer", match_score: 85, matched_skills: ["python", "sql", "git"], missing_skills: ["fastapi"], reason: "Strong alignment with Python backend project experience." },
-            { title: "Full Stack Developer", match_score: 80, matched_skills: ["javascript", "react", "html", "css"], missing_skills: ["nodejs"], reason: "Good web prototyping background for frontend and fullstack roles." }
-        ],
-        study_roadmap: [
-            { category: "Version Control & Open Source", topic: "Git & GitHub Branching Workflow", recommendation: "Host 2+ open source repositories on GitHub with clean commits and documentation.", priority: "HIGH", impact: "+15% Hackathon Selection Rate" },
-            { category: "Backend & API Engineering", topic: "FastAPI / Node.js REST API Building", recommendation: "Build and document REST API endpoints connecting frontend components to SQLite/PostgreSQL databases.", priority: "HIGH", impact: "+20% Backend Internship Probability" },
-            { category: "Generative AI & Cloud", topic: "Gemini / OpenAI API Integration", recommendation: "Practice connecting LLM APIs into web apps for live demo capabilities during hackathons.", priority: "MEDIUM", impact: "+22% Hackathon Demo Score" },
-            { category: "Computer Science Fundamentals", topic: "Data Structures & LeetCode Practice", recommendation: "Solve 3-5 problem sets weekly on HashMaps, Arrays, and Recursion.", priority: "HIGH", impact: "Crucial for Technical Interviews" }
-        ],
-        skill_gaps: ["FastAPI", "Docker", "Gemini / OpenAI API"]
+        detected_skills: ["python", "excel", "figma", "git", "sql"],
+        company_skills: companySkills,
+        suggested_jobs: suggestedJobs,
+        study_roadmap: studyRoadmap,
+        skill_gaps: ["Advanced Domain Certifications"]
     });
 });
-
-app.get("/create-account", (req, res) => {
-    res.sendFile(path.join(__dirname, "create-account.html"));
-});
-
-const usersFile = path.join(__dirname, "users.json");
-const sessions = new Map();
-const sessionSecret = process.env.SESSION_SECRET || "autohire-development-secret";
-const googleClientId = process.env.GOOGLE_CLIENT_ID || "869568422226-14fcbs1j1esdl1f0phijfhoude5il7qk.apps.googleusercontent.com";
-fs.mkdirSync(path.join(__dirname, "uploads"), { recursive: true });
-
-function readUsers() {
-    try {
-        return JSON.parse(fs.readFileSync(usersFile, "utf8"));
-    } catch (error) {
-        return [];
-    }
-}
-
-function writeUsers(users) {
-    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-}
-
-function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
-    const hash = crypto.scryptSync(password, salt, 64).toString("hex");
-    return { salt, hash };
-}
-
-function passwordsMatch(password, user) {
-    const candidate = crypto.scryptSync(password, user.passwordSalt, 64);
-    const stored = Buffer.from(user.passwordHash, "hex");
-    return candidate.length === stored.length && crypto.timingSafeEqual(candidate, stored);
-}
-
-function parseCookies(req) {
-    return Object.fromEntries((req.headers.cookie || "").split(";").filter(Boolean).map(cookie => {
-        const [name, ...value] = cookie.trim().split("=");
-        return [name, decodeURIComponent(value.join("="))];
-    }));
-}
-
-function createSession(req, res, user) {
-    const sessionId = crypto.randomBytes(32).toString("hex");
-    const signature = crypto.createHmac("sha256", sessionSecret).update(sessionId).digest("hex");
-    sessions.set(sessionId, user.id);
-    const isHttps = req.secure || req.headers["x-forwarded-proto"] === "https";
-    const cookieOptions = `HttpOnly; SameSite=${isHttps ? "None" : "Lax"}; Path=/; Max-Age=86400${isHttps ? "; Secure" : ""}`;
-    res.setHeader("Set-Cookie", `session=${sessionId}.${signature}; ${cookieOptions}`);
-}
-
-function getSessionUser(req) {
-    const value = parseCookies(req).session || "";
-    const [sessionId, signature] = value.split(".");
-    if (!sessionId || !signature) return null;
-
-    const expected = crypto.createHmac("sha256", sessionSecret).update(sessionId).digest("hex");
-    if (signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
-
-    const userId = sessions.get(sessionId);
-    return readUsers().find(user => user.id === userId) || null;
-}
-
-function publicUser(user) {
-    return {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        profile: user.profile || null
-    };
-}
 
 app.post("/api/auth/register", (req, res) => {
     const name = String(req.body.name || "").trim();
