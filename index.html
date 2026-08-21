@@ -438,11 +438,11 @@
                     <h3 id="profileFullName"></h3>
                     <p class="profile-email" id="profileEmail"></p>
                     <div class="profile-links">
+                        <a href="profile.html" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--teal); padding: 8px 12px; background: var(--paper); border-radius: 6px; width: 100%; margin-bottom: 6px;">👤 View My Profile</a>
                         <a id="githubLink" href="#" target="_blank" rel="noreferrer" hidden>GitHub profile</a>
                         <a id="linkedinLink" href="#" target="_blank" rel="noreferrer" hidden>LinkedIn profile</a>
-                        <a href="register.html">Edit profile in register</a>
                     </div>
-                    <button class="logout-button" id="logoutButton" type="button">Logout</button>
+                    <button class="logout-button" id="logoutButton" type="button">🚪 Logout</button>
                 </div>
             </div>
         </div>
@@ -549,8 +549,6 @@
         });
 
         logoutButton.addEventListener("click", async () => {
-            if (!window.confirm("Do you want to logout?")) return;
-
             try {
                 await fetch(`${apiUrl}/logout`, {
                     method: "POST",
@@ -559,7 +557,7 @@
             } finally {
                 localStorage.removeItem("loggedInUser");
                 localStorage.removeItem("autoHireProfile");
-                window.location.href = "index.html";
+                window.location.href = "sign-in.html";
             }
         });
     </script>

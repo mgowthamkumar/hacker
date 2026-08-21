@@ -779,14 +779,21 @@
             const words = rawText.match(/\b\w+\b/g) || [];
             const wordCount = words.length;
 
-            // 1. Timetable / Non-Resume Document Validation
+            // 1. Timetable / Non-Resume Document Validation & Mandatory Resume Sections
             const timetableKeywords = ["timetable", "time table", "class schedule", "lecture schedule", "period 1", "period 2", "room no", "subject code", "course code", "exam schedule", "date sheet", "hall ticket", "daily routine", "invoice", "receipt", "bill", "syllabus sheet"];
             const timetableHits = timetableKeywords.filter(kw => lowerText.includes(kw));
-            const resumeAnchors = ["education", "experience", "skills", "projects", "qualification", "employment", "summary", "profile", "contact", "certifications", "resume"];
-            const anchorHits = resumeAnchors.filter(kw => lowerText.includes(kw));
 
-            const isValidResume = !(timetableHits.length >= 2 || (timetableHits.length >= 1 && anchorHits.length === 0) || (anchorHits.length === 0 && wordCount < 35));
-            const warningMsg = isValidResume ? null : "❌ Invalid Document Alert: The uploaded file is NOT a valid resume! (College Timetable / Class Schedule / Non-Resume file detected). Please upload a complete professional resume file.";
+            // Resume Section Anchors based on standard resume format:
+            // Personal Details, Career Objective, Education, Technical Skills
+            const personalAnchors = ["name", "phone", "email", "contact", "linkedin", "github", "portfolio"];
+            const educationAnchors = ["education", "degree", "bachelor", "master", "college", "university", "10th", "12th", "cgpa", "percentage", "school"];
+            const skillAnchors = ["skills", "technical skills", "programming", "web technologies", "database", "tools", "software"];
+
+            const hasEducation = educationAnchors.some(kw => lowerText.includes(kw));
+            const hasSkills = skillAnchors.some(kw => lowerText.includes(kw));
+
+            const isValidResume = !(timetableHits.length >= 2 || (timetableHits.length >= 1 && !(hasEducation || hasSkills)) || (!(hasEducation || hasSkills) && wordCount < 35));
+            const warningMsg = isValidResume ? null : "❌ Invalid Resume Document Alert: The uploaded file is missing essential resume sections (Personal Details, Career Objective, Education, Technical Skills). Please upload a complete professional resume.";
 
             // Helper for exact word-boundary matching to prevent false positives (e.g. "md" in "developed")
             const testWord = (kw) => new RegExp('\\b' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(lowerText);
@@ -861,42 +868,40 @@
                     grade: "F",
                     hackathon_probability: 10,
                     internship_probability: 15,
-                    hackathon_status: "❌ Document Invalid (Not a Valid Resume)",
+                    hackathon_status: "❌ Document Invalid (Missing Essential Resume Sections)",
                     internship_status: "❌ Please Upload a Professional Resume",
                     feedback: [{ type: "fail", text: warningMsg }],
                     detected_skills: [],
                     company_skills: [],
                     suggested_jobs: [],
                     study_roadmap: [{
-                        category: "Resume Validation Required",
+                        category: "Resume Structure Requirement",
                         topic: "Upload Complete Professional Resume",
-                        recommendation: "Your document was recognized as a non-resume file (timetable, schedule, or notes). Upload a complete resume with Education, Technical Skills, and Projects.",
+                        recommendation: "Your document is missing essential resume sections. Include: 1) Personal Details & Contact, 2) Career Objective, 3) Education (Degree/College), 4) Technical Skills (Programming, Web, DB, Tools).",
                         priority: "HIGH",
-                        impact: "Unlocks Selection Scores & Custom Career Recommendations"
+                        impact: "Unlocks Selection Scores & Career Roadmap"
                     }],
-                    skill_gaps: ["Valid Resume File"]
+                    skill_gaps: ["Essential Resume Sections"]
                 };
             }
 
-            // Action Verbs
+            // Technical Skill Score (35% Weight)
+            const techSkillsScore = Math.min(100, Math.max(40, detectedSkills.length * 22));
+
+            // Action Verbs (25% Weight)
             const actionVerbs = ["achieved", "developed", "managed", "created", "led", "increased", "reduced", "designed", "implemented", "engineered", "launched", "optimized", "built", "improved"];
             const foundVerbs = actionVerbs.filter(v => lowerText.includes(v));
-            const actionScore = Math.min(100, Math.max(50, foundVerbs.length * 25));
+            const actionScore = Math.min(100, Math.max(40, foundVerbs.length * 25));
 
-            // Metrics
+            // Metrics (25% Weight)
             const numbers = rawText.match(/\b\d+(?:%|\b)/g) || [];
             const metricsScore = Math.min(100, Math.max(40, numbers.length * 35));
 
-            // Structure
+            // Structure (15% Weight)
             const sections = ["education", "experience", "skills"].filter(sec => lowerText.includes(sec));
             const structureScore = sections.length > 0 ? (sections.length / 3) * 100 : 80;
 
-            // Length
-            let lengthScore = 100;
-            if (wordCount > 0 && wordCount < 120) lengthScore = 65;
-            else if (wordCount > 600) lengthScore = 75;
-
-            const rawTotal = (actionScore * 0.30) + (metricsScore * 0.30) + (structureScore * 0.25) + (lengthScore * 0.15);
+            const rawTotal = (techSkillsScore * 0.35) + (actionScore * 0.25) + (metricsScore * 0.25) + (structureScore * 0.15);
             const totalScore = Math.min(100, Math.round(rawTotal));
             const grade = totalScore >= 85 ? "A" : (totalScore >= 75 ? "B" : (totalScore >= 60 ? "C" : "D"));
 

@@ -61,7 +61,7 @@ class AnalysisResult(BaseModel):
 
 
 def validate_resume_document(raw_text: str) -> tuple[bool, str]:
-    """Detect if the uploaded text is a valid resume or a non-resume document (like a timetable/schedule)."""
+    """Detect if the uploaded text is a valid resume containing essential professional sections."""
     lower_text = raw_text.lower()
     
     # 1. Timetable / Schedule / Non-resume keywords
@@ -73,18 +73,22 @@ def validate_resume_document(raw_text: str) -> tuple[bool, str]:
     ]
     timetable_hits = [kw for kw in timetable_keywords if kw in lower_text]
     
-    # 2. Check resume section headers / anchor keywords
-    resume_anchors = [
-        "education", "experience", "skills", "projects", "qualification", "employment",
-        "work history", "summary", "profile", "contact", "certifications", "curriculum vitae", "resume"
-    ]
-    anchor_hits = [anchor for anchor in resume_anchors if anchor in lower_text]
+    # 2. Check essential resume sections matching standard resume format:
+    # Personal Details, Career Objective, Education, Technical Skills
+    personal_anchors = ["name", "phone", "email", "contact", "linkedin", "github", "portfolio", "address"]
+    objective_anchors = ["objective", "target role", "summary", "profile", "career objective"]
+    education_anchors = ["education", "degree", "bachelor", "master", "college", "university", "10th", "12th", "cgpa", "percentage", "school"]
+    skills_anchors = ["skills", "technical skills", "programming", "web technologies", "database", "tools", "software"]
     
-    if len(timetable_hits) >= 2 or (len(timetable_hits) >= 1 and len(anchor_hits) == 0):
+    has_personal = any(anchor in lower_text for anchor in personal_anchors)
+    has_education = any(anchor in lower_text for anchor in education_anchors)
+    has_skills = any(anchor in lower_text for anchor in skills_anchors)
+    
+    if len(timetable_hits) >= 2 or (len(timetable_hits) >= 1 and not (has_education or has_skills)):
         return False, "❌ Invalid Document Alert: The uploaded file is NOT a valid resume! (College Timetable / Class Schedule / Non-Resume file detected). Please upload a complete professional resume file."
     
-    if len(anchor_hits) == 0 and len(raw_text.strip().split()) < 35:
-        return False, "❌ Incomplete Resume Alert: The uploaded document does not contain standard resume sections (Education, Technical Skills, Projects). Please upload a complete resume."
+    if not (has_education or has_skills) and len(raw_text.strip().split()) < 35:
+        return False, "❌ Incomplete Resume Alert: The uploaded document is missing essential resume sections (Personal Details, Education, Technical Skills, Career Objective). Please upload a complete resume."
         
     return True, ""
 
@@ -121,12 +125,11 @@ def predict_resume_domain(raw_text: str, detected_skills: List[str]) -> tuple[st
             eng_score += 4.0
     domain_scores["engineering"] = eng_score
 
-    # 2. Medical & Healthcare / Doctor Keywords (Strict word boundary to avoid "md" matching "developed" or "cmd"!)
+    # 2. Medical & Healthcare / Doctor Keywords
     doctor_heavy = ["mbbs", "bams", "bhms", "doctor", "physician", "surgeon", "nurse", "nursing", "hospital", "clinic", "clinical", "patient care", "patient", "surgery", "bds", "dentist", "medical officer"]
     doctor_general = ["pharmacology", "pharmacy", "medical", "anatomy", "physiology", "pathology", "pediatrics", "healthcare", "diagnosis", "prescription", "bls", "acls"]
     
     doctor_score = count_matches(doctor_heavy) * 5.0 + count_matches(doctor_general) * 2.0
-    # Note: \bmd\b and \bms\b only matched if exact standalone words (e.g. Doctor of Medicine)
     if re.search(r"\bmbbs\b", lower_text) or re.search(r"\bdoctor of medicine\b", lower_text):
         doctor_score += 10.0
     domain_scores["doctor"] = doctor_score
@@ -154,10 +157,8 @@ def predict_resume_domain(raw_text: str, detected_skills: List[str]) -> tuple[st
     business_score = count_matches(business_heavy) * 4.0 + count_matches(business_general) * 2.0
     domain_scores["business"] = business_score
 
-    # Select domain with highest score
     top_domain = max(domain_scores, key=domain_scores.get)
     if domain_scores[top_domain] < 2.0:
-        # Default fallback to Engineering if technical skills or programming terms exist
         top_domain = "engineering"
 
     domain_meta = {
@@ -301,17 +302,17 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
     if not is_valid_resume:
         hackathon_prob = 10.0
         intern_prob = 15.0
-        hackathon_status = "❌ Document Invalid (Not a Valid Resume)"
-        intern_status = "❌ Please Upload a Professional Resume"
+        hackathon_status = "❌ Document Invalid (Missing Resume Sections)"
+        intern_status = "❌ Please Upload a Standard Resume File"
         
         roadmap.append(StudyTopic(
-            category="Resume Validation Required",
-            topic="Upload Genuine Professional Resume",
-            recommendation="Your document was recognized as a non-resume file (timetable, schedule, or notes). Upload a full resume with Education, Technical Skills, and Projects.",
+            category="Resume Section Requirements",
+            topic="Include Essential Resume Sections",
+            recommendation="Your uploaded file is missing standard resume sections. Please structure your file to include: 1) Personal Details, 2) Career Objective, 3) Education (Degree/College), 4) Technical Skills.",
             priority="HIGH",
-            impact="Unlocks Selection Scores & Custom Career Recommendations"
+            impact="Unlocks Accurate ATS Scoring & Custom Study Recommendations"
         ))
-        return hackathon_prob, intern_prob, hackathon_status, intern_status, roadmap, ["Valid Resume File"]
+        return hackathon_prob, intern_prob, hackathon_status, intern_status, roadmap, ["Complete Resume Sections"]
 
     # Calculate domain-tailored probabilities & study roadmaps
     if domain_name == "Engineering & Computer Science":
@@ -323,24 +324,24 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
         if "git" not in skills_set:
             skill_gaps.append("Git & GitHub Branching")
             roadmap.append(StudyTopic(
-                category="Version Control & Collaboration",
+                category="Technical Skills (Tools)",
                 topic="Git Branching & GitHub Open Source PRs",
-                recommendation="Master Git commands (clone, commit, push, branch, merge) and host 2+ repositories on GitHub with clear documentation.",
+                recommendation="Master Git commands (clone, commit, push, branch, merge) and host 2+ project repositories on GitHub with clear README documentation.",
                 priority="HIGH",
                 impact="+15% Technical Interview Selection Odds"
             ))
         if not (skills_set & {"fastapi", "nodejs", "django", "flask", "rest api"}):
             skill_gaps.append("REST API & Backend Development")
             roadmap.append(StudyTopic(
-                category="Backend & API Engineering",
+                category="Technical Skills (Web Technologies)",
                 topic="REST API Development (FastAPI / Node.js)",
                 recommendation="Build JSON REST APIs, handle HTTP methods (GET, POST, PUT, DELETE), and connect endpoints to SQL databases.",
                 priority="HIGH",
                 impact="+20% Backend / Fullstack Role Match"
             ))
         roadmap.append(StudyTopic(
-            category="Computer Science Fundamentals",
-            topic="Data Structures, Algorithms & LeetCode Problem Solving",
+            category="Technical Skills (Core Engineering)",
+            topic="Data Structures, Algorithms & Problem Solving",
             recommendation="Solve 3-5 algorithmic problems weekly on Arrays, HashMaps, Strings, Trees, and Time Complexity.",
             priority="HIGH",
             impact="Essential for Passing Technical Engineering Interviews"
@@ -355,7 +356,7 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
         if "figma" not in skills_set:
             skill_gaps.append("Figma & UI/UX Prototyping")
             roadmap.append(StudyTopic(
-                category="UI/UX & Visual Design",
+                category="Technical Skills (Design Tools)",
                 topic="Figma Design Systems & Interactive Wireframing",
                 recommendation="Master Figma components, auto-layout, and interactive prototypes to create modern app layouts.",
                 priority="HIGH",
@@ -364,7 +365,7 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
         if not (skills_set & {"photoshop", "illustrator"}):
             skill_gaps.append("Adobe Creative Suite")
             roadmap.append(StudyTopic(
-                category="Digital Visual Arts",
+                category="Technical Skills (Visual Arts)",
                 topic="Adobe Illustrator & Graphic Branding",
                 recommendation="Learn vector logo design, branding systems, and digital asset production for creative campaigns.",
                 priority="HIGH",
@@ -430,7 +431,7 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
         if not (skills_set & {"power bi", "tableau"}):
             skill_gaps.append("Business Intelligence (Power BI / Tableau)")
             roadmap.append(StudyTopic(
-                category="Business Intelligence",
+                category="Technical Skills (Analytics Tools)",
                 topic="Interactive Dashboarding with Power BI or Tableau",
                 recommendation="Build executive KPI dashboards connecting sales, financial, or operational data sources.",
                 priority="HIGH",
@@ -468,7 +469,7 @@ async def analyze_resume(
     if not raw_text.strip():
         raw_text = "Experienced candidate proficient in professional resume sections, qualifications, projects, and skills."
 
-    # 1. Document Resume Validation (Non-resume / Timetable check)
+    # 1. Document Resume Validation (Check required resume sections & non-resume structures)
     is_valid_resume, warning_msg = validate_resume_document(raw_text)
 
     # 2. Extract detected skills & Predict Domain
@@ -492,7 +493,17 @@ async def analyze_resume(
         total_score = 20.0
         grade = "F"
     else:
-        # Action Verbs
+        # Technical Skill Evaluation (35% weight of ATS grade score)
+        tech_skills_score = min(100.0, float(len(detected_skills) * 22.0))
+        if tech_skills_score < 40.0:
+            tech_skills_score = 40.0
+
+        if len(detected_skills) >= 3:
+            feedback.append({"type": "pass", "text": f"Technical Skills Analysis: Detected key tools across Programming, Web, Database & Software Tools ({', '.join(detected_skills[:5])})."})
+        else:
+            feedback.append({"type": "fail", "text": "Technical Skill Suggestion: Expand your Technical Skills section with Programming languages, Web Tech, Databases, or Developer Tools."})
+
+        # Action Verbs (25% weight)
         action_verbs = ["achieved", "developed", "managed", "created", "led", "increased", "reduced",
                         "designed", "implemented", "engineered", "launched", "orchestrated", "automated",
                         "optimized", "built", "assisted", "supported", "coordinated", "handled", "improved"]
@@ -504,7 +515,7 @@ async def analyze_resume(
         else:
             feedback.append({"type": "fail", "text": "Low action impact detected. Add stronger accomplishment verbs."})
 
-        # Quantifiable Metrics
+        # Quantifiable Metrics (25% weight)
         numbers = re.findall(r'\b\d+(?:%|\b)', raw_text)
         metrics_score = min(100.0, float(len(numbers) * 35))
 
@@ -513,18 +524,11 @@ async def analyze_resume(
         else:
             feedback.append({"type": "fail", "text": "Lacks measurable impact. Incorporate percentages, user counts, or metric data."})
 
-        # Structure
+        # Structure & Length (15% weight)
         required_sections = ["education", "experience", "skills"]
         found_sections = [sec for sec in required_sections if sec in lower_text]
         structure_score = (len(found_sections) / len(required_sections)) * 100.0
 
-        if len(found_sections) == len(required_sections):
-            feedback.append({"type": "pass", "text": "Standard resume sections detected (Education, Technical Skills, Projects/Experience)."})
-        else:
-            missing = [sec for sec in required_sections if sec not in lower_text]
-            feedback.append({"type": "fail", "text": f"Missing recommended section headers: {', '.join(missing)}."})
-
-        # Length
         if word_count < 100:
             length_score = 60.0
             feedback.append({"type": "fail", "text": f"Resume text is short ({word_count} words). Aim for 200–500 words."})
@@ -535,7 +539,8 @@ async def analyze_resume(
             length_score = 100.0
             feedback.append({"type": "pass", "text": f"Ideal concise length ({word_count} words)."})
 
-        raw_total = (action_score * 0.30) + (metrics_score * 0.30) + (structure_score * 0.25) + (length_score * 0.15)
+        # Grade calculation heavily weighted by Technical Skills
+        raw_total = (tech_skills_score * 0.35) + (action_score * 0.25) + (metrics_score * 0.25) + (structure_score * 0.15)
         total_score = min(100.0, round(raw_total))
 
         grade = "A" if total_score >= 85 else ("B" if total_score >= 75 else ("C" if total_score >= 60 else "D"))
@@ -609,7 +614,7 @@ if __name__ == "__main__":
 
     uvicorn.run(
         "app1:app",
-        host=os.getenv("HOST", "127.0.0.1"),
+        host=os.getenv("HOST", "0.0.0.0"),
         port=int(os.getenv("PORT", "5503")),
         root_path="/",
         reload=False

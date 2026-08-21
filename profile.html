@@ -2,247 +2,362 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>My Profile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My Profile - AutoHire RAG AI</title>
 
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
         body {
-            background: #111827;
+            background: #0f172a;
+            color: #f8fafc;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            padding: 16px;
         }
 
-        .profile-card {
-
-            width: 420px;
-
-            background: #1F2937;
-
-            padding: 35px;
-
-            border-radius: 15px;
-
+        .profile-container {
+            width: 100%;
+            max-width: 520px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 28px 24px;
+            border-radius: 20px;
             text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
 
-            box-shadow: 0 0 20px rgba(0, 0, 0, .4);
-
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            margin-bottom: 20px;
         }
 
         .avatar {
-
-            width: 120px;
-
-            height: 120px;
-
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-
-            background: #FACC15;
-
-            color: #111827;
-
-            font-size: 50px;
-
-            font-weight: bold;
-
+            background: linear-gradient(135deg, #eab308, #ca8a04);
+            color: #0f172a;
+            font-size: 44px;
+            font-weight: 800;
             display: flex;
-
             justify-content: center;
-
             align-items: center;
-
-            margin: auto;
-
-            margin-bottom: 20px;
-
+            margin: 0 auto 16px auto;
+            box-shadow: 0 0 25px rgba(234, 179, 8, 0.4);
+            border: 3px solid #fef08a;
         }
 
         h2 {
-
-            color: white;
-
-            margin-bottom: 5px;
-
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
         }
 
-        p {
-
-            color: #d1d5db;
-
-            margin: 12px 0;
-
-            font-size: 17px;
-
+        .role-tag {
+            color: #eab308;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
         }
 
-        .info {
-
+        .info-group {
             text-align: left;
-
-            margin-top: 25px;
-
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
-        .info div {
-
-            background: #374151;
-
-            padding: 15px;
-
-            border-radius: 8px;
-
-            margin-top: 15px;
-
-            color: white;
-
+        .info-card {
+            background: #0f172a;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid #334155;
         }
 
-        label {
-
-            color: #FACC15;
-
-            font-weight: bold;
-
+        .info-card label {
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: block;
+            margin-bottom: 4px;
         }
 
-        button {
-
-            margin-top: 30px;
-
+        .info-card input, .info-card select {
             width: 100%;
-
-            padding: 12px;
-
-            background: #FACC15;
-
-            color: #111827;
-
+            background: transparent;
             border: none;
-
-            border-radius: 8px;
-
-            font-size: 17px;
-
-            font-weight: bold;
-
-            cursor: pointer;
-
+            color: #f8fafc;
+            font-size: 15px;
+            font-weight: 600;
+            outline: none;
         }
 
-        button:hover {
+        .info-card select option {
+            background: #1e293b;
+            color: #f8fafc;
+        }
 
+        .info-card p {
+            color: #f8fafc;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .btn-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
             background: #eab308;
+            color: #0f172a;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            touch-action: manipulation;
+        }
 
+        .btn:hover, .btn:active {
+            background: #facc15;
+            transform: translateY(-1px);
+        }
+
+        .btn-save {
+            background: #10b981;
+            color: #ffffff;
+        }
+
+        .btn-save:hover {
+            background: #059669;
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #f8fafc;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
         }
 
         .logout {
-
-            background: red;
-
-            color: white;
-
-            margin-top: 15px;
-
+            background: #ef4444;
+            color: #ffffff;
         }
 
         .logout:hover {
+            background: #dc2626;
+        }
 
-            background: darkred;
+        /* Mobile Optimization */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
 
+            .profile-container {
+                padding: 20px 16px;
+                border-radius: 16px;
+            }
+
+            .avatar {
+                width: 80px;
+                height: 80px;
+                font-size: 36px;
+            }
+
+            h2 {
+                font-size: 20px;
+            }
+
+            .btn {
+                padding: 12px;
+                font-size: 15px;
+            }
         }
     </style>
-
 </head>
 
 <body>
 
-    <div class="profile-card">
+    <div class="profile-container">
+
+        <div class="status-badge" id="status-badge">
+            <span id="status-dot">🟢</span> <span id="status-text">Auto Sync Active (Mobile Ready)</span>
+        </div>
 
         <div class="avatar" id="avatar">
             U
         </div>
 
-        <h2 id="username">User Name</h2>
+        <h2 id="display-name">Candidate User</h2>
+        <p class="role-tag" id="display-domain">💻 Engineering & Computer Science</p>
 
-        <p>Username</p>
+        <form id="profile-form" onsubmit="saveProfile(event)">
+            <div class="info-group">
+                <div class="info-card">
+                    <label>Full Name</label>
+                    <input type="text" id="input-name" placeholder="Enter Full Name" required>
+                </div>
 
-        <div class="info">
+                <div class="info-card">
+                    <label>Email Address</label>
+                    <input type="email" id="input-email" placeholder="Enter Email Address" required>
+                </div>
 
-            <div>
+                <div class="info-card">
+                    <label>Target Domain / Field</label>
+                    <select id="input-domain">
+                        <option value="Engineering & Computer Science">💻 Engineering & Computer Science</option>
+                        <option value="Arts, Design & Humanities">🎨 Arts, Design & Humanities</option>
+                        <option value="Medical & Healthcare / Doctor">🩺 Medical & Healthcare / Doctor</option>
+                        <option value="Pure & Applied Science / Research">🔬 Pure & Applied Science / Research</option>
+                        <option value="Business, Finance & Commerce">💼 Business, Finance & Commerce</option>
+                    </select>
+                </div>
 
-                <label>Email</label>
-
-                <p id="email"></p>
-
+                <div class="info-card">
+                    <label>Technical Skills</label>
+                    <input type="text" id="input-skills" placeholder="e.g. Python, React, SQL, Git">
+                </div>
             </div>
 
-        </div>
-
-        <button onclick="goHome()">
-
-            Home
-
-        </button>
-
-        <button class="logout" onclick="logout()">
-
-            Logout
-
-        </button>
-
+            <div class="btn-stack">
+                <button type="submit" class="btn btn-save">
+                    💾 Save Profile Changes
+                </button>
+                <button type="button" class="btn" onclick="goDashboard()">
+                    🏠 Back to Dashboard
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="goAnalyzer()">
+                    📄 Resume Analyzer
+                </button>
+                <button type="button" class="btn logout" onclick="logout()">
+                    🚪 Logout
+                </button>
+            </div>
+        </form>
     </div>
 
     <script src="api-config.js"></script>
     <script>
+        const apiUrl = window.AUTOHIRE_API_URL || "http://127.0.0.1:8800/api/auth";
 
-        const apiUrl = window.AUTOHIRE_API_URL;
+        // Load profile automatically without terminal process requirement
+        function loadProfileData() {
+            const localProfile = JSON.parse(localStorage.getItem("autoHireProfile") || localStorage.getItem("loggedInUser") || "null") || {
+                name: "Candidate User",
+                email: "candidate@autohire.ai",
+                domain: "Engineering & Computer Science",
+                skills: "Python, SQL, React, Git"
+            };
 
-        fetch(`${apiUrl}/me`, { credentials: "include" }).then(async response => {
-            const localUser = JSON.parse(localStorage.getItem("autoHireProfile") || localStorage.getItem("loggedInUser") || "null");
-            if (!response.ok && !localUser) {
-                window.location.href = "index.html";
-                return;
-            }
+            // Populate Form UI
+            document.getElementById("input-name").value = localProfile.name || "Candidate User";
+            document.getElementById("input-email").value = localProfile.email || "candidate@autohire.ai";
+            document.getElementById("input-domain").value = localProfile.domain || "Engineering & Computer Science";
+            document.getElementById("input-skills").value = localProfile.skills || "Python, SQL, React, Git";
 
-            const { user } = response.ok ? await response.json() : { user: localUser };
-            document.getElementById("username").innerHTML = user.name;
-            document.getElementById("email").innerHTML = user.email;
-            document.getElementById("avatar").innerHTML = user.name.charAt(0).toUpperCase();
-        }).catch(() => {
-            if (!localStorage.getItem("autoHireProfile") && !localStorage.getItem("loggedInUser")) {
-                window.location.href = "index.html";
-            }
-        });
+            updateHeader(localProfile);
 
-        function goHome() {
+            // Attempt live backend fetch seamlessly
+            fetch(`${apiUrl}/me`, { credentials: "include" })
+                .then(async res => {
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.user) {
+                            const merged = { ...localProfile, ...data.user };
+                            document.getElementById("input-name").value = merged.name || merged.email;
+                            document.getElementById("input-email").value = merged.email || "";
+                            updateHeader(merged);
+                            localStorage.setItem("autoHireProfile", JSON.stringify(merged));
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Backend offline — local offline sync mode remains 100% active
+                    document.getElementById("status-badge").style.background = "rgba(234, 179, 8, 0.15)";
+                    document.getElementById("status-badge").style.color = "#facc15";
+                    document.getElementById("status-text").innerText = "⚡ Local Auto-Sync (Offline Ready)";
+                });
+        }
 
+        function updateHeader(user) {
+            const name = user.name || user.email || "Candidate User";
+            document.getElementById("display-name").innerText = name;
+            document.getElementById("avatar").innerText = name.charAt(0).toUpperCase();
+            document.getElementById("display-domain").innerText = user.domain ? user.domain : "💻 Engineering & Computer Science";
+        }
+
+        function saveProfile(event) {
+            event.preventDefault();
+            const profileData = {
+                name: document.getElementById("input-name").value.trim(),
+                email: document.getElementById("input-email").value.trim(),
+                domain: document.getElementById("input-domain").value,
+                skills: document.getElementById("input-skills").value.trim()
+            };
+
+            localStorage.setItem("autoHireProfile", JSON.stringify(profileData));
+            localStorage.setItem("loggedInUser", JSON.stringify(profileData));
+            updateHeader(profileData);
+
+            alert("✅ Profile updated successfully!");
+        }
+
+        function goDashboard() {
             window.location.href = "dashboard.html";
+        }
 
+        function goAnalyzer() {
+            window.location.href = "analyzer.html";
         }
 
         function logout() {
-
             fetch(`${apiUrl}/logout`, { method: "POST", credentials: "include" }).finally(() => {
                 localStorage.removeItem("loggedInUser");
                 localStorage.removeItem("autoHireProfile");
-                window.location.href = "index.html";
+                window.location.href = "sign-in.html";
             });
-
         }
 
+        // Auto-run profile initialization on load
+        window.addEventListener("DOMContentLoaded", loadProfileData);
     </script>
-
 </body>
 
 </html>

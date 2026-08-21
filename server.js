@@ -980,11 +980,11 @@ app.post("/submit-registration", upload.single("resumeFile"), (req, res) => {
 
 if (require.main === module) {
     const PORT = Number(process.env.PORT || 8800);
-    const HOST = process.env.HOST || "127.0.0.1";
+    const HOST = process.env.HOST || "0.0.0.0";
     const server = app.listen(PORT, HOST, () => {
         console.log("Server Running");
         console.log(`Local: http://localhost:${PORT}/register.html`);
-        console.log(`Network: http://<your-computer-ip>:${PORT}/register.html`);
+        console.log(`Network Mobile: http://0.0.0.0:${PORT}/register.html`);
         startAnalyzerBackend();
         startJobsBackend();
     });
