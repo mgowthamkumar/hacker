@@ -570,36 +570,50 @@ app.post(["/analyzer", "/api/analyzer"], upload.single("file"), async (req, res)
     const lowerText = rawText.toLowerCase();
 
     // 1. Timetable / Non-Resume Document Validation
-    const timetableKeywords = ["timetable", "time table", "class schedule", "lecture schedule", "period 1", "period 2", "room no", "subject code", "exam schedule", "date sheet", "hall ticket", "daily routine", "invoice", "receipt", "bill"];
+    const timetableKeywords = ["timetable", "time table", "class schedule", "lecture schedule", "period 1", "period 2", "room no", "subject code", "exam schedule", "date sheet", "hall ticket", "daily routine", "invoice", "receipt", "bill", "syllabus sheet"];
     const timetableHits = timetableKeywords.filter(kw => lowerText.includes(kw));
     const resumeAnchors = ["education", "experience", "skills", "projects", "qualification", "employment", "summary", "profile", "contact", "certifications", "resume"];
     const anchorHits = resumeAnchors.filter(kw => lowerText.includes(kw));
 
-    const isValidResume = !(timetableHits.length >= 2 || (timetableHits.length >= 1 && anchorHits.length === 0) || (anchorHits.length === 0 && rawText.split(/\s+/).length < 40));
-    const warningMsg = isValidResume ? null : "⚠️ Non-Resume Document Detected: The uploaded document appears to be a timetable, class schedule, or non-resume document. Please upload a genuine resume for accurate field analysis.";
+    const isValidResume = !(timetableHits.length >= 2 || (timetableHits.length >= 1 && anchorHits.length === 0) || (anchorHits.length === 0 && rawText.split(/\s+/).length < 35));
+    const warningMsg = isValidResume ? null : "❌ Invalid Document Alert: The uploaded file is NOT a valid resume! (College Timetable / Class Schedule / Non-Resume file detected). Please upload a complete professional resume file.";
 
-    // 2. Domain Classification
-    let domainName = "Engineering & Computer Science";
-    let domainIcon = "💻";
-    let domainDesc = "Focused on software engineering, technology systems, and technical problem solving.";
+    // Helper for exact word-boundary matching
+    const testWord = (kw) => new RegExp('\\b' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(lowerText);
 
-    if (lowerText.includes("mbbs") || lowerText.includes("doctor") || lowerText.includes("patient") || lowerText.includes("clinical") || lowerText.includes("nursing")) {
-        domainName = "Medical & Healthcare / Doctor";
-        domainIcon = "🩺";
-        domainDesc = "Focused on clinical medicine, patient care, surgical procedures, and health sciences.";
-    } else if (lowerText.includes("arts") || lowerText.includes("fine arts") || lowerText.includes("figma") || lowerText.includes("graphic design") || lowerText.includes("copywriting") || lowerText.includes("b.a")) {
-        domainName = "Arts, Design & Humanities";
-        domainIcon = "🎨";
-        domainDesc = "Focused on creative arts, visual design, UI/UX, copywriting, and media.";
-    } else if (lowerText.includes("b.sc") || lowerText.includes("m.sc") || lowerText.includes("laboratory") || lowerText.includes("spss") || lowerText.includes("biotechnology")) {
-        domainName = "Pure & Applied Science / Research";
-        domainIcon = "🔬";
-        domainDesc = "Focused on scientific research, laboratory experimentation, and statistical data analysis.";
-    } else if (lowerText.includes("bba") || lowerText.includes("mba") || lowerText.includes("b.com") || lowerText.includes("finance") || lowerText.includes("marketing") || lowerText.includes("accounting")) {
-        domainName = "Business, Finance & Commerce";
-        domainIcon = "💼";
-        domainDesc = "Focused on business administration, financial analysis, marketing, and operations.";
-    }
+    // 2. Domain Classification with exact word-boundary scoring
+    const domainScores = { engineering: 0, doctor: 0, arts: 0, science: 0, business: 0 };
+
+    const engKw = ["b.tech", "btech", "m.tech", "mtech", "b.e", "be", "computer science", "software engineer", "developer", "coding", "full stack", "backend", "frontend", "devops", "python", "java", "c++", "c#", "javascript", "typescript", "react", "nodejs", "sql", "git", "github", "aws", "docker", "fastapi", "django", "flask", "rest api", "machine learning", "data structures", "algorithms", "autocad", "matlab"];
+    engKw.forEach(kw => { if (testWord(kw)) domainScores.engineering += (["b.tech", "btech", "computer science", "software engineer", "developer", "python", "react", "java", "javascript", "sql"].includes(kw) ? 4 : 2); });
+
+    const docKw = ["mbbs", "bams", "bhms", "doctor", "physician", "surgeon", "nurse", "nursing", "hospital", "clinic", "clinical", "patient care", "patient", "surgery", "pharmacology", "pharmacy", "bds", "dentist", "medical officer", "bls", "acls"];
+    docKw.forEach(kw => { if (testWord(kw)) domainScores.doctor += (["mbbs", "doctor", "physician", "surgeon", "bds", "nursing"].includes(kw) ? 5 : 2); });
+
+    const artsKw = ["fine arts", "graphic design", "ui/ux", "figma", "photoshop", "illustrator", "creative writing", "journalism", "copywriting", "content writing", "bfa", "mfa", "b.a", "ba", "m.a", "ma", "literature", "history", "media", "communication", "dribbble", "behance"];
+    artsKw.forEach(kw => { if (testWord(kw)) domainScores.arts += (["fine arts", "figma", "graphic design", "ui/ux", "copywriting", "bfa"].includes(kw) ? 4 : 2); });
+
+    const sciKw = ["b.sc", "bsc", "m.sc", "msc", "biotechnology", "microbiology", "biochemistry", "spss", "latex", "scientific paper", "laboratory", "physics", "chemistry", "biology", "botany", "zoology", "mathematics", "statistics"];
+    sciKw.forEach(kw => { if (testWord(kw)) domainScores.science += (["b.sc", "m.sc", "biotechnology", "microbiology", "laboratory"].includes(kw) ? 4 : 2); });
+
+    const bizKw = ["bba", "mba", "b.com", "bcom", "m.com", "finance", "accounting", "chartered accountant", "marketing", "human resources", "hr", "sales", "business development", "power bi", "tableau", "salesforce"];
+    bizKw.forEach(kw => { if (testWord(kw)) domainScores.business += (["mba", "b.com", "finance", "marketing", "accounting"].includes(kw) ? 4 : 2); });
+
+    let topDomainKey = Object.keys(domainScores).reduce((a, b) => domainScores[a] >= domainScores[b] ? a : b);
+    if (domainScores[topDomainKey] === 0) topDomainKey = "engineering";
+
+    const domainMap = {
+        arts: { name: "Arts, Design & Humanities", icon: "🎨", desc: "Focused on visual design, UI/UX, copywriting, digital art, literature, and media communication." },
+        doctor: { name: "Medical & Healthcare / Doctor", icon: "🩺", desc: "Focused on clinical medicine, patient diagnostics, surgical procedures, and healthcare management." },
+        science: { name: "Pure & Applied Science / Research", icon: "🔬", desc: "Focused on scientific research, lab protocols, statistical data analysis, and experimentation." },
+        business: { name: "Business, Finance & Commerce", icon: "💼", desc: "Focused on financial modeling, corporate business analysis, marketing, and operations." },
+        engineering: { name: "Engineering & Computer Science", icon: "💻", desc: "Focused on software engineering, tech stacks, data engineering, and technical problem solving." }
+    };
+
+    const selectedDomain = domainMap[topDomainKey];
+    const domainName = selectedDomain.name;
+    const domainIcon = selectedDomain.icon;
+    const domainDesc = selectedDomain.desc;
 
     const companySkillsStr = req.body.company_skills || "";
     const companySkills = companySkillsStr ? companySkillsStr.split(/[,;\s]+/).filter(Boolean) : [];
@@ -611,16 +625,16 @@ app.post(["/analyzer", "/api/analyzer"], upload.single("file"), async (req, res)
             predicted_domain: domainName,
             domain_icon: domainIcon,
             domain_description: domainDesc,
-            action_score: 30.0,
-            metrics_score: 20.0,
-            structure_score: 30.0,
-            length_score: 40.0,
-            total_score: 28.0,
+            action_score: 20.0,
+            metrics_score: 15.0,
+            structure_score: 20.0,
+            length_score: 30.0,
+            total_score: 20.0,
             grade: "F",
-            hackathon_probability: 15.0,
-            internship_probability: 20.0,
-            hackathon_status: "⚠️ Document Invalid (Timetable / Schedule Detected)",
-            internship_status: "⚠️ Please Upload a Valid Professional Resume",
+            hackathon_probability: 10.0,
+            internship_probability: 15.0,
+            hackathon_status: "❌ Document Invalid (Not a Valid Resume)",
+            internship_status: "❌ Please Upload a Professional Resume",
             feedback: [{ type: "fail", text: warningMsg }],
             detected_skills: [],
             company_skills: companySkills,
@@ -628,9 +642,9 @@ app.post(["/analyzer", "/api/analyzer"], upload.single("file"), async (req, res)
             study_roadmap: [{
                 category: "Resume Validation Required",
                 topic: "Upload Complete Professional Resume",
-                recommendation: "Your current file was identified as a timetable or schedule. Upload a full resume containing Education, Experience, and Skills.",
+                recommendation: "Your document was recognized as a non-resume file (timetable, schedule, or notes). Upload a complete resume with Education, Technical Skills, and Projects.",
                 priority: "HIGH",
-                impact: "Unlocks Accurate Selection Scores & Career Roadmap"
+                impact: "Unlocks Selection Scores & Custom Career Recommendations"
             }],
             skill_gaps: ["Valid Resume File"]
         });

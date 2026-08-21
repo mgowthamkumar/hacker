@@ -81,86 +81,84 @@ def validate_resume_document(raw_text: str) -> tuple[bool, str]:
     anchor_hits = [anchor for anchor in resume_anchors if anchor in lower_text]
     
     if len(timetable_hits) >= 2 or (len(timetable_hits) >= 1 and len(anchor_hits) == 0):
-        return False, "⚠️ Non-Resume Document Detected: The uploaded file appears to be a college timetable, class schedule, or non-resume document. Please upload a valid professional resume (Arts, Engineering, Doctor/Medical, Science, Business) for accurate analysis."
+        return False, "❌ Invalid Document Alert: The uploaded file is NOT a valid resume! (College Timetable / Class Schedule / Non-Resume file detected). Please upload a complete professional resume file."
     
-    if len(anchor_hits) == 0 and len(raw_text.strip().split()) < 40:
-        return False, "⚠️ Incomplete Resume Warning: The uploaded text lacks standard resume sections (Education, Skills, Experience). Please upload a complete resume file."
+    if len(anchor_hits) == 0 and len(raw_text.strip().split()) < 35:
+        return False, "❌ Incomplete Resume Alert: The uploaded document does not contain standard resume sections (Education, Technical Skills, Projects). Please upload a complete resume."
         
     return True, ""
 
 
 def predict_resume_domain(raw_text: str, detected_skills: List[str]) -> tuple[str, str, str]:
-    """Predict resume discipline/domain across 5 major fields."""
+    """Predict resume discipline/domain accurately using word-boundary matching to prevent false positives."""
     lower_text = raw_text.lower()
     skills_set = set(s.lower() for s in detected_skills)
 
     domain_scores = {
-        "arts": 0,
-        "doctor": 0,
-        "science": 0,
-        "business": 0,
-        "engineering": 0
+        "arts": 0.0,
+        "doctor": 0.0,
+        "science": 0.0,
+        "business": 0.0,
+        "engineering": 0.0
     }
 
-    # 1. Arts, Design & Humanities
-    arts_kw = [
-        "arts", "b.a", "ba", "m.a", "ma", "fine arts", "bfa", "mfa", "graphic design", "ui/ux", "ui", "ux",
-        "figma", "photoshop", "illustrator", "indesign", "canva", "creative writing", "literature", "history",
-        "journalism", "copywriting", "content writing", "media", "communication", "film", "acting", "music",
-        "theatre", "sociology", "psychology", "philosophy", "animation", "visual arts", "sculpture", "painting",
-        "fashion", "interior design", "dribbble", "behance"
-    ]
-    for kw in arts_kw:
-        if kw in lower_text or kw in skills_set:
-            domain_scores["arts"] += 2 if kw in ["b.a", "fine arts", "figma", "copywriting", "graphic design", "ui/ux"] else 1
+    # Helper function for exact word-boundary regex matching
+    def count_matches(keywords: list[str]) -> int:
+        count = 0
+        for kw in keywords:
+            pattern = r"\b" + re.escape(kw) + r"\b"
+            if re.search(pattern, lower_text):
+                count += 1
+        return count
 
-    # 2. Medical & Healthcare / Doctor
-    doctor_kw = [
-        "mbbs", "md", "ms", "bams", "bhms", "doctor", "physician", "surgeon", "nurse", "nursing", "hospital",
-        "clinic", "clinical", "patient", "surgery", "pharmacology", "pharmacy", "medical", "anatomy",
-        "physiology", "pathology", "pediatrics", "health", "healthcare", "bds", "dentist", "diagnosis",
-        "treatment", "prescription", "icu", "ward", "medical officer", "bls", "acls"
-    ]
-    for kw in doctor_kw:
-        if kw in lower_text or kw in skills_set:
-            domain_scores["doctor"] += 3 if kw in ["mbbs", "md", "doctor", "physician", "surgeon", "bds", "nursing"] else 1
+    # 1. Engineering & Technology Keywords
+    eng_heavy = ["b.tech", "btech", "m.tech", "mtech", "b.e", "be", "computer science", "software engineer", "developer", "coding", "full stack", "backend", "frontend", "devops", "data structures", "algorithms"]
+    eng_skills = ["python", "java", "c++", "c#", "javascript", "typescript", "react", "nodejs", "sql", "git", "github", "aws", "docker", "fastapi", "django", "flask", "rest api", "machine learning", "cad", "autocad", "matlab"]
+    
+    eng_score = count_matches(eng_heavy) * 4.0 + count_matches(eng_skills) * 3.0
+    for sk in detected_skills:
+        if sk.lower() in ["python", "java", "javascript", "react", "nodejs", "sql", "git", "aws", "docker", "c++", "c#", "fastapi", "django", "rest api"]:
+            eng_score += 4.0
+    domain_scores["engineering"] = eng_score
 
-    # 3. Pure & Applied Science / Research
-    science_kw = [
-        "b.sc", "bsc", "m.sc", "msc", "physics", "chemistry", "biology", "biotechnology", "microbiology",
-        "biochemistry", "botany", "zoology", "mathematics", "statistics", "genetics", "laboratory", "lab",
-        "research paper", "scientific", "spss", "latex", "experiment", "hypothesis", "publication", "astronomy",
-        "geology", "research assistant"
-    ]
-    for kw in science_kw:
-        if kw in lower_text or kw in skills_set:
-            domain_scores["science"] += 2 if kw in ["b.sc", "m.sc", "biotechnology", "chemistry", "physics", "laboratory"] else 1
+    # 2. Medical & Healthcare / Doctor Keywords (Strict word boundary to avoid "md" matching "developed" or "cmd"!)
+    doctor_heavy = ["mbbs", "bams", "bhms", "doctor", "physician", "surgeon", "nurse", "nursing", "hospital", "clinic", "clinical", "patient care", "patient", "surgery", "bds", "dentist", "medical officer"]
+    doctor_general = ["pharmacology", "pharmacy", "medical", "anatomy", "physiology", "pathology", "pediatrics", "healthcare", "diagnosis", "prescription", "bls", "acls"]
+    
+    doctor_score = count_matches(doctor_heavy) * 5.0 + count_matches(doctor_general) * 2.0
+    # Note: \bmd\b and \bms\b only matched if exact standalone words (e.g. Doctor of Medicine)
+    if re.search(r"\bmbbs\b", lower_text) or re.search(r"\bdoctor of medicine\b", lower_text):
+        doctor_score += 10.0
+    domain_scores["doctor"] = doctor_score
 
-    # 4. Business, Finance & Commerce
-    business_kw = [
-        "bba", "mba", "b.com", "bcom", "m.com", "finance", "accounting", "chartered accountant", "ca", "cpa",
-        "marketing", "human resources", "hr", "sales", "business development", "economics", "banking",
-        "commerce", "auditing", "excel", "tally", "power bi", "tableau", "crm", "salesforce", "operations",
-        "supply chain", "brand manager", "business analyst"
-    ]
-    for kw in business_kw:
-        if kw in lower_text or kw in skills_set:
-            domain_scores["business"] += 2 if kw in ["mba", "b.com", "finance", "marketing", "accounting", "human resources"] else 1
+    # 3. Arts, Design & Humanities Keywords
+    arts_heavy = ["fine arts", "graphic design", "ui/ux", "figma", "photoshop", "illustrator", "creative writing", "journalism", "copywriting", "content writing", "bfa", "mfa", "animation", "visual arts", "dribbble", "behance"]
+    arts_general = ["arts", "b.a", "ba", "m.a", "ma", "literature", "history", "media", "communication", "film", "acting", "music", "theatre", "sociology", "psychology", "philosophy", "sculpture", "painting", "fashion design"]
+    
+    arts_score = count_matches(arts_heavy) * 4.0 + count_matches(arts_general) * 2.0
+    if "figma" in skills_set or "copywriting" in skills_set:
+        arts_score += 5.0
+    domain_scores["arts"] = arts_score
 
-    # 5. Engineering & Technology
-    eng_kw = [
-        "b.tech", "btech", "m.tech", "mtech", "b.e", "be", "computer science", "software", "developer",
-        "python", "java", "c++", "c#", "javascript", "react", "node", "sql", "git", "aws", "docker",
-        "machine learning", "data science", "ai", "fastapi", "django", "mechanical", "electrical",
-        "civil", "electronics", "cad", "autocad", "matlab", "embedded", "engineering"
-    ]
-    for kw in eng_kw:
-        if kw in lower_text or kw in skills_set:
-            domain_scores["engineering"] += 2 if kw in ["b.tech", "computer science", "developer", "python", "software"] else 1
+    # 4. Pure & Applied Science / Research Keywords
+    science_heavy = ["b.sc", "bsc", "m.sc", "msc", "biotechnology", "microbiology", "biochemistry", "spss", "latex", "scientific paper", "research paper", "laboratory", "lab research"]
+    science_general = ["physics", "chemistry", "biology", "botany", "zoology", "mathematics", "statistics", "genetics", "hypothesis", "astronomy", "geology"]
+    
+    science_score = count_matches(science_heavy) * 4.0 + count_matches(science_general) * 2.0
+    domain_scores["science"] = science_score
 
+    # 5. Business, Finance & Commerce Keywords
+    business_heavy = ["bba", "mba", "b.com", "bcom", "m.com", "finance", "accounting", "chartered accountant", "marketing", "human resources", "sales", "business development", "power bi", "tableau", "salesforce"]
+    business_general = ["hr", "economics", "banking", "commerce", "auditing", "tally", "crm", "operations", "supply chain", "brand manager", "business analyst"]
+    
+    business_score = count_matches(business_heavy) * 4.0 + count_matches(business_general) * 2.0
+    domain_scores["business"] = business_score
+
+    # Select domain with highest score
     top_domain = max(domain_scores, key=domain_scores.get)
-    if domain_scores[top_domain] == 0:
-        top_domain = "engineering" # default fallback
+    if domain_scores[top_domain] < 2.0:
+        # Default fallback to Engineering if technical skills or programming terms exist
+        top_domain = "engineering"
 
     domain_meta = {
         "arts": ("Arts, Design & Humanities", "🎨", "Focused on creative arts, visual design, media, copywriting, UI/UX, and literature."),
@@ -207,29 +205,30 @@ SKILL_ALIASES = {
 }
 
 JOB_CATALOG = [
+    # Engineering / Tech Jobs
+    {"domain": "Engineering & Computer Science", "title": "Software Development Engineer", "skills": ["python", "java", "sql", "git", "rest api", "c++"], "reason": "Strong fit for software engineering, algorithmic problem solving, and backend services."},
+    {"domain": "Engineering & Computer Science", "title": "Full Stack Engineer", "skills": ["javascript", "react", "nodejs", "html", "css", "sql", "git"], "reason": "A strong option for fullstack web application development and UI prototyping."},
+    {"domain": "Engineering & Computer Science", "title": "Python & Data Engineer", "skills": ["python", "sql", "pandas", "numpy", "fastapi", "git"], "reason": "Strong fit for Python data pipelines, REST APIs, and database engineering."},
+    {"domain": "Engineering & Computer Science", "title": "DevOps & Cloud Engineer", "skills": ["aws", "docker", "kubernetes", "linux", "cloud", "git"], "reason": "Suitable for cloud architecture, containerization, and automation pipelines."},
+
     # Arts Jobs
-    {"domain": "Arts, Design & Humanities", "title": "UI/UX & Visual Designer", "skills": ["figma", "photoshop", "illustrator", "html", "css"], "reason": "Great match for creative design, prototyping, and visual branding profiles."},
-    {"domain": "Arts, Design & Humanities", "title": "Content Strategist & Copywriter", "skills": ["copywriting", "excel", "figma"], "reason": "Strong alignment with creative writing, digital media, and content marketing skills."},
-    {"domain": "Arts, Design & Humanities", "title": "Graphic Designer & Media Specialist", "skills": ["photoshop", "illustrator", "figma", "canva"], "reason": "Ideal for visual artists, graphic designers, and brand content creators."},
-    
+    {"domain": "Arts, Design & Humanities", "title": "UI/UX & Visual Designer", "skills": ["figma", "photoshop", "illustrator", "html", "css"], "reason": "Great match for creative design, interactive prototyping, and user testing."},
+    {"domain": "Arts, Design & Humanities", "title": "Content Strategist & Copywriter", "skills": ["copywriting", "excel", "figma"], "reason": "Strong alignment with digital content creation, SEO copywriting, and brand storytelling."},
+    {"domain": "Arts, Design & Humanities", "title": "Graphic Designer & Brand Lead", "skills": ["photoshop", "illustrator", "figma", "canva"], "reason": "Ideal for visual artists, graphic branding, and creative media production."},
+
     # Doctor / Medical Jobs
-    {"domain": "Medical & Healthcare / Doctor", "title": "Resident Medical Officer", "skills": ["patient care", "diagnostics", "bls", "acls"], "reason": "Excellent match for clinical diagnosis, patient management, and emergency care."},
-    {"domain": "Medical & Healthcare / Doctor", "title": "Clinical Research Associate", "skills": ["clinical trial", "research", "medical writing"], "reason": "Strong fit for medical research, pharmaceutical studies, and trial management."},
+    {"domain": "Medical & Healthcare / Doctor", "title": "Resident Medical Officer", "skills": ["patient care", "diagnostics", "bls", "acls"], "reason": "Excellent match for clinical diagnosis, patient management, and emergency hospital care."},
+    {"domain": "Medical & Healthcare / Doctor", "title": "Clinical Research Associate", "skills": ["clinical trial", "research", "medical writing"], "reason": "Strong fit for medical research, pharmaceutical trials, and healthcare studies."},
     {"domain": "Medical & Healthcare / Doctor", "title": "Healthcare Administrator", "skills": ["hospital management", "excel", "health informatics"], "reason": "Perfect for clinical operations, healthcare policy, and facility leadership."},
-    
+
     # Science Jobs
     {"domain": "Pure & Applied Science / Research", "title": "Research Scientist & Lab Analyst", "skills": ["laboratory", "spss", "python", "excel"], "reason": "High alignment with lab experimentation, scientific testing, and research data."},
     {"domain": "Pure & Applied Science / Research", "title": "Data Analyst / Statistician", "skills": ["python", "sql", "excel", "spss", "r"], "reason": "Great fit for statistical analysis, hypothesis testing, and quantitative research."},
 
     # Business Jobs
     {"domain": "Business, Finance & Commerce", "title": "Financial Analyst", "skills": ["excel", "power bi", "tableau", "sql"], "reason": "Ideal match for corporate finance, financial modeling, and data reporting."},
-    {"domain": "Business, Finance & Commerce", "title": "Business Analyst", "skills": ["excel", "sql", "tableau", "power bi"], "reason": "Strong fit for business requirement gathering, reporting, and workflow optimization."},
-    {"domain": "Business, Finance & Commerce", "title": "Digital Marketing Specialist", "skills": ["copywriting", "excel", "power bi"], "reason": "Great match for performance marketing, campaign management, and customer analytics."},
-
-    # Tech / Engineering Jobs
-    {"domain": "Engineering & Computer Science", "title": "Python Developer", "skills": ["python", "sql", "fastapi", "django", "flask", "rest api", "git"], "reason": "Strong fit for Python backend development and API engineering."},
-    {"domain": "Engineering & Computer Science", "title": "Full Stack Developer", "skills": ["javascript", "react", "nodejs", "html", "css", "sql", "rest api", "git"], "reason": "A strong option for fullstack web prototyping and application development."},
-    {"domain": "Engineering & Computer Science", "title": "DevOps & Cloud Engineer", "skills": ["aws", "docker", "kubernetes", "linux", "cloud", "git"], "reason": "Suitable when deployment, containerization, and cloud platforms are present."}
+    {"domain": "Business, Finance & Commerce", "title": "Business Analyst", "skills": ["excel", "sql", "tableau", "power bi"], "reason": "Strong fit for business requirements, executive reporting, and workflow optimization."},
+    {"domain": "Business, Finance & Commerce", "title": "Digital Marketing Specialist", "skills": ["copywriting", "excel", "power bi"], "reason": "Great match for performance marketing, campaign management, and customer analytics."}
 ]
 
 
@@ -275,9 +274,9 @@ def build_job_recommendations(raw_text: str, domain_name: str, company_skills: s
 
         overlap_ratio = len(matched_skills) / max(1, len(job_skill_set))
         company_boost = min(20, len(company_matched) * 10)
-        domain_boost = 30 if is_same_domain else 0
+        domain_boost = 35 if is_same_domain else 0
         
-        score = min(100, int(round(overlap_ratio * 50 + domain_boost + company_boost)))
+        score = min(100, int(round(overlap_ratio * 45 + domain_boost + company_boost)))
 
         if is_same_domain or score >= 45:
             suggestions.append(
@@ -300,23 +299,54 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
     skill_gaps: List[str] = []
 
     if not is_valid_resume:
-        # Invalid resume / timetable state
-        hackathon_prob = 15.0
-        intern_prob = 20.0
-        hackathon_status = "⚠️ Document Invalid (Timetable / Schedule Detected)"
-        intern_status = "⚠️ Please Upload a Valid Professional Resume"
+        hackathon_prob = 10.0
+        intern_prob = 15.0
+        hackathon_status = "❌ Document Invalid (Not a Valid Resume)"
+        intern_status = "❌ Please Upload a Professional Resume"
         
         roadmap.append(StudyTopic(
             category="Resume Validation Required",
-            topic="Upload Complete Professional Resume",
-            recommendation="Your current document was recognized as a timetable or schedule. Upload a full resume containing Education, Experience, and Skills sections to view tailored recommendations.",
+            topic="Upload Genuine Professional Resume",
+            recommendation="Your document was recognized as a non-resume file (timetable, schedule, or notes). Upload a full resume with Education, Technical Skills, and Projects.",
             priority="HIGH",
-            impact="Unlocks Accurate Selection Scores & Career Roadmap"
+            impact="Unlocks Selection Scores & Custom Career Recommendations"
         ))
         return hackathon_prob, intern_prob, hackathon_status, intern_status, roadmap, ["Valid Resume File"]
 
     # Calculate domain-tailored probabilities & study roadmaps
-    if domain_name == "Arts, Design & Humanities":
+    if domain_name == "Engineering & Computer Science":
+        hackathon_prob = min(98.0, max(45.0, 50.0 + (len(skills_set & {"git", "python", "javascript", "react", "fastapi", "aws", "c++", "sql"}) * 7.0)))
+        intern_prob = min(96.0, max(40.0, (total_score * 0.45) + (len(skills_set & {"python", "java", "sql", "git", "rest api", "c++"}) * 5.0)))
+        hackathon_status = "🔥 Top Tier Hackathon & Prototyping Contender" if hackathon_prob >= 80 else "⚡ Competitive Technical Contender"
+        intern_status = "🌟 Strong Software Engineering Internship Fit" if intern_prob >= 78 else "📈 Competitive Engineering Fit"
+
+        if "git" not in skills_set:
+            skill_gaps.append("Git & GitHub Branching")
+            roadmap.append(StudyTopic(
+                category="Version Control & Collaboration",
+                topic="Git Branching & GitHub Open Source PRs",
+                recommendation="Master Git commands (clone, commit, push, branch, merge) and host 2+ repositories on GitHub with clear documentation.",
+                priority="HIGH",
+                impact="+15% Technical Interview Selection Odds"
+            ))
+        if not (skills_set & {"fastapi", "nodejs", "django", "flask", "rest api"}):
+            skill_gaps.append("REST API & Backend Development")
+            roadmap.append(StudyTopic(
+                category="Backend & API Engineering",
+                topic="REST API Development (FastAPI / Node.js)",
+                recommendation="Build JSON REST APIs, handle HTTP methods (GET, POST, PUT, DELETE), and connect endpoints to SQL databases.",
+                priority="HIGH",
+                impact="+20% Backend / Fullstack Role Match"
+            ))
+        roadmap.append(StudyTopic(
+            category="Computer Science Fundamentals",
+            topic="Data Structures, Algorithms & LeetCode Problem Solving",
+            recommendation="Solve 3-5 algorithmic problems weekly on Arrays, HashMaps, Strings, Trees, and Time Complexity.",
+            priority="HIGH",
+            impact="Essential for Passing Technical Engineering Interviews"
+        ))
+
+    elif domain_name == "Arts, Design & Humanities":
         hackathon_prob = min(98.0, max(40.0, 50.0 + (len(skills_set & {"figma", "photoshop", "illustrator", "html", "css", "copywriting"}) * 8.0)))
         intern_prob = min(96.0, max(35.0, (total_score * 0.50) + (structure_score * 0.35)))
         hackathon_status = "🎨 Top Design & Case Competition Contender" if hackathon_prob >= 75 else "🎨 Creative Portfolio Contender"
@@ -332,7 +362,7 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
                 impact="+25% Design Portfolio Pass Rate"
             ))
         if not (skills_set & {"photoshop", "illustrator"}):
-            skill_gaps.append("Adobe Creative Suite (Photoshop/Illustrator)")
+            skill_gaps.append("Adobe Creative Suite")
             roadmap.append(StudyTopic(
                 category="Digital Visual Arts",
                 topic="Adobe Illustrator & Graphic Branding",
@@ -340,19 +370,10 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
                 priority="HIGH",
                 impact="+20% Graphic Design Selection Odds"
             ))
-        if "copywriting" not in skills_set:
-            skill_gaps.append("Content Strategy & SEO Copywriting")
-            roadmap.append(StudyTopic(
-                category="Content Strategy",
-                topic="SEO Copywriting & Digital Brand Storytelling",
-                recommendation="Practice writing high-converting headlines, content calendars, and brand stories for online campaigns.",
-                priority="MEDIUM",
-                impact="+18% Content Strategy Match"
-            ))
         roadmap.append(StudyTopic(
             category="Creative Portfolio Showcase",
             topic="Online Design Portfolio (Behance / Dribbble / Medium)",
-            recommendation="Publish 3 complete case studies demonstrating your creative process from initial wireframe to final polish.",
+            recommendation="Publish 3 complete case studies demonstrating your creative process from wireframe to final polish.",
             priority="HIGH",
             impact="Essential for Creative & Design Interview Calls"
         ))
@@ -377,13 +398,6 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
             priority="HIGH",
             impact="+22% Clinical Systems Adaptability"
         ))
-        roadmap.append(StudyTopic(
-            category="Medical Research & Ethics",
-            topic="Clinical Research Methodology & Evidence-Based Practice",
-            recommendation="Review clinical trial guidelines, patient consent ethics, and scientific medical journal reporting.",
-            priority="MEDIUM",
-            impact="+20% Medical Fellowship Odds"
-        ))
 
     elif domain_name == "Pure & Applied Science / Research":
         hackathon_prob = min(95.0, max(35.0, 45.0 + (len(skills_set & {"python", "excel", "spss", "sql"}) * 10.0)))
@@ -405,15 +419,9 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
             priority="HIGH",
             impact="Mandatory for Industrial Research Labs"
         ))
-        roadmap.append(StudyTopic(
-            category="Academic Publishing",
-            topic="Scientific Manuscript Writing & LaTeX Documentation",
-            recommendation="Learn LaTeX formatting for peer-reviewed journal submissions and conference presentations.",
-            priority="MEDIUM",
-            impact="+20% Scientific Paper Acceptance Rate"
-        ))
 
-    elif domain_name == "Business, Finance & Commerce":
+    else:
+        # Business, Finance & Commerce
         hackathon_prob = min(98.0, max(40.0, 45.0 + (len(skills_set & {"excel", "power bi", "tableau", "sql"}) * 10.0)))
         intern_prob = min(96.0, max(40.0, (total_score * 0.50) + (metrics_score * 0.35)))
         hackathon_status = "💼 Business Case Competition Contender"
@@ -431,49 +439,9 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
         roadmap.append(StudyTopic(
             category="Financial Modeling",
             topic="Advanced Financial Modeling & Excel Analysis",
-            recommendation="Master VLOOKUP, INDEX/MATCH, Pivot Tables, and DCF valuation models for corporate analysis.",
+            recommendation="Master Pivot Tables, VLOOKUP, and DCF valuation models for corporate analysis.",
             priority="HIGH",
             impact="+30% Corporate Finance Interview Rate"
-        ))
-        roadmap.append(StudyTopic(
-            category="Agile Project Management",
-            topic="Scrum Framework & Agile Project Tracking",
-            recommendation="Learn sprint planning, backlog grooming, and team workflow management in Jira or Asana.",
-            priority="MEDIUM",
-            impact="+18% Operations & Management Match"
-        ))
-
-    else:
-        # Engineering & Computer Science
-        hackathon_prob = min(98.0, max(35.0, 45.0 + (len(skills_set & {"git", "python", "javascript", "react", "fastapi", "aws"}) * 7.0)))
-        intern_prob = min(96.0, max(30.0, (total_score * 0.45) + (len(skills_set & {"python", "java", "sql", "git", "rest api"}) * 5.0)))
-        hackathon_status = "🔥 Top Tier Hackathon Participant" if hackathon_prob >= 80 else "⚡ Good Prototyping Contender"
-        intern_status = "🌟 Strong Software Internship Candidate" if intern_prob >= 78 else "📈 Competitive Technical Fit"
-
-        if "git" not in skills_set:
-            skill_gaps.append("Git & GitHub")
-            roadmap.append(StudyTopic(
-                category="Version Control",
-                topic="Git Branching & GitHub Collaboration",
-                recommendation="Learn Git commands (clone, commit, push, branch, pull request) and host 2+ repositories on GitHub.",
-                priority="HIGH",
-                impact="+15% Hackathon & Technical Odds"
-            ))
-        if not (skills_set & {"fastapi", "nodejs", "django", "flask", "rest api"}):
-            skill_gaps.append("REST API & Backend Development")
-            roadmap.append(StudyTopic(
-                category="Backend Engineering",
-                topic="REST API Development (FastAPI or Node.js)",
-                recommendation="Build JSON REST APIs, handle HTTP methods (GET, POST, PUT, DELETE), and connect to SQL databases.",
-                priority="HIGH",
-                impact="+20% Backend Role Match"
-            ))
-        roadmap.append(StudyTopic(
-            category="Computer Science Fundamentals",
-            topic="Data Structures, Algorithms & LeetCode",
-            recommendation="Solve 3-5 coding problems weekly on Arrays, HashMaps, Strings, Trees, and Time Complexity.",
-            priority="HIGH",
-            impact="Essential for Technical Internship Interviews"
         ))
 
     return hackathon_prob, intern_prob, hackathon_status, intern_status, roadmap, skill_gaps
@@ -517,11 +485,11 @@ async def analyze_resume(
 
     if not is_valid_resume:
         feedback.append({"type": "fail", "text": warning_msg})
-        action_score = 30.0
-        metrics_score = 20.0
-        structure_score = 30.0
-        length_score = 40.0
-        total_score = 28.0
+        action_score = 20.0
+        metrics_score = 15.0
+        structure_score = 20.0
+        length_score = 30.0
+        total_score = 20.0
         grade = "F"
     else:
         # Action Verbs
@@ -532,7 +500,7 @@ async def analyze_resume(
         action_score = min(100.0, float(len(found_verbs) * 25))
 
         if len(found_verbs) >= 2:
-            feedback.append({"type": "pass", "text": f"Action impact detected ({len(found_verbs)} key verbs found)."})
+            feedback.append({"type": "pass", "text": f"Action impact detected ({len(found_verbs)} key accomplishment verbs found)."})
         else:
             feedback.append({"type": "fail", "text": "Low action impact detected. Add stronger accomplishment verbs."})
 
@@ -543,7 +511,7 @@ async def analyze_resume(
         if len(numbers) >= 2:
             feedback.append({"type": "pass", "text": f"Quantifiable achievements detected ({len(numbers)} numerical data points)."})
         else:
-            feedback.append({"type": "fail", "text": "Lacks measurable impact. Incorporate percentages, revenue, or key metrics."})
+            feedback.append({"type": "fail", "text": "Lacks measurable impact. Incorporate percentages, user counts, or metric data."})
 
         # Structure
         required_sections = ["education", "experience", "skills"]
@@ -551,7 +519,7 @@ async def analyze_resume(
         structure_score = (len(found_sections) / len(required_sections)) * 100.0
 
         if len(found_sections) == len(required_sections):
-            feedback.append({"type": "pass", "text": "Standard resume sections detected (Education, Experience, Skills)."})
+            feedback.append({"type": "pass", "text": "Standard resume sections detected (Education, Technical Skills, Projects/Experience)."})
         else:
             missing = [sec for sec in required_sections if sec not in lower_text]
             feedback.append({"type": "fail", "text": f"Missing recommended section headers: {', '.join(missing)}."})
@@ -581,7 +549,7 @@ async def analyze_resume(
     )
 
     if is_valid_resume:
-        feedback.append({"type": "pass", "text": f"Domain predicted as: {domain_icon} {domain_name}."})
+        feedback.append({"type": "pass", "text": f"Technical Skills Analysis -> Predicted Field: {domain_icon} {domain_name}."})
 
     return AnalysisResult(
         is_valid_resume=is_valid_resume,
