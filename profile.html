@@ -8,158 +8,161 @@
 
     <title>My Profile</title>
 
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg: #070b14;
+            --bg-card: rgba(15, 23, 42, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --green: #00ff41;
+            --green-glow: rgba(0, 255, 65, 0.25);
+            --cyan: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "Inter", sans-serif;
         }
 
         body {
-            background: #111827;
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0, 255, 65, 0.12) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 50% at 50% 100%, rgba(56, 189, 248, 0.1) 0%, transparent 70%);
+            color: var(--text-main);
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            padding: 24px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Scanline texture */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .profile-card {
-
-            width: 420px;
-
-            background: #1F2937;
-
-            padding: 35px;
-
-            border-radius: 15px;
-
+            width: min(440px, 100%);
+            background: var(--bg-card);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            padding: 40px;
+            border-radius: 24px;
             text-align: center;
+            border: 1px solid var(--border);
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
+            position: relative;
+            z-index: 1;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
 
-            box-shadow: 0 0 20px rgba(0, 0, 0, .4);
-
+        .profile-card:hover {
+            border-color: rgba(0, 255, 65, 0.3);
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 255, 65, 0.08);
         }
 
         .avatar {
-
-            width: 120px;
-
-            height: 120px;
-
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-
-            background: #FACC15;
-
-            color: #111827;
-
-            font-size: 50px;
-
-            font-weight: bold;
-
+            background: linear-gradient(135deg, var(--green), var(--cyan));
+            color: #050811;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 42px;
+            font-weight: 800;
             display: flex;
-
             justify-content: center;
-
             align-items: center;
-
-            margin: auto;
-
-            margin-bottom: 20px;
-
+            margin: 0 auto 20px;
+            box-shadow: 0 0 25px var(--green-glow);
         }
 
         h2 {
-
-            color: white;
-
-            margin-bottom: 5px;
-
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 4px;
         }
 
         p {
-
-            color: #d1d5db;
-
-            margin: 12px 0;
-
-            font-size: 17px;
-
+            color: var(--text-muted);
+            margin: 8px 0;
+            font-size: 15px;
         }
 
         .info {
-
             text-align: left;
-
-            margin-top: 25px;
-
+            margin-top: 24px;
         }
 
         .info div {
-
-            background: #374151;
-
-            padding: 15px;
-
-            border-radius: 8px;
-
-            margin-top: 15px;
-
-            color: white;
-
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-top: 12px;
+            color: #fff;
         }
 
         label {
-
-            color: #FACC15;
-
-            font-weight: bold;
-
+            color: var(--green);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            text-shadow: 0 0 8px var(--green-glow);
         }
 
         button {
-
-            margin-top: 30px;
-
+            margin-top: 24px;
             width: 100%;
-
-            padding: 12px;
-
-            background: #FACC15;
-
-            color: #111827;
-
+            padding: 14px;
+            background: var(--green);
+            color: #050811;
             border: none;
-
-            border-radius: 8px;
-
-            font-size: 17px;
-
-            font-weight: bold;
-
+            border-radius: 12px;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 16px;
+            font-weight: 800;
             cursor: pointer;
-
+            transition: transform 0.25s var(--ease-spring), box-shadow 0.25s, background 0.2s;
+            box-shadow: 0 0 20px var(--green-glow);
         }
 
         button:hover {
-
-            background: #eab308;
-
+            background: #26ff59;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 65, 0.4);
         }
 
         .logout {
-
-            background: red;
-
-            color: white;
-
-            margin-top: 15px;
-
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #f87171;
+            margin-top: 12px;
+            box-shadow: none;
         }
 
         .logout:hover {
-
-            background: darkred;
-
+            background: rgba(239, 68, 68, 0.3);
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
         }
     </style>
 

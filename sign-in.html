@@ -11,22 +11,31 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
         rel="stylesheet">
     <style>
         :root {
-            --ink: #17211f;
-            --muted: #66736e;
-            --paper: #f4f6ef;
-            --surface: #ffffff;
-            --lime: #d8f05c;
-            --teal: #0e776d;
-            --line: #dce3d8;
+            --bg: #070b14;
+            --bg-card: rgba(15, 23, 42, 0.75);
+            --border: rgba(255, 255, 255, 0.1);
+            --green: #00ff41;
+            --green-glow: rgba(0, 255, 65, 0.25);
+            --cyan: #38bdf8;
+            --purple: #a855f7;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        * {
-            box-sizing: border-box;
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
         }
+
+        * { box-sizing: border-box; }
 
         body {
             min-height: 100vh;
@@ -34,137 +43,283 @@
             display: grid;
             place-items: center;
             padding: 24px;
-            color: var(--ink);
-            background: var(--paper) url("background.png.jpeg") center/cover fixed;
-            font-family: "DM Sans", sans-serif;
+            font-family: "Inter", sans-serif;
+            background: var(--bg);
+            overflow-x: hidden;
+            position: relative;
+            color: var(--text-main);
         }
 
+        /* ── Animated background orbs ── */
+        .bg-orbs {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.25;
+            animation: orbFloat linear infinite;
+        }
+
+        .orb-1 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, var(--green), transparent);
+            top: -150px; left: -100px;
+            animation-duration: 22s;
+            animation-delay: 0s;
+        }
+        .orb-2 {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, var(--cyan), transparent);
+            bottom: -100px; right: -80px;
+            animation-duration: 28s;
+            animation-delay: -8s;
+        }
+        .orb-3 {
+            width: 350px; height: 350px;
+            background: radial-gradient(circle, var(--purple), transparent);
+            top: 40%; left: 60%;
+            animation-duration: 18s;
+            animation-delay: -14s;
+        }
+
+        @keyframes orbFloat {
+            0%   { transform: translate(0, 0) scale(1); }
+            33%  { transform: translate(30px, -40px) scale(1.08); }
+            66%  { transform: translate(-20px, 20px) scale(0.96); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        /* Grid texture overlay */
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* ── Auth card ── */
         .shell {
-            width: min(430px, 100%);
-            padding: 34px;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, .96);
-            box-shadow: 0 22px 60px rgba(23, 33, 31, .2);
+            width: min(440px, 100%);
+            padding: 40px;
+            border-radius: 24px;
+            background: var(--bg-card);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid var(--border);
+            box-shadow:
+                0 32px 80px rgba(0, 0, 0, 0.7),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 1;
+            animation: cardEntry 0.7s var(--ease-out) both;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .shell:hover {
+            border-color: rgba(0, 255, 65, 0.3);
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 255, 65, 0.08);
+        }
+
+        @keyframes cardEntry {
+            from { opacity: 0; transform: translateY(32px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         .brand {
             display: inline-block;
-            color: var(--ink);
-            font: 700 1.45rem "Space Grotesk", sans-serif;
+            color: #fff;
+            font: 700 1.5rem "Space Grotesk", sans-serif;
             letter-spacing: -.04em;
             text-decoration: none;
+            transition: opacity 0.2s;
         }
-
-        .brand span {
-            color: var(--teal);
-        }
+        .brand:hover { opacity: 0.9; }
+        .brand span { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
 
         h1 {
-            margin: 38px 0 7px;
-            font: 700 2.2rem "Space Grotesk", sans-serif;
+            margin: 32px 0 6px;
+            font: 800 2.2rem "Space Grotesk", sans-serif;
             letter-spacing: -.05em;
+            color: #fff;
         }
 
         .intro {
-            margin: 0 0 24px;
-            color: var(--muted);
+            margin: 0 0 28px;
+            color: var(--text-muted);
+            font-size: .95rem;
         }
 
         label {
             display: block;
-            margin: 15px 0 6px;
-            font-size: .84rem;
-            font-weight: 700;
+            margin: 18px 0 8px;
+            font-size: .82rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.8);
+            letter-spacing: .02em;
         }
 
         input {
             width: 100%;
-            padding: 13px;
-            border: 1px solid var(--line);
-            border-radius: 7px;
-            background: #fbfcf8;
-            color: var(--ink);
-            font: inherit;
-        }
-
-        input:focus {
-            outline: 2px solid var(--lime);
-            border-color: var(--teal);
-        }
-
-        button {
-            width: 100%;
-            margin-top: 20px;
-            padding: 13px 18px;
-            border: 0;
-            border-radius: 8px;
-            background: var(--teal);
+            padding: 14px 18px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
             color: #fff;
-            font: 700 .95rem "DM Sans", sans-serif;
+            font: 500 .95rem "Inter", sans-serif;
+            transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+            outline: none;
+        }
+        input::placeholder { color: rgba(255,255,255,0.3); }
+        input:focus {
+            border-color: var(--green);
+            background: rgba(255, 255, 255, 0.07);
+            box-shadow: 0 0 0 3px rgba(0, 255, 65, 0.2);
+        }
+
+        /* ── Primary submit button ── */
+        button[type="submit"], .btn-primary {
+            width: 100%;
+            margin-top: 24px;
+            padding: 15px 20px;
+            border: 0;
+            border-radius: 12px;
+            background: var(--green);
+            color: #050811;
+            font: 700 .95rem "Inter", sans-serif;
             cursor: pointer;
+            transition: transform 0.25s var(--ease-spring),
+                        box-shadow 0.25s var(--ease-out),
+                        opacity 0.2s, background 0.2s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px var(--green-glow);
         }
-
-        button:hover {
-            background: #095e57;
+        button[type="submit"]::after, .btn-primary::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s;
         }
-
-        button:disabled {
+        button[type="submit"]:hover::after, .btn-primary:hover::after {
+            transform: translateX(100%);
+        }
+        button[type="submit"]:hover, .btn-primary:hover {
+            transform: translateY(-2px);
+            background: #26ff59;
+            box-shadow: 0 10px 30px rgba(0, 255, 65, 0.4);
+        }
+        button[type="submit"]:active, .btn-primary:active {
+            transform: translateY(0) scale(0.98);
+        }
+        button[type="submit"]:disabled, .btn-primary:disabled {
             cursor: wait;
-            opacity: .65;
+            opacity: .6;
         }
 
+        /* ── Divider ── */
         .divider {
             display: flex;
             align-items: center;
             gap: 12px;
-            margin: 22px 0;
-            color: var(--muted);
-            font-size: .8rem;
+            margin: 24px 0;
+            color: rgba(255,255,255,0.4);
+            font-size: .82rem;
+            font-weight: 500;
         }
-
-        .divider::before,
-        .divider::after {
+        .divider::before, .divider::after {
             content: "";
             height: 1px;
             flex: 1;
-            background: var(--line);
+            background: var(--border);
         }
 
+        /* ── Google button wrapper ── */
         .google-button {
-            min-height: 42px;
+            min-height: 44px;
             display: flex;
             justify-content: center;
         }
 
+        /* ── GitHub button ── */
+        .github-button {
+            width: 100%;
+            margin-top: 14px;
+            padding: 14px 18px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font: 600 .92rem "Inter", sans-serif;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+            transition: background 0.25s, border-color 0.25s, transform 0.25s var(--ease-spring), box-shadow 0.25s;
+        }
+        .github-button:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        .github-button svg {
+            width: 20px;
+            height: 20px;
+            fill: #fff;
+            flex-shrink: 0;
+        }
+
+        /* ── Error message ── */
         .message {
             min-height: 20px;
             margin: 12px 0 0;
-            color: #b42318;
+            color: #f87171;
             font-size: .84rem;
         }
 
+        /* ── Footer link ── */
         .footer {
-            margin: 24px 0 0;
-            color: var(--muted);
+            margin: 26px 0 0;
+            color: rgba(255, 255, 255, 0.45);
             text-align: center;
             font-size: .88rem;
         }
-
         .footer a {
-            color: var(--teal);
-            font-weight: 700;
+            color: var(--lime);
+            font-weight: 600;
             text-decoration: none;
+            transition: opacity 0.2s;
         }
+        .footer a:hover { opacity: 0.8; }
 
         @media (max-width: 480px) {
-            .shell {
-                padding: 28px 22px;
-            }
+            .shell { padding: 28px 22px; }
         }
     </style>
 </head>
 
 <body>
+    <div class="bg-orbs" aria-hidden="true">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+    <div class="bg-grid" aria-hidden="true"></div>
+
     <main class="shell">
         <a class="brand" href="index.html">Auto<span>Hire</span></a>
         <h1>Sign in</h1>
@@ -179,13 +334,21 @@
             <div class="message" id="loginMessage" role="status"></div>
         </form>
 
-        <div class="divider">or</div>
+        <div class="divider">or continue with</div>
+
         <div id="g_id_onload" data-client_id="869568422226-14fcbs1j1esdl1f0phijfhoude5il7qk.apps.googleusercontent.com"
             data-callback="handleCredentialResponse"></div>
         <div class="google-button">
             <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"
                 data-text="continue_with"></div>
         </div>
+
+        <a href="https://github.com/login/oauth/authorize" class="github-button" id="githubSignInBtn">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            Continue with GitHub
+        </a>
 
         <p class="footer">New to AutoHire? <a href="create-account.html">Create an account</a></p>
     </main>

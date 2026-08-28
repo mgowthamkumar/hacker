@@ -4,281 +4,481 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registration</title>
+    <meta name="description" content="Build your AutoHire profile to discover tailored career opportunities.">
+    <title>Create Your Profile | AutoHire</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, Helvetica, sans-serif;
+        :root {
+            --bg: #070b14;
+            --bg-card: rgba(15, 23, 42, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --green: #00ff41;
+            --green-glow: rgba(0, 255, 65, 0.25);
+            --cyan: #38bdf8;
+            --purple: #a855f7;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            background:
-                linear-gradient(135deg,
-                    rgba(255, 40, 40, 0.55),
-                    rgba(255, 140, 0, 0.55)),
-                url("background.png");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 30px;
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: "Inter", sans-serif;
+            padding: 40px 20px 60px;
+            position: relative;
+            overflow-x: hidden;
         }
 
+        /* ── Animated background ── */
+        .bg-orbs {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.25;
+            animation: orbFloat linear infinite;
+        }
+        .orb-1 {
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, var(--green), transparent);
+            top: -200px; left: -150px;
+            animation-duration: 28s;
+        }
+        .orb-2 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, var(--cyan), transparent);
+            bottom: -150px; right: -100px;
+            animation-duration: 22s;
+            animation-delay: -9s;
+        }
+
+        @keyframes orbFloat {
+            0%   { transform: translate(0, 0) scale(1); }
+            50%  { transform: translate(30px, -40px) scale(1.07); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        /* ── Container ── */
         .container {
             width: 90%;
-            max-width: 900px;
-            margin: 30px auto;
-            padding: 40px;
-            border: 4px solid transparent;
-            background-image:
-                linear-gradient(135deg, #fff8f5, #ffe9dc),
-                linear-gradient(135deg, #0f172a, #2563eb, #38bdf8);
-            background-origin: border-box;
-            background-clip: padding-box, border-box;
-            border-radius: 24px;
-            box-shadow:
-                0 20px 60px rgba(0, 0, 0, .35),
-                0 0 25px rgba(37, 99, 235, .35);
-            transition: .3s;
+            max-width: 860px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            animation: cardEntry 0.7s var(--ease-out) both;
         }
 
-        .container:hover {
-            transform: translateY(-3px);
-            box-shadow:
-                0 25px 70px rgba(0, 0, 0, .4),
-                0 0 35px rgba(56, 189, 248, .45);
+        @keyframes cardEntry {
+            from { opacity: 0; transform: translateY(28px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
+
+        /* ── Page header ── */
+        .page-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            font-size: .88rem;
+            text-decoration: none;
+            margin-bottom: 28px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--green); text-shadow: 0 0 8px var(--green-glow); }
+        .back-link svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+        .brand {
+            display: inline-block;
+            color: #fff;
+            font: 700 1.5rem "Space Grotesk", sans-serif;
+            letter-spacing: -.04em;
+            text-decoration: none;
+            margin-bottom: 20px;
+        }
+        .brand span { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
 
         .tagline {
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-            color: #ffffff;
-            background: linear-gradient(90deg, #ff512f, #dd2476);
-            padding: 12px;
-            border-radius: 10px;
-            margin-bottom: 25px;
-            letter-spacing: .5px;
+            display: inline-block;
+            font-size: .8rem;
+            font-weight: 700;
+            color: #050811;
+            background: var(--green);
+            box-shadow: 0 0 15px var(--green-glow);
+            padding: 8px 20px;
+            border-radius: 100px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            margin-bottom: 20px;
         }
 
         h2 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 30px;
-            color: #222;
+            font: 800 2.4rem "Space Grotesk", sans-serif;
+            letter-spacing: -.04em;
+            color: #fff;
+            margin-bottom: 8px;
         }
 
-        .form-group {
-            margin-bottom: 18px;
+        .page-subtitle {
+            color: var(--text-muted);
+            font-size: .95rem;
         }
+
+        /* ── Form card ── */
+        .form-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
+        }
+
+        /* ── Section dividers inside form ── */
+        .form-section {
+            margin-bottom: 32px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid var(--border);
+        }
+        .form-section:last-of-type {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .form-section-title {
+            font: 700 .8rem "Space Grotesk", sans-serif;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--green);
+            margin-bottom: 20px;
+            text-shadow: 0 0 8px var(--green-glow);
+        }
+
+        /* ── Grid layout ── */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 640px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        /* ── Form group ── */
+        .form-group { margin-bottom: 20px; }
+        .form-group:last-child { margin-bottom: 0; }
 
         label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #333;
+            margin-bottom: 7px;
+            font-size: .82rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.8);
+            letter-spacing: .02em;
         }
 
-        input,
-        select {
+        input, select {
             width: 100%;
-            padding: 13px;
-            background: #ffffff;
-            border: 1px solid #d9d9d9;
-            border-radius: 10px;
-            font-size: 15px;
-            transition: .3s;
-        }
-
-        input:focus,
-        select:focus {
+            padding: 13px 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font: 500 .95rem "Inter", sans-serif;
+            transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
             outline: none;
-            border: 2px solid #ff6b00;
-            box-shadow: 0 0 10px rgba(255, 107, 0, .25);
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        input::placeholder { color: rgba(255,255,255,0.3); }
+        input:focus, select:focus {
+            border-color: var(--green);
+            background: rgba(255,255,255,0.07);
+            box-shadow: 0 0 0 3px rgba(0, 255, 65, 0.2);
         }
 
-        input[type=file] {
-            padding: 10px;
+        /* Select arrow */
+        .select-wrap { position: relative; }
+        .select-wrap::after {
+            content: '';
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid rgba(255,255,255,0.5);
+            pointer-events: none;
         }
 
-        /* Styling for the date input picker indicator */
-        input[type="date"]::-webkit-calendar-picker-indicator {
+        select option { background: #0f172a; color: var(--text-main); }
+
+        input[type="file"] {
+            padding: 11px 16px;
             cursor: pointer;
-            opacity: 0.6;
-            transition: 0.2s;
+            color: var(--text-muted);
+        }
+        input[type="file"]::file-selector-button {
+            background: rgba(0, 255, 65, 0.15);
+            color: var(--green);
+            border: 1px solid rgba(0, 255, 65, 0.4);
+            border-radius: 8px;
+            padding: 6px 16px;
+            font: 600 .82rem "Inter", sans-serif;
+            cursor: pointer;
+            margin-right: 12px;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        input[type="file"]::file-selector-button:hover {
+            background: rgba(0, 255, 65, 0.25);
         }
 
-        input[type="date"]::-webkit-calendar-picker-indicator:hover {
-            opacity: 1;
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.5;
+            cursor: pointer;
+            transition: opacity 0.2s;
         }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 
+        /* ── Checkbox ── */
         .checkbox {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 10px;
-            font-size: 15px;
-        }
-
-        .checkbox input {
-            width: auto;
-            transform: scale(1.1);
-            cursor: pointer;
-        }
-
-        button {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(90deg, #ff3d3d, #ff8c00);
-            color: white;
-            font-size: 18px;
-            font-weight: bold;
-            border: none;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
             border-radius: 10px;
+            font-size: .88rem;
+            color: var(--muted);
             cursor: pointer;
-            transition: .3s;
-            margin-top: 20px;
+            transition: border-color 0.25s, background 0.25s;
+        }
+        .checkbox:hover {
+            border-color: var(--teal);
+            background: rgba(14,119,109,0.08);
+        }
+        .checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 1px;
+            flex-shrink: 0;
+            accent-color: var(--teal);
+            cursor: pointer;
         }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 25px rgba(255, 90, 0, .40);
+        /* ── Submit button ── */
+        button[type="submit"] {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+            color: #fff;
+            font: 700 1rem "Inter", sans-serif;
+            cursor: pointer;
+            margin-top: 28px;
+            transition: transform 0.25s var(--ease-spring),
+                        box-shadow 0.25s,
+                        opacity 0.2s;
+            position: relative;
+            overflow: hidden;
         }
-
-        button:disabled {
-            background: #ccc;
+        button[type="submit"]::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s;
+        }
+        button[type="submit"]:hover::after { transform: translateX(100%); }
+        button[type="submit"]:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 36px rgba(14,119,109,0.45);
+        }
+        button[type="submit"]:active { transform: scale(0.98); }
+        button[type="submit"]:disabled {
+            background: rgba(255,255,255,0.12);
             cursor: not-allowed;
+            opacity: 0.6;
         }
 
-        .footer {
+        .footer-note {
             text-align: center;
-            margin-top: 25px;
-            font-size: 15px;
-            color: #333;
+            margin-top: 24px;
+            color: var(--muted);
+            font-size: .85rem;
         }
-
-        .footer a {
-            color: #000000;
+        .footer-note a {
+            color: var(--lime);
+            font-weight: 600;
             text-decoration: none;
-            font-weight: bold;
         }
+        .footer-note a:hover { opacity: 0.8; }
 
-        .footer a:hover {
-            color: #ff6b00;
-        }
-
-        @media(max-width:768px) {
-            .container {
-                padding: 25px;
-            }
-
-            h2 {
-                font-size: 24px;
-            }
-
-            .tagline {
-                font-size: 16px;
-            }
+        @media (max-width: 768px) {
+            .form-card { padding: 28px 20px; }
+            h2 { font-size: 1.9rem; }
         }
     </style>
 </head>
 
 <body>
+    <div class="bg-orbs" aria-hidden="true">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
     <div class="container">
-        <p class="tagline">
-            Your AI Career Companion for Jobs, Internships & Hackathons
-        </p>
+        <div class="page-header">
+            <a class="back-link" href="index.html">
+                <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Back to AutoHire
+            </a>
+            <br>
+            <a class="brand" href="index.html">Auto<span>Hire</span></a>
+            <br>
+            <span class="tagline">Your AI Career Companion</span>
+            <h2>Create Your Profile</h2>
+            <p class="page-subtitle">Build your profile to unlock personalized career opportunities.</p>
+        </div>
 
-        <h2>Create Your Account</h2>
+        <div class="form-card">
+            <form id="registrationForm" enctype="multipart/form-data">
 
-        <form id="registrationForm" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="fullName">Full Name</label>
-                <input type="text" id="fullName" name="fullName" placeholder="Enter your full name" required>
-            </div>
+                <div class="form-section">
+                    <div class="form-section-title">Personal Information</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fullName">Full Name</label>
+                            <input type="text" id="fullName" name="fullName" placeholder="Your full name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="emailAddress">Email Address</label>
+                            <input type="email" id="emailAddress" name="emailAddress" placeholder="you@example.com" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="mobileNumber">Mobile Number</label>
+                            <input type="tel" id="mobileNumber" name="mobileNumber" placeholder="+91 9876543210" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dob">Date of Birth</label>
+                            <input type="date" id="dob" name="dob" required>
+                        </div>
+                    </div>
+                </div>
 
-            <div class="form-group">
-                <label for="emailAddress">Email Address</label>
-                <input type="email" id="emailAddress" name="emailAddress" placeholder="example@email.com" required>
-            </div>
+                <div class="form-section">
+                    <div class="form-section-title">Career Preferences</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="userType">User Type</label>
+                            <div class="select-wrap">
+                                <select id="userType" name="userType" required>
+                                    <option value="">Select Role</option>
+                                    <option value="student">Student</option>
+                                    <option value="professional">Professional</option>
+                                    <option value="recruiter">Recruiter</option>
+                                    <option value="company">Company</option>
+                                    <option value="organizer">Hackathon Organizer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="experienceLevel">Experience Level</label>
+                            <div class="select-wrap">
+                                <select id="experienceLevel" name="experienceLevel">
+                                    <option value="fresher">Fresher</option>
+                                    <option value="beginner">Beginner</option>
+                                    <option value="intermediate">Intermediate</option>
+                                    <option value="experienced">Experienced</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="preferredDomain">Preferred Domain</label>
+                        <div class="select-wrap">
+                            <select id="preferredDomain" name="preferredDomain">
+                                <option value="ai">Artificial Intelligence</option>
+                                <option value="ml">Machine Learning</option>
+                                <option value="data_science">Data Science</option>
+                                <option value="web_dev">Web Development</option>
+                                <option value="app_dev">App Development</option>
+                                <option value="cyber_security">Cyber Security</option>
+                                <option value="cloud_computing">Cloud Computing</option>
+                                <option value="devops">DevOps</option>
+                                <option value="ui_ux">UI/UX</option>
+                                <option value="blockchain">Blockchain</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
-            <div class="form-group">
-                <label for="mobileNumber">Mobile Number</label>
-                <input type="tel" id="mobileNumber" name="mobileNumber" placeholder="+91 9876543210" required>
-            </div>
+                <div class="form-section">
+                    <div class="form-section-title">Online Presence</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="githubProfile">GitHub Profile</label>
+                            <input type="url" id="githubProfile" name="githubProfile" placeholder="https://github.com/username">
+                        </div>
+                        <div class="form-group">
+                            <label for="linkedinProfile">LinkedIn Profile</label>
+                            <input type="url" id="linkedinProfile" name="linkedinProfile" placeholder="https://linkedin.com/in/username">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="resumeFile">Upload Resume</label>
+                        <input type="file" id="resumeFile" name="resumeFile" accept=".pdf,.doc,.docx">
+                    </div>
+                </div>
 
-            <div class="form-group">
-                <label for="userType">User Type</label>
-                <select id="userType" name="userType" required>
-                    <option value="">Select Role</option>
-                    <option value="student">Student</option>
-                    <option value="professional">Professional</option>
-                    <option value="recruiter">Recruiter</option>
-                    <option value="company">Company</option>
-                    <option value="organizer">Hackathon Organizer</option>
-                </select>
-            </div>
+                <div class="checkbox">
+                    <input type="checkbox" id="termsAgreement" name="termsAgreement" required>
+                    <label for="termsAgreement" style="margin:0; cursor:pointer; color: rgba(255,255,255,0.55);">
+                        I agree to the <strong style="color:#fff;">Terms & Conditions</strong> and <strong style="color:#fff;">Privacy Policy</strong>
+                    </label>
+                </div>
 
-            <div class="form-group">
-                <label for="dob">Date of Birth</label>
-                <input type="date" id="dob" name="dob" required>
-            </div>
+                <button type="submit" id="submitBtn">Register &amp; Index Profile</button>
+            </form>
 
-            <div class="form-group">
-                <label for="preferredDomain">Preferred Domain</label>
-                <select id="preferredDomain" name="preferredDomain">
-                    <option value="ai">Artificial Intelligence</option>
-                    <option value="ml">Machine Learning</option>
-                    <option value="data_science">Data Science</option>
-                    <option value="web_dev">Web Development</option>
-                    <option value="app_dev">App Development</option>
-                    <option value="cyber_security">Cyber Security</option>
-                    <option value="cloud_computing">Cloud Computing</option>
-                    <option value="devops">DevOps</option>
-                    <option value="ui_ux">UI/UX</option>
-                    <option value="blockchain">Blockchain</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="experienceLevel">Experience Level</label>
-                <select id="experienceLevel" name="experienceLevel">
-                    <option value="fresher">Fresher</option>
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="experienced">Experienced</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="githubProfile">GitHub Profile</label>
-                <input type="url" id="githubProfile" name="githubProfile" placeholder="https://github.com/username">
-            </div>
-
-            <div class="form-group">
-                <label for="linkedinProfile">LinkedIn Profile</label>
-                <input type="url" id="linkedinProfile" name="linkedinProfile"
-                    placeholder="https://linkedin.com/in/username">
-            </div>
-
-            <div class="form-group">
-                <label for="resumeFile">Upload Resume</label>
-                <input type="file" id="resumeFile" name="resumeFile" accept=".pdf,.doc,.docx">
-            </div>
-
-            <div class="checkbox">
-                <input type="checkbox" id="termsAgreement" name="termsAgreement" required>
-                <label for="termsAgreement">I agree to the Terms & Conditions and Privacy Policy</label>
-            </div>
-
-            <button type="submit" id="submitBtn">Register & Index Profile</button>
-        </form>
+            <p class="footer-note">Already registered? <a href="sign-in.html">Sign in here</a></p>
+        </div>
     </div>
 
     <script src="api-config.js"></script>

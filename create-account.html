@@ -4,123 +4,261 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Account</title>
-
+    <meta name="description" content="Create your AutoHire account and start your career journey.">
+    <title>Create Account | AutoHire</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
+        :root {
+            --bg: #070b14;
+            --bg-card: rgba(15, 23, 42, 0.75);
+            --border: rgba(255, 255, 255, 0.1);
+            --green: #00ff41;
+            --green-glow: rgba(0, 255, 65, 0.25);
+            --cyan: #38bdf8;
+            --purple: #a855f7;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            background: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 32px 24px;
+            font-family: "Inter", sans-serif;
+            background: var(--bg);
+            position: relative;
+            overflow-x: hidden;
+            color: var(--text-main);
         }
 
-        .container {
-            width: 380px;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, .2);
+        /* ── Animated background ── */
+        .bg-orbs {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
         }
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.25;
+            animation: orbFloat linear infinite;
+        }
+        .orb-1 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, var(--green), transparent);
+            top: -200px; right: -100px;
+            animation-duration: 25s;
+        }
+        .orb-2 {
+            width: 380px; height: 380px;
+            background: radial-gradient(circle, var(--cyan), transparent);
+            bottom: -100px; left: -80px;
+            animation-duration: 30s;
+            animation-delay: -10s;
+        }
+
+        @keyframes orbFloat {
+            0%   { transform: translate(0, 0) scale(1); }
+            50%  { transform: translate(25px, -35px) scale(1.06); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        /* ── Card ── */
+        .container {
+            width: min(420px, 100%);
+            padding: 40px;
+            border-radius: 24px;
+            background: var(--bg-card);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid var(--border);
+            box-shadow:
+                0 32px 80px rgba(0, 0, 0, 0.7),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 1;
+            animation: cardEntry 0.7s var(--ease-out) both;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .container:hover {
+            border-color: rgba(0, 255, 65, 0.3);
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 255, 65, 0.08);
+        }
+
+        @keyframes cardEntry {
+            from { opacity: 0; transform: translateY(32px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .brand {
+            display: inline-block;
+            color: #fff;
+            font: 700 1.5rem "Space Grotesk", sans-serif;
+            letter-spacing: -.04em;
+            text-decoration: none;
+            margin-bottom: 6px;
+        }
+        .brand:hover { opacity: 0.9; }
+        .brand span { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
 
         h2 {
-            text-align: center;
-            margin-bottom: 25px;
+            font: 800 2rem "Space Grotesk", sans-serif;
+            letter-spacing: -.04em;
+            color: #fff;
+            margin: 24px 0 6px;
         }
 
-        input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
+        .subtitle {
+            color: var(--text-muted);
+            font-size: .92rem;
+            margin-bottom: 26px;
         }
 
-        button {
+        input[type="text"], input[type="email"], input[type="password"] {
             width: 100%;
-            padding: 12px;
+            padding: 13px 16px;
+            margin: 6px 0 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.04);
+            color: #fff;
+            font: 500 .95rem "Inter", sans-serif;
+            transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+            outline: none;
+        }
+        input::placeholder { color: rgba(255,255,255,0.3); }
+        input:focus {
+            border-color: var(--green);
+            background: rgba(255,255,255,0.07);
+            box-shadow: 0 0 0 3px rgba(0, 255, 65, 0.2);
+        }
+
+        .field-label {
+            display: block;
+            font-size: .82rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.8);
+            letter-spacing: .02em;
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 15px;
+            margin-top: 10px;
             border: none;
-            background: #28a745;
-            color: white;
-            font-size: 16px;
-            border-radius: 5px;
+            border-radius: 12px;
+            background: var(--green);
+            color: #050811;
+            font: 700 .95rem "Inter", sans-serif;
+            cursor: pointer;
+            transition: transform 0.25s var(--ease-spring), box-shadow 0.25s, background 0.2s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px var(--green-glow);
+        }
+        button[type="submit"]::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s;
+        }
+        button[type="submit"]:hover::after { transform: translateX(100%); }
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            background: #26ff59;
+            box-shadow: 0 10px 30px rgba(0,255,65,0.4);
+        }
+        button[type="submit"]:active { transform: scale(0.98); }
+
+        .show-password {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0 14px;
+            font-size: .85rem;
+            color: var(--text-muted);
             cursor: pointer;
         }
-
-        button:hover {
-            background: #218838;
+        .show-password input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            accent-color: var(--green);
+            cursor: pointer;
         }
 
         .login {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 26px;
+            color: var(--text-muted);
+            font-size: .9rem;
         }
-
         .login a {
+            color: var(--green);
+            font-weight: 600;
             text-decoration: none;
-            color: #007BFF;
-            font-weight: bold;
+            transition: opacity 0.2s;
         }
-
-        .login a:hover {
-            text-decoration: underline;
-        }
-
-        .show-password {
-            margin: 10px 0;
-            font-size: 14px;
-            color: #333;
-        }
-
-        .show-password input {
-            margin-right: 8px;
-        }
+        .login a:hover { opacity: 0.8; text-shadow: 0 0 8px var(--green-glow); }
     </style>
-
 </head>
 
 <body>
+    <div class="bg-orbs" aria-hidden="true">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
 
     <div class="container">
-
+        <a class="brand" href="index.html">Auto<span>Hire</span></a>
         <h2>Create Account</h2>
+        <p class="subtitle">Start your career journey today.</p>
 
         <form id="signupForm">
+            <label class="field-label" for="name">Full Name</label>
+            <input type="text" id="name" placeholder="Your full name" required>
 
-            <input type="text" id="name" placeholder="Full Name" required>
+            <label class="field-label" for="email">Email</label>
+            <input type="email" id="email" placeholder="you@example.com" required>
 
-            <input type="email" id="email" placeholder="Enter Gmail" required>
+            <label class="field-label" for="password">Password</label>
+            <input type="password" id="password" placeholder="Create a password" required>
 
-            <input type="password" id="password" placeholder="Create Password" required>
+            <label class="field-label" for="confirmPassword">Confirm Password</label>
+            <input type="password" id="confirmPassword" placeholder="Repeat your password" required>
 
-            <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+            <label class="show-password">
+                <input type="checkbox" id="showPassword">
+                Show passwords
+            </label>
 
-            <div class="show-password">
-                <label>
-                    <input type="checkbox" id="showPassword">
-                    Show Passwords
-                </label>
-            </div>
-
-            <button type="submit">
-                Create Account
-            </button>
-
+            <button type="submit">Create Account</button>
         </form>
 
         <div class="login">
             Already have an account?
             <a href="sign-in.html">Sign in</a>
         </div>
-
     </div>
 
     <script src="api-config.js"></script>
