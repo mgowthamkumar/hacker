@@ -38,6 +38,8 @@ class StudyTopic(BaseModel):
 
 class AnalysisResult(BaseModel):
     is_valid_resume: bool
+    is_complete_resume: bool = True
+    missing_sections: List[str] = []
     warning_message: Optional[str] = None
     predicted_domain: str
     domain_icon: str
@@ -60,10 +62,19 @@ class AnalysisResult(BaseModel):
     skill_gaps: List[str]
 
 
-def validate_resume_document(raw_text: str) -> tuple[bool, str]:
-    """Detect if the uploaded text is a valid resume containing essential professional sections."""
+def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]:
+    """
+    Detect if the uploaded text is a complete resume containing all 5 required section categories:
+    1. Personal Details (Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio)
+    2. Career Objective / Target Role (Target Job Role, Career Objective)
+    3. Education (Degree/Course, Specialization, College, University, CGPA/Percentage, Year)
+    4. Technical Skills (Programming, Web Technologies, Database, Tools/Software, Other Technical Skills)
+    5. Languages (Languages known / Spoken languages)
+    """
     lower_text = raw_text.lower()
-    
+    words = re.findall(r"\b\w+\b", raw_text)
+    word_count = len(words)
+
     # 1. Timetable / Schedule / Non-resume keywords
     timetable_keywords = [
         "timetable", "time table", "class schedule", "lecture schedule", "period 1", "period 2", "period 3",
@@ -72,25 +83,58 @@ def validate_resume_document(raw_text: str) -> tuple[bool, str]:
         "menu card", "syllabus sheet"
     ]
     timetable_hits = [kw for kw in timetable_keywords if kw in lower_text]
-    
-    # 2. Check essential resume sections matching standard resume format:
-    # Personal Details, Career Objective, Education, Technical Skills
-    personal_anchors = ["name", "phone", "email", "contact", "linkedin", "github", "portfolio", "address"]
-    objective_anchors = ["objective", "target role", "summary", "profile", "career objective"]
-    education_anchors = ["education", "degree", "bachelor", "master", "college", "university", "10th", "12th", "cgpa", "percentage", "school"]
-    skills_anchors = ["skills", "technical skills", "programming", "web technologies", "database", "tools", "software"]
-    
-    has_personal = any(anchor in lower_text for anchor in personal_anchors)
-    has_education = any(anchor in lower_text for anchor in education_anchors)
-    has_skills = any(anchor in lower_text for anchor in skills_anchors)
-    
-    if len(timetable_hits) >= 2 or (len(timetable_hits) >= 1 and not (has_education or has_skills)):
-        return False, "❌ Invalid Document Alert: The uploaded file is NOT a valid resume! (College Timetable / Class Schedule / Non-Resume file detected). Please upload a complete professional resume file."
-    
-    if not (has_education or has_skills) and len(raw_text.strip().split()) < 35:
-        return False, "❌ Incomplete Resume Alert: The uploaded document is missing essential resume sections (Personal Details, Education, Technical Skills, Career Objective). Please upload a complete resume."
-        
-    return True, ""
+    if len(timetable_hits) >= 2 or (len(timetable_hits) >= 1 and word_count < 120):
+        return False, False, "this is not an complete resume", ["Timetable/Non-resume file detected"]
+
+    missing_sections = []
+
+    # Check Section 1: PERSONAL DETAILS (Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio)
+    has_email = bool(re.search(r"[\w\.-]+@[\w\.-]+\.\w+", raw_text)) or "email" in lower_text
+    has_phone = bool(re.search(r"\+?\d[\d\s-]{7,}", raw_text)) or any(k in lower_text for k in ["phone", "mobile", "contact", "call"])
+    has_personal_meta = any(k in lower_text for k in ["linkedin", "github", "portfolio", "location", "address", "city", "state", "pincode", "name"])
+    if not (has_email or has_phone or has_personal_meta):
+        missing_sections.append("Personal Details (Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio)")
+
+    # Check Section 2: CAREER OBJECTIVE / TARGET ROLE
+    objective_anchors = [
+        "objective", "target role", "target job role", "career objective", "profile summary",
+        "professional summary", "summary", "career goal", "about me", "seeking role", "seeking a role", "aspiring"
+    ]
+    if not any(anchor in lower_text for anchor in objective_anchors):
+        missing_sections.append("Career Objective / Target Role")
+
+    # Check Section 3: EDUCATION
+    education_anchors = [
+        "education", "degree", "course", "specialization", "college", "university", "school", "academic",
+        "b.tech", "btech", "m.tech", "mtech", "b.e", "be", "b.sc", "bsc", "m.sc", "msc",
+        "bba", "mba", "b.com", "bcom", "bca", "mca", "diploma", "10th", "12th",
+        "cgpa", "gpa", "percentage", "year"
+    ]
+    if not any(anchor in lower_text for anchor in education_anchors):
+        missing_sections.append("Education (Degree, Course, Specialization, College, University, CGPA, Year)")
+
+    # Check Section 4: TECHNICAL SKILLS
+    skills_anchors = [
+        "skills", "technical skills", "programming", "web technologies", "database",
+        "tools", "software", "technologies", "tech stack", "python", "javascript",
+        "java", "c++", "c#", "html", "css", "sql", "react", "nodejs", "git", "aws", "excel", "power bi"
+    ]
+    if not any(anchor in lower_text for anchor in skills_anchors):
+        missing_sections.append("Technical Skills (Programming, Web, Database, Tools)")
+
+    # Check Section 5: LANGUAGES
+    languages_anchors = [
+        "languages", "language", "languages known", "mother tongue", "spoken languages",
+        "english", "hindi", "tamil", "telugu", "kannada", "malayalam", "marathi", "bengali",
+        "gujarati", "spanish", "french", "german", "japanese", "mandarin", "chinese", "russian"
+    ]
+    if not any(anchor in lower_text for anchor in languages_anchors):
+        missing_sections.append("Languages")
+
+    if missing_sections or word_count < 35:
+        return False, False, "this is not an complete resume", missing_sections
+
+    return True, True, "", []
 
 
 def predict_resume_domain(raw_text: str, detected_skills: List[str]) -> tuple[str, str, str]:
@@ -106,7 +150,6 @@ def predict_resume_domain(raw_text: str, detected_skills: List[str]) -> tuple[st
         "engineering": 0.0
     }
 
-    # Helper function for exact word-boundary regex matching
     def count_matches(keywords: list[str]) -> int:
         count = 0
         for kw in keywords:
@@ -302,15 +345,15 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
     if not is_valid_resume:
         hackathon_prob = 10.0
         intern_prob = 15.0
-        hackathon_status = "❌ Document Invalid (Missing Resume Sections)"
-        intern_status = "❌ Please Upload a Standard Resume File"
+        hackathon_status = "❌ Document Incomplete / Invalid"
+        intern_status = "❌ Missing essential resume details"
         
         roadmap.append(StudyTopic(
             category="Resume Section Requirements",
-            topic="Include Essential Resume Sections",
-            recommendation="Your uploaded file is missing standard resume sections. Please structure your file to include: 1) Personal Details, 2) Career Objective, 3) Education (Degree/College), 4) Technical Skills.",
+            topic="Include Essential Resume Details",
+            recommendation="Ensure your uploaded resume contains: 1) Personal Details, 2) Career Objective / Target Role, 3) Education, 4) Technical Skills, 5) Languages.",
             priority="HIGH",
-            impact="Unlocks Accurate ATS Scoring & Custom Study Recommendations"
+            impact="Required for Complete Resume Analysis"
         ))
         return hackathon_prob, intern_prob, hackathon_status, intern_status, roadmap, ["Complete Resume Sections"]
 
@@ -467,10 +510,10 @@ async def analyze_resume(
         raw_text = resume_text.strip()
 
     if not raw_text.strip():
-        raw_text = "Experienced candidate proficient in professional resume sections, qualifications, projects, and skills."
+        raw_text = "Missing document text"
 
-    # 1. Document Resume Validation (Check required resume sections & non-resume structures)
-    is_valid_resume, warning_msg = validate_resume_document(raw_text)
+    # 1. Document Resume Validation (Check required resume sections: Personal Details, Career Objective, Education, Technical Skills, Languages)
+    is_valid_resume, is_complete_resume, warning_msg, missing_sections = validate_resume_document(raw_text)
 
     # 2. Extract detected skills & Predict Domain
     detected_skills = extract_resume_skills(raw_text)
@@ -484,7 +527,7 @@ async def analyze_resume(
     feedback = []
     company_skill_list = parse_company_skills(company_skills)
 
-    if not is_valid_resume:
+    if not is_valid_resume or not is_complete_resume:
         feedback.append({"type": "fail", "text": warning_msg})
         action_score = 20.0
         metrics_score = 15.0
@@ -493,7 +536,7 @@ async def analyze_resume(
         total_score = 20.0
         grade = "F"
     else:
-        # Technical Skill Evaluation (35% weight of ATS grade score)
+        # Technical Skill Evaluation
         tech_skills_score = min(100.0, float(len(detected_skills) * 22.0))
         if tech_skills_score < 40.0:
             tech_skills_score = 40.0
@@ -503,7 +546,7 @@ async def analyze_resume(
         else:
             feedback.append({"type": "fail", "text": "Technical Skill Suggestion: Expand your Technical Skills section with Programming languages, Web Tech, Databases, or Developer Tools."})
 
-        # Action Verbs (25% weight)
+        # Action Verbs
         action_verbs = ["achieved", "developed", "managed", "created", "led", "increased", "reduced",
                         "designed", "implemented", "engineered", "launched", "orchestrated", "automated",
                         "optimized", "built", "assisted", "supported", "coordinated", "handled", "improved"]
@@ -515,7 +558,7 @@ async def analyze_resume(
         else:
             feedback.append({"type": "fail", "text": "Low action impact detected. Add stronger accomplishment verbs."})
 
-        # Quantifiable Metrics (25% weight)
+        # Quantifiable Metrics
         numbers = re.findall(r'\b\d+(?:%|\b)', raw_text)
         metrics_score = min(100.0, float(len(numbers) * 35))
 
@@ -524,7 +567,7 @@ async def analyze_resume(
         else:
             feedback.append({"type": "fail", "text": "Lacks measurable impact. Incorporate percentages, user counts, or metric data."})
 
-        # Structure & Length (15% weight)
+        # Structure & Length
         required_sections = ["education", "experience", "skills"]
         found_sections = [sec for sec in required_sections if sec in lower_text]
         structure_score = (len(found_sections) / len(required_sections)) * 100.0
@@ -539,7 +582,7 @@ async def analyze_resume(
             length_score = 100.0
             feedback.append({"type": "pass", "text": f"Ideal concise length ({word_count} words)."})
 
-        # Grade calculation heavily weighted by Technical Skills
+        # Grade calculation
         raw_total = (tech_skills_score * 0.35) + (action_score * 0.25) + (metrics_score * 0.25) + (structure_score * 0.15)
         total_score = min(100.0, round(raw_total))
 
@@ -550,15 +593,17 @@ async def analyze_resume(
 
     # 5. Probabilities & Domain-Specific Roadmap
     hack_prob, int_prob, hack_status, int_status, roadmap, skill_gaps = calculate_probabilities_and_roadmap(
-        raw_text, detected_skills, domain_name, total_score, action_score, metrics_score, structure_score, is_valid_resume
+        raw_text, detected_skills, domain_name, total_score, action_score, metrics_score, structure_score, is_valid_resume and is_complete_resume
     )
 
-    if is_valid_resume:
+    if is_valid_resume and is_complete_resume:
         feedback.append({"type": "pass", "text": f"Technical Skills Analysis -> Predicted Field: {domain_icon} {domain_name}."})
 
     return AnalysisResult(
-        is_valid_resume=is_valid_resume,
-        warning_message=warning_msg if not is_valid_resume else None,
+        is_valid_resume=is_valid_resume and is_complete_resume,
+        is_complete_resume=is_complete_resume,
+        missing_sections=missing_sections,
+        warning_message=warning_msg if (not is_valid_resume or not is_complete_resume) else None,
         predicted_domain=domain_name,
         domain_icon=domain_icon,
         domain_description=domain_desc,
