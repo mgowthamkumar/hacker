@@ -1,22 +1,13 @@
 {
     "version": 2,
-    "builds": [
-        {
-            "src": "Dockerfile",
-            "use": "@vercel/docker"
-        }
-    ],
-    "env": {
-        "HOST": "0.0.0.0"
-    },
     "rewrites": [
-        {
-            "source": "/analyzer",
-            "destination": "/api/analyzer.py"
-        },
         {
             "source": "/api/(.*)",
             "destination": "/api/index.js"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/$1"
         }
     ]
 }

@@ -2,250 +2,362 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My Profile - AutoHire RAG AI</title>
 
-    <title>My Profile</title>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #070b14;
-            --bg-card: rgba(15, 23, 42, 0.75);
-            --border: rgba(255, 255, 255, 0.08);
-            --green: #00ff41;
-            --green-glow: rgba(0, 255, 65, 0.25);
-            --cyan: #38bdf8;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Inter", sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
         body {
-            background-color: var(--bg);
-            background-image: 
-                radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0, 255, 65, 0.12) 0%, transparent 70%),
-                radial-gradient(ellipse 60% 50% at 50% 100%, rgba(56, 189, 248, 0.1) 0%, transparent 70%);
-            color: var(--text-main);
+            background: #0f172a;
+            color: #f8fafc;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            padding: 24px;
-            position: relative;
-            overflow-x: hidden;
+            padding: 16px;
         }
 
-        /* Scanline texture */
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            background: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-            background-size: 40px 40px;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .profile-card {
-            width: min(440px, 100%);
-            background: var(--bg-card);
-            backdrop-filter: blur(28px);
-            -webkit-backdrop-filter: blur(28px);
-            padding: 40px;
-            border-radius: 24px;
+        .profile-container {
+            width: 100%;
+            max-width: 520px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 28px 24px;
+            border-radius: 20px;
             text-align: center;
-            border: 1px solid var(--border);
-            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
-            position: relative;
-            z-index: 1;
-            transition: border-color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
         }
 
-        .profile-card:hover {
-            border-color: rgba(0, 255, 65, 0.3);
-            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 255, 65, 0.08);
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            margin-bottom: 20px;
         }
 
         .avatar {
             width: 100px;
             height: 100px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--green), var(--cyan));
-            color: #050811;
-            font-family: "Space Grotesk", sans-serif;
-            font-size: 42px;
+            background: linear-gradient(135deg, #eab308, #ca8a04);
+            color: #0f172a;
+            font-size: 44px;
             font-weight: 800;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: 0 auto 20px;
-            box-shadow: 0 0 25px var(--green-glow);
+            margin: 0 auto 16px auto;
+            box-shadow: 0 0 25px rgba(234, 179, 8, 0.4);
+            border: 3px solid #fef08a;
         }
 
         h2 {
-            font-family: "Space Grotesk", sans-serif;
-            font-size: 26px;
-            font-weight: 800;
-            color: #fff;
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 700;
             margin-bottom: 4px;
         }
 
-        p {
-            color: var(--text-muted);
-            margin: 8px 0;
-            font-size: 15px;
+        .role-tag {
+            color: #eab308;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
         }
 
-        .info {
+        .info-group {
             text-align: left;
-            margin-top: 24px;
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
-        .info div {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--border);
-            padding: 16px 20px;
+        .info-card {
+            background: #0f172a;
+            padding: 14px 16px;
             border-radius: 12px;
-            margin-top: 12px;
-            color: #fff;
+            border: 1px solid #334155;
         }
 
-        label {
-            color: var(--green);
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: .05em;
+        .info-card label {
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
             text-transform: uppercase;
-            text-shadow: 0 0 8px var(--green-glow);
+            letter-spacing: 0.5px;
+            display: block;
+            margin-bottom: 4px;
         }
 
-        button {
+        .info-card input, .info-card select {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #f8fafc;
+            font-size: 15px;
+            font-weight: 600;
+            outline: none;
+        }
+
+        .info-card select option {
+            background: #1e293b;
+            color: #f8fafc;
+        }
+
+        .info-card p {
+            color: #f8fafc;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .btn-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
             margin-top: 24px;
+        }
+
+        .btn {
             width: 100%;
             padding: 14px;
-            background: var(--green);
-            color: #050811;
+            background: #eab308;
+            color: #0f172a;
             border: none;
             border-radius: 12px;
-            font-family: "Space Grotesk", sans-serif;
             font-size: 16px;
-            font-weight: 800;
+            font-weight: 700;
             cursor: pointer;
-            transition: transform 0.25s var(--ease-spring), box-shadow 0.25s, background 0.2s;
-            box-shadow: 0 0 20px var(--green-glow);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            touch-action: manipulation;
         }
 
-        button:hover {
-            background: #26ff59;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 255, 65, 0.4);
+        .btn:hover, .btn:active {
+            background: #facc15;
+            transform: translateY(-1px);
+        }
+
+        .btn-save {
+            background: #10b981;
+            color: #ffffff;
+        }
+
+        .btn-save:hover {
+            background: #059669;
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #f8fafc;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
         }
 
         .logout {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            color: #f87171;
-            margin-top: 12px;
-            box-shadow: none;
+            background: #ef4444;
+            color: #ffffff;
         }
 
         .logout:hover {
-            background: rgba(239, 68, 68, 0.3);
-            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+            background: #dc2626;
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .profile-container {
+                padding: 20px 16px;
+                border-radius: 16px;
+            }
+
+            .avatar {
+                width: 80px;
+                height: 80px;
+                font-size: 36px;
+            }
+
+            h2 {
+                font-size: 20px;
+            }
+
+            .btn {
+                padding: 12px;
+                font-size: 15px;
+            }
         }
     </style>
-
 </head>
 
 <body>
 
-    <div class="profile-card">
+    <div class="profile-container">
+
+        <div class="status-badge" id="status-badge">
+            <span id="status-dot">🟢</span> <span id="status-text">Auto Sync Active (Mobile Ready)</span>
+        </div>
 
         <div class="avatar" id="avatar">
             U
         </div>
 
-        <h2 id="username">User Name</h2>
+        <h2 id="display-name">Candidate User</h2>
+        <p class="role-tag" id="display-domain">💻 Engineering & Computer Science</p>
 
-        <p>Username</p>
+        <form id="profile-form" onsubmit="saveProfile(event)">
+            <div class="info-group">
+                <div class="info-card">
+                    <label>Full Name</label>
+                    <input type="text" id="input-name" placeholder="Enter Full Name" required>
+                </div>
 
-        <div class="info">
+                <div class="info-card">
+                    <label>Email Address</label>
+                    <input type="email" id="input-email" placeholder="Enter Email Address" required>
+                </div>
 
-            <div>
+                <div class="info-card">
+                    <label>Target Domain / Field</label>
+                    <select id="input-domain">
+                        <option value="Engineering & Computer Science">💻 Engineering & Computer Science</option>
+                        <option value="Arts, Design & Humanities">🎨 Arts, Design & Humanities</option>
+                        <option value="Medical & Healthcare / Doctor">🩺 Medical & Healthcare / Doctor</option>
+                        <option value="Pure & Applied Science / Research">🔬 Pure & Applied Science / Research</option>
+                        <option value="Business, Finance & Commerce">💼 Business, Finance & Commerce</option>
+                    </select>
+                </div>
 
-                <label>Email</label>
-
-                <p id="email"></p>
-
+                <div class="info-card">
+                    <label>Technical Skills</label>
+                    <input type="text" id="input-skills" placeholder="e.g. Python, React, SQL, Git">
+                </div>
             </div>
 
-        </div>
-
-        <button onclick="goHome()">
-
-            Home
-
-        </button>
-
-        <button class="logout" onclick="logout()">
-
-            Logout
-
-        </button>
-
+            <div class="btn-stack">
+                <button type="submit" class="btn btn-save">
+                    💾 Save Profile Changes
+                </button>
+                <button type="button" class="btn" onclick="goDashboard()">
+                    🏠 Back to Dashboard
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="goAnalyzer()">
+                    📄 Resume Analyzer
+                </button>
+                <button type="button" class="btn logout" onclick="logout()">
+                    🚪 Logout
+                </button>
+            </div>
+        </form>
     </div>
 
     <script src="api-config.js"></script>
     <script>
+        const apiUrl = window.AUTOHIRE_API_URL || "http://127.0.0.1:8800/api/auth";
 
-        const apiUrl = window.AUTOHIRE_API_URL;
+        // Load profile automatically without terminal process requirement
+        function loadProfileData() {
+            const localProfile = JSON.parse(localStorage.getItem("autoHireProfile") || localStorage.getItem("loggedInUser") || "null") || {
+                name: "Candidate User",
+                email: "candidate@autohire.ai",
+                domain: "Engineering & Computer Science",
+                skills: "Python, SQL, React, Git"
+            };
 
-        fetch(`${apiUrl}/me`, { credentials: "include" }).then(async response => {
-            const localUser = JSON.parse(localStorage.getItem("autoHireProfile") || localStorage.getItem("loggedInUser") || "null");
-            if (!response.ok && !localUser) {
-                window.location.href = "index.html";
-                return;
-            }
+            // Populate Form UI
+            document.getElementById("input-name").value = localProfile.name || "Candidate User";
+            document.getElementById("input-email").value = localProfile.email || "candidate@autohire.ai";
+            document.getElementById("input-domain").value = localProfile.domain || "Engineering & Computer Science";
+            document.getElementById("input-skills").value = localProfile.skills || "Python, SQL, React, Git";
 
-            const { user } = response.ok ? await response.json() : { user: localUser };
-            document.getElementById("username").innerHTML = user.name;
-            document.getElementById("email").innerHTML = user.email;
-            document.getElementById("avatar").innerHTML = user.name.charAt(0).toUpperCase();
-        }).catch(() => {
-            if (!localStorage.getItem("autoHireProfile") && !localStorage.getItem("loggedInUser")) {
-                window.location.href = "index.html";
-            }
-        });
+            updateHeader(localProfile);
 
-        function goHome() {
+            // Attempt live backend fetch seamlessly
+            fetch(`${apiUrl}/me`, { credentials: "include" })
+                .then(async res => {
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.user) {
+                            const merged = { ...localProfile, ...data.user };
+                            document.getElementById("input-name").value = merged.name || merged.email;
+                            document.getElementById("input-email").value = merged.email || "";
+                            updateHeader(merged);
+                            localStorage.setItem("autoHireProfile", JSON.stringify(merged));
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Backend offline — local offline sync mode remains 100% active
+                    document.getElementById("status-badge").style.background = "rgba(234, 179, 8, 0.15)";
+                    document.getElementById("status-badge").style.color = "#facc15";
+                    document.getElementById("status-text").innerText = "⚡ Local Auto-Sync (Offline Ready)";
+                });
+        }
 
+        function updateHeader(user) {
+            const name = user.name || user.email || "Candidate User";
+            document.getElementById("display-name").innerText = name;
+            document.getElementById("avatar").innerText = name.charAt(0).toUpperCase();
+            document.getElementById("display-domain").innerText = user.domain ? user.domain : "💻 Engineering & Computer Science";
+        }
+
+        function saveProfile(event) {
+            event.preventDefault();
+            const profileData = {
+                name: document.getElementById("input-name").value.trim(),
+                email: document.getElementById("input-email").value.trim(),
+                domain: document.getElementById("input-domain").value,
+                skills: document.getElementById("input-skills").value.trim()
+            };
+
+            localStorage.setItem("autoHireProfile", JSON.stringify(profileData));
+            localStorage.setItem("loggedInUser", JSON.stringify(profileData));
+            updateHeader(profileData);
+
+            alert("✅ Profile updated successfully!");
+        }
+
+        function goDashboard() {
             window.location.href = "dashboard.html";
+        }
 
+        function goAnalyzer() {
+            window.location.href = "analyzer.html";
         }
 
         function logout() {
-
             fetch(`${apiUrl}/logout`, { method: "POST", credentials: "include" }).finally(() => {
                 localStorage.removeItem("loggedInUser");
                 localStorage.removeItem("autoHireProfile");
-                window.location.href = "index.html";
+                window.location.href = "sign-in.html";
             });
-
         }
 
+        // Auto-run profile initialization on load
+        window.addEventListener("DOMContentLoaded", loadProfileData);
     </script>
-
 </body>
 
 </html>
