@@ -870,7 +870,7 @@ async def rag_analyze(
             text = (extracted + "\n" + text).strip()
 
     skills_str = company_skills or target_skills or ""
-    return await analyze_resume_endpoint(resume_text=text, company_skills=skills_str, file=None)
+    return await analyze_resume(file=file, resume_text=text, company_skills=skills_str)
 
 
 if __name__ == "__main__":
