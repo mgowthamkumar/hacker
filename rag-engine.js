@@ -326,64 +326,155 @@ class RagEngine {
     };
   }
 
-  // RAG Resume Analysis & Study Roadmap Generator
+  // RAG Resume Analysis & Study Roadmap Generator (Combined Engine)
   async analyzeResumeWithRag(resumeText, targetSkills = "") {
     if (!this.initialized) await this.initKnowledgeBase();
 
-    const combinedQuery = `${resumeText} ${targetSkills}`;
-    const topMatches = this.similaritySearch(combinedQuery, 8);
+    const rawText = (resumeText || "").trim();
+    const textLower = rawText.toLowerCase();
+    const words = rawText.match(/\b\w+\b/g) || [];
+    const wordCount = words.length;
 
-    // Filter study resources matched via vector similarity
+    // 1. Audit 5 Required Resume Section Categories
+    const missingSections = [];
+
+    // Category 1: Personal Details
+    const hasEmail = /[\w\.-]+@[\w\.-]+\.\w+/.test(rawText) || textLower.includes("email");
+    const hasPhone = /\+?\d[\d\s-]{7,}/.test(rawText) || ["phone", "mobile", "contact", "call"].some(k => textLower.includes(k));
+    const hasPersonal = ["linkedin", "github", "portfolio", "location", "address", "city", "state", "pincode", "name"].some(k => textLower.includes(k));
+    if (!(hasEmail || hasPhone || hasPersonal)) {
+      missingSections.append ? missingSections.push("Personal Details") : missingSections.push("Personal Details (Name, Phone, Email, Location, LinkedIn, GitHub)");
+    }
+
+    // Category 2: Career Objective / Target Role
+    const objectiveAnchors = ["objective", "target role", "target job role", "career objective", "profile summary", "professional summary", "summary", "career goal", "about me", "aspiring"];
+    if (!objectiveAnchors.some(k => textLower.includes(k))) {
+      missingSections.push("Career Objective / Target Role");
+    }
+
+    // Category 3: Education
+    const educationAnchors = ["education", "degree", "course", "specialization", "college", "university", "academic", "b.tech", "btech", "m.tech", "mtech", "b.e", "be", "b.sc", "bsc", "m.sc", "msc", "bba", "mba", "b.com", "bcom", "bca", "mca", "cgpa", "percentage"];
+    if (!educationAnchors.some(k => textLower.includes(k))) {
+      missingSections.push("Education (Degree, College, University, CGPA)");
+    }
+
+    // Category 4: Technical Skills
+    const skillsAnchors = ["skills", "technical skills", "programming", "web technologies", "database", "tools", "software", "python", "javascript", "java", "c++", "html", "css", "sql", "git", "aws"];
+    if (!skillsAnchors.some(k => textLower.includes(k))) {
+      missingSections.push("Technical Skills (Programming, Web, Database, Tools)");
+    }
+
+    // Category 5: Languages
+    const languagesAnchors = ["languages", "language", "languages known", "spoken languages", "english", "hindi", "tamil", "telugu", "spanish", "french", "german"];
+    if (!languagesAnchors.some(k => textLower.includes(k))) {
+      missingSections.push("Languages");
+    }
+
+    const isValidResume = missingSections.length === 0;
+    const warningMessage = isValidResume ? null : `⚠️ Invalid Resume Alert: Document is missing required section(s): ${missingSections.join(", ")}. Please upload a complete resume containing Personal Details, Career Objective, Education, Technical Skills, and Languages!`;
+
+    // 2. Precise Degree Subject Classification
+    let domainTitle = "Engineering & Technology Student";
+    let domainIcon = "💻";
+    let domainDesc = "Degree background in B.Tech, M.Tech, B.E, M.E, BCA, MCA, or Computer Science.";
+
+    if (/\b(b\.com|bcom|m\.com|mcom|b\.a|ba|m\.a|ma|bba|mba|commerce|finance|accounting)\b/.test(textLower)) {
+      domainTitle = "Arts & Commerce Student";
+      domainIcon = "🎨";
+      domainDesc = "Degree background in Arts, Humanities, Fine Arts, Design, or Commerce.";
+    } else if (/\b(b\.sc|bsc|m\.sc|msc|physics|chemistry|biology|microbiology|biotechnology)\b/.test(textLower)) {
+      domainTitle = "Science & Research Student";
+      domainIcon = "🔬";
+      domainDesc = "Degree background in B.Sc, M.Sc, Pure Sciences, Mathematics, or Laboratory Research.";
+    } else if (/\b(mbbs|bds|b\.pharma|m\.pharma|nursing|doctor|clinical|medical)\b/.test(textLower)) {
+      domainTitle = "Medical & Healthcare Student";
+      domainIcon = "🩺";
+      domainDesc = "Degree background in Medical Sciences, MBBS, Pharmacy, Nursing, or Clinical Healthcare.";
+    } else if (/\b(b\.ed|m\.ed|teaching|pedagogy|lecturer|instructor)\b/.test(textLower)) {
+      domainTitle = "Teaching & Education Student";
+      domainIcon = "📚";
+      domainDesc = "Degree background in Pedagogy, Curriculum & Educational instruction.";
+    }
+
+    // 3. ATS Action Verbs & Metrics Analysis
+    const actionVerbsList = ["achieved", "developed", "managed", "created", "led", "increased", "reduced", "designed", "implemented", "engineered", "launched", "orchestrated", "automated", "optimized", "built", "improved"];
+    const foundVerbs = actionVerbsList.filter(v => textLower.includes(v));
+    const numbersFound = rawText.match(/\b\d+(?:%|\b)/g) || [];
+
+    const actionScore = Math.min(100, Math.max(30, foundVerbs.length * 20));
+    const metricsScore = Math.min(100, Math.max(25, numbersFound.length * 30));
+    const structureScore = isValidResume ? 90 : 50;
+    const lengthScore = wordCount >= 100 && wordCount <= 600 ? 95 : 65;
+
+    // 4. Vector Grounding Search
+    const combinedQuery = `${rawText} ${targetSkills}`;
+    const topMatches = this.similaritySearch(combinedQuery, 8);
     const studyMatches = this.vectorStore.searchTopK(combinedQuery, 4, "StudyGuide");
     const jobMatches = this.vectorStore.searchTopK(combinedQuery, 3, "Job");
 
-    const textLower = combinedQuery.toLowerCase();
-    let domainTitle = "Engineering & Computer Science";
-    let domainIcon = "💻";
-
-    if (textLower.includes("design") || textLower.includes("ui") || textLower.includes("ux") || textLower.includes("figma") || textLower.includes("arts")) {
-      domainTitle = "UI/UX Design & Creative Arts";
-      domainIcon = "🎨";
-    } else if (textLower.includes("teacher") || textLower.includes("education") || textLower.includes("instructor") || textLower.includes("school")) {
-      domainTitle = "Education & Computer Science Pedagogy";
-      domainIcon = "🎓";
-    } else if (textLower.includes("health") || textLower.includes("medical") || textLower.includes("clinical") || textLower.includes("bio")) {
-      domainTitle = "Medical & Healthcare Informatics";
-      domainIcon = "🩺";
-    }
-
-    const hackathonOdds = Math.min(96, Math.max(60, topMatches.length * 9 + 30));
-    const internshipOdds = Math.min(94, Math.max(55, topMatches.length * 8 + 25));
+    const hackathonOdds = Math.min(96, Math.max(55, Math.round((actionScore + structureScore) / 2)));
+    const internshipOdds = Math.min(94, Math.max(50, Math.round((metricsScore + lengthScore) / 2)));
     const overallScore = Math.round((hackathonOdds + internshipOdds) / 2);
+    const grade = overallScore >= 85 ? "Grade A" : (overallScore >= 75 ? "Grade B+" : "Grade B");
+
+    const feedbackList = [];
+    if (!isValidResume) {
+      feedbackList.push(`⚠️ Section Alert: Missing required resume sections (${missingSections.join(", ")}).`);
+    } else {
+      feedbackList.push("✅ Resume Structure Audit: All 5 required section categories detected.");
+    }
+    feedbackList.push(`🎓 Qualification Classification: ${domainIcon} ${domainTitle}.`);
+    feedbackList.push(`⚡ Action Verbs Audit: Detected ${foundVerbs.length} accomplishment action verbs.`);
+    feedbackList.push(`📊 Quantifiable Metrics: Found ${numbersFound.length} numerical data points.`);
+    feedbackList.push(`🧠 Vector Grounding: Matched ${topMatches.length} industry skill vectors.`);
 
     const roadmap = studyMatches.map((m, idx) => ({
       title: `${idx + 1}. ${m.document.metadata.title}`,
       category: m.document.category || "Skill Goal",
       desc: m.document.metadata.text || m.document.text,
-      impact: `+${15 + idx * 5}% Vector Match Boost (Score: ${Math.round(m.similarityScore * 100)}%)`
+      impact: `+${15 + idx * 5}% Vector Boost (Match: ${Math.round(m.similarityScore * 100)}%)`
+    }));
+
+    const suggestedJobs = jobMatches.map(j => ({
+      title: j.document.metadata.title || "Matched Industry Position",
+      match_score: Math.min(98, Math.round(j.similarityScore * 100) + 20),
+      reason: `Vector similarity match (${Math.round(j.similarityScore * 100)}%) with ${j.document.metadata.company || 'Industry Partner'}.`,
+      matched_skills: ["Python", "JavaScript", "SQL"],
+      missing_skills: ["System Architecture"]
     }));
 
     return {
       success: true,
-      domain: { title: domainTitle, icon: domainIcon, description: "Vector Grounded Domain Classification" },
-      hackathon_odds: { score: hackathonOdds, badge: hackathonOdds > 75 ? "High Probability" : "Competitive", status: "Grounding vector match confirms strong baseline capabilities." },
-      internship_odds: { score: internshipOdds, badge: internshipOdds > 70 ? "Competitive" : "Building Foundation", status: "Technical stack matches live industry dataset vectors." },
-      overall_score: { score: overallScore, grade: overallScore > 80 ? "Grade A" : "Grade B+" },
-      metrics: { action_verbs: 82, metrics_presence: 70, structure: 88, length_balance: 85 },
-      feedback: [
-        `🧠 RAG Vector Match: Found ${topMatches.length} relevant skill vectors in database.`,
-        "✅ Action Impact: Resume uses strong technical verbs and structured project bullet points.",
-        "💡 Recommendation: Quantify achievement metrics with numerical percentages (e.g. 'Improved performance by 30%').",
-        "🚀 Vector Match: Target role aligns with live market hiring trends."
-      ],
+      is_valid_resume: isValidResume,
+      is_complete_resume: isValidResume,
+      missing_sections: missingSections,
+      warning_message: warningMessage,
+      warning_msg: warningMessage,
+      predicted_domain: domainTitle,
+      domain_icon: domainIcon,
+      domain_description: domainDesc,
+      domain: { title: domainTitle, icon: domainIcon, description: domainDesc },
+      hackathon_probability: hackathonOdds,
+      hackathon_badge: hackathonOdds > 75 ? "High Probability" : "Competitive",
+      hackathon_status: hackathonOdds > 75 ? "Strong technical stack for competitive hackathons." : "Good baseline.",
+      hackathon_odds: { score: hackathonOdds, badge: hackathonOdds > 75 ? "High Probability" : "Competitive", status: hackathonOdds > 75 ? "Strong technical stack for competitive hackathons." : "Good baseline." },
+      internship_probability: internshipOdds,
+      internship_badge: internshipOdds > 70 ? "Competitive" : "Building Foundation",
+      internship_status: "Profile shows active technical capabilities.",
+      internship_odds: { score: internshipOdds, badge: internshipOdds > 70 ? "Competitive" : "Building Foundation", status: "Profile shows active technical capabilities." },
+      total_score: overallScore,
+      grade: grade,
+      overall_score: { score: overallScore, grade: grade },
+      action_score: actionScore,
+      metrics_score: metricsScore,
+      structure_score: structureScore,
+      length_score: lengthScore,
+      metrics: { action_verbs: actionScore, metrics_presence: metricsScore, structure: structureScore, length_balance: lengthScore },
+      feedback: feedbackList,
+      study_roadmap: roadmap,
       roadmap: roadmap,
-      job_matches: jobMatches.map(j => ({
-        title: j.document.metadata.title || "Matched Role",
-        match_score: Math.min(98, Math.round(j.similarityScore * 100) + 20),
-        reason: `Vector similarity match (${Math.round(j.similarityScore * 100)}%) with ${j.document.metadata.company || 'Company'}.`,
-        matched_skills: ["Python", "JavaScript", "SQL"],
-        missing_skills: ["System Architecture"]
-      }))
+      suggested_jobs: suggestedJobs,
+      job_matches: suggestedJobs
     };
   }
 }

@@ -548,48 +548,30 @@ app.get("/api/rag/search", async (req, res) => {
     });
 });
 
-app.post("/api/rag/analyze", express.json(), upload.single("file"), async (req, res) => {
-    const resumeText = (req.body && req.body.resume_text) || (req.file ? req.file.buffer.toString() : "") || "Software Engineer resume with Python, React, SQL and AWS.";
-    const targetSkills = (req.body && req.body.company_skills) || "";
-    const analysis = await ragEngine.analyzeResumeWithRag(resumeText, targetSkills);
-    return res.json(analysis);
-});
+// --- Combined Resume Analyzer Endpoint (Python FastAPI + Node RAG Engine) ---
+app.post(["/api/rag/analyze", "/analyzer", "/api/analyzer"], upload.single("file"), async (req, res) => {
+    const resumeText = (req.body && req.body.resume_text) || (req.file ? req.file.buffer.toString("utf8") : "") || "";
+    const targetSkills = (req.body && (req.body.company_skills || req.body.target_skills)) || "";
 
-// --- Study Pack Printable Document & PDF Generator Endpoints ---
-app.get(["/api/study-pack/pdf", "/api/study-pack/html"], async (req, res) => {
-    const topic = req.query.topic || req.query.gap || "Data Structures & Algorithms Mastery";
-    const name = req.query.name || "Candidate User";
-    const data = studyPackGenerator.generateStudyPackData(topic, name);
-    const html = studyPackGenerator.generateStudyPackHtml(data);
-    res.setHeader("Content-Type", "text/html");
-    return res.send(html);
-});
+    // 1. Run RAG Vector Grounded Analysis
+    const ragAnalysis = await ragEngine.analyzeResumeWithRag(resumeText, targetSkills);
 
-app.get("/api/study-pack/data", async (req, res) => {
-    const topic = req.query.topic || req.query.gap || "Data Structures & Algorithms Mastery";
-    const name = req.query.name || "Candidate User";
-    const data = studyPackGenerator.generateStudyPackData(topic, name);
-    return res.json(data);
-});
-
-// Resume Analyzer Proxy & Express Standalone Handler
-app.post(["/analyzer", "/api/analyzer"], upload.single("file"), async (req, res) => {
-    // Try proxying to Python FastAPI backend app1.py (port 5503)
+    // 2. Attempt Python FastAPI Backend (app1.py on port 5503) & merge results
     try {
         const analyzerPort = process.env.ANALYZER_PORT || "5503";
         const formData = new (require("form-data"))();
         if (req.file) {
             formData.append("file", req.file.buffer || fs.readFileSync(req.file.path), req.file.originalname);
         }
-        if (req.body.resume_text) {
-            formData.append("resume_text", req.body.resume_text);
+        if (resumeText) {
+            formData.append("resume_text", resumeText);
         }
-        if (req.body.company_skills) {
-            formData.append("company_skills", req.body.company_skills);
+        if (targetSkills) {
+            formData.append("company_skills", targetSkills);
         }
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
 
         const upstream = await fetch(`http://127.0.0.1:${analyzerPort}/analyzer`, {
             method: "POST",
@@ -600,172 +582,29 @@ app.post(["/analyzer", "/api/analyzer"], upload.single("file"), async (req, res)
         clearTimeout(timeoutId);
 
         if (upstream.ok) {
-            const result = await upstream.json();
-            return res.json(result);
+            const pyResult = await upstream.json();
+            const merged = {
+                ...ragAnalysis,
+                ...pyResult,
+                domain: pyResult.domain || ragAnalysis.domain,
+                predicted_domain: pyResult.predicted_domain || ragAnalysis.predicted_domain,
+                hackathon_odds: pyResult.hackathon_odds || ragAnalysis.hackathon_odds,
+                internship_odds: pyResult.internship_odds || ragAnalysis.internship_odds,
+                overall_score: pyResult.overall_score || ragAnalysis.overall_score,
+                metrics: pyResult.metrics || ragAnalysis.metrics,
+                roadmap: (pyResult.roadmap && pyResult.roadmap.length > 0) ? pyResult.roadmap : ragAnalysis.roadmap,
+                study_roadmap: (pyResult.study_roadmap && pyResult.study_roadmap.length > 0) ? pyResult.study_roadmap : ragAnalysis.study_roadmap,
+                job_matches: (pyResult.job_matches && pyResult.job_matches.length > 0) ? pyResult.job_matches : ragAnalysis.job_matches,
+                suggested_jobs: (pyResult.suggested_jobs && pyResult.suggested_jobs.length > 0) ? pyResult.suggested_jobs : ragAnalysis.suggested_jobs,
+                feedback: Array.from(new Set([...(ragAnalysis.feedback || []), ...(pyResult.feedback ? pyResult.feedback.map(f => typeof f === 'string' ? f : f.text) : [])]))
+            };
+            return res.json(merged);
         }
     } catch (e) {
-        // Python analyzer backend offline — fall back to Express standalone analysis
+        // Python backend offline — return complete combined RAG analysis
     }
 
-    const rawText = (req.body.resume_text || "").trim() || (req.file ? req.file.buffer.toString("utf8") : "");
-    const lowerText = rawText.toLowerCase();
-
-    // 1. Timetable / Non-Resume Document Validation
-    const timetableKeywords = ["timetable", "time table", "class schedule", "lecture schedule", "period 1", "period 2", "room no", "subject code", "exam schedule", "date sheet", "hall ticket", "daily routine", "invoice", "receipt", "bill", "syllabus sheet"];
-    const timetableHits = timetableKeywords.filter(kw => lowerText.includes(kw));
-    const resumeAnchors = ["education", "experience", "skills", "projects", "qualification", "employment", "summary", "profile", "contact", "certifications", "resume"];
-    const anchorHits = resumeAnchors.filter(kw => lowerText.includes(kw));
-
-    const isValidResume = !(timetableHits.length >= 2 || (timetableHits.length >= 1 && anchorHits.length === 0) || (anchorHits.length === 0 && rawText.split(/\s+/).length < 35));
-    const warningMsg = isValidResume ? null : "❌ Invalid Document Alert: The uploaded file is NOT a valid resume! (College Timetable / Class Schedule / Non-Resume file detected). Please upload a complete professional resume file.";
-
-    // Helper for exact word-boundary matching
-    const testWord = (kw) => new RegExp('\\b' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(lowerText);
-
-    // 2. Domain Classification with exact word-boundary scoring
-    const domainScores = { engineering: 0, doctor: 0, arts: 0, science: 0, business: 0 };
-
-    const engKw = ["b.tech", "btech", "m.tech", "mtech", "b.e", "be", "computer science", "software engineer", "developer", "coding", "full stack", "backend", "frontend", "devops", "python", "java", "c++", "c#", "javascript", "typescript", "react", "nodejs", "sql", "git", "github", "aws", "docker", "fastapi", "django", "flask", "rest api", "machine learning", "data structures", "algorithms", "autocad", "matlab"];
-    engKw.forEach(kw => { if (testWord(kw)) domainScores.engineering += (["b.tech", "btech", "computer science", "software engineer", "developer", "python", "react", "java", "javascript", "sql"].includes(kw) ? 4 : 2); });
-
-    const docKw = ["mbbs", "bams", "bhms", "doctor", "physician", "surgeon", "nurse", "nursing", "hospital", "clinic", "clinical", "patient care", "patient", "surgery", "pharmacology", "pharmacy", "bds", "dentist", "medical officer", "bls", "acls"];
-    docKw.forEach(kw => { if (testWord(kw)) domainScores.doctor += (["mbbs", "doctor", "physician", "surgeon", "bds", "nursing"].includes(kw) ? 5 : 2); });
-
-    const artsKw = ["fine arts", "graphic design", "ui/ux", "figma", "photoshop", "illustrator", "creative writing", "journalism", "copywriting", "content writing", "bfa", "mfa", "b.a", "ba", "m.a", "ma", "literature", "history", "media", "communication", "dribbble", "behance"];
-    artsKw.forEach(kw => { if (testWord(kw)) domainScores.arts += (["fine arts", "figma", "graphic design", "ui/ux", "copywriting", "bfa"].includes(kw) ? 4 : 2); });
-
-    const sciKw = ["b.sc", "bsc", "m.sc", "msc", "biotechnology", "microbiology", "biochemistry", "spss", "latex", "scientific paper", "laboratory", "physics", "chemistry", "biology", "botany", "zoology", "mathematics", "statistics"];
-    sciKw.forEach(kw => { if (testWord(kw)) domainScores.science += (["b.sc", "m.sc", "biotechnology", "microbiology", "laboratory"].includes(kw) ? 4 : 2); });
-
-    const bizKw = ["bba", "mba", "b.com", "bcom", "m.com", "finance", "accounting", "chartered accountant", "marketing", "human resources", "hr", "sales", "business development", "power bi", "tableau", "salesforce"];
-    bizKw.forEach(kw => { if (testWord(kw)) domainScores.business += (["mba", "b.com", "finance", "marketing", "accounting"].includes(kw) ? 4 : 2); });
-
-    let topDomainKey = Object.keys(domainScores).reduce((a, b) => domainScores[a] >= domainScores[b] ? a : b);
-    if (domainScores[topDomainKey] === 0) topDomainKey = "engineering";
-
-    const domainMap = {
-        arts: { name: "Arts, Design & Humanities", icon: "🎨", desc: "Focused on visual design, UI/UX, copywriting, digital art, literature, and media communication." },
-        doctor: { name: "Medical & Healthcare / Doctor", icon: "🩺", desc: "Focused on clinical medicine, patient diagnostics, surgical procedures, and healthcare management." },
-        science: { name: "Pure & Applied Science / Research", icon: "🔬", desc: "Focused on scientific research, lab protocols, statistical data analysis, and experimentation." },
-        business: { name: "Business, Finance & Commerce", icon: "💼", desc: "Focused on financial modeling, corporate business analysis, marketing, and operations." },
-        engineering: { name: "Engineering & Computer Science", icon: "💻", desc: "Focused on software engineering, tech stacks, data engineering, and technical problem solving." }
-    };
-
-    const selectedDomain = domainMap[topDomainKey];
-    const domainName = selectedDomain.name;
-    const domainIcon = selectedDomain.icon;
-    const domainDesc = selectedDomain.desc;
-
-    const companySkillsStr = req.body.company_skills || "";
-    const companySkills = companySkillsStr ? companySkillsStr.split(/[,;\s]+/).filter(Boolean) : [];
-
-    if (!isValidResume) {
-        return res.json({
-            is_valid_resume: false,
-            warning_message: warningMsg,
-            predicted_domain: domainName,
-            domain_icon: domainIcon,
-            domain_description: domainDesc,
-            action_score: 20.0,
-            metrics_score: 15.0,
-            structure_score: 20.0,
-            length_score: 30.0,
-            total_score: 20.0,
-            grade: "F",
-            hackathon_probability: 10.0,
-            internship_probability: 15.0,
-            hackathon_status: "❌ Document Invalid (Not a Valid Resume)",
-            internship_status: "❌ Please Upload a Professional Resume",
-            feedback: [{ type: "fail", text: warningMsg }],
-            detected_skills: [],
-            company_skills: companySkills,
-            suggested_jobs: [],
-            study_roadmap: [{
-                category: "Resume Validation Required",
-                topic: "Upload Complete Professional Resume",
-                recommendation: "Your document was recognized as a non-resume file (timetable, schedule, or notes). Upload a complete resume with Education, Technical Skills, and Projects.",
-                priority: "HIGH",
-                impact: "Unlocks Selection Scores & Custom Career Recommendations"
-            }],
-            skill_gaps: ["Valid Resume File"]
-        });
-    }
-
-    let studyRoadmap = [];
-    let suggestedJobs = [];
-
-    if (domainName === "Arts, Design & Humanities") {
-        studyRoadmap = [
-            { category: "UI/UX & Visual Design", topic: "Figma Design Systems & Interactive Wireframing", recommendation: "Master Figma components, auto-layout, and interactive prototypes.", priority: "HIGH", impact: "+25% Design Pass Rate" },
-            { category: "Digital Visual Arts", topic: "Adobe Illustrator & Graphic Branding", recommendation: "Learn vector logo design and branding systems for campaigns.", priority: "HIGH", impact: "+20% Graphic Selection" },
-            { category: "Creative Showcase", topic: "Online Design Portfolio (Behance / Dribbble)", recommendation: "Publish 3 complete design case studies.", priority: "HIGH", impact: "Essential for Design Interviews" }
-        ];
-        suggestedJobs = [
-            { title: "UI/UX Designer", match_score: 90, matched_skills: ["figma", "html", "css"], missing_skills: ["photoshop"], reason: "Great match for UI design and prototyping." },
-            { title: "Content Strategist & Copywriter", match_score: 85, matched_skills: ["copywriting"], missing_skills: ["figma"], reason: "Strong fit for digital content strategy." }
-        ];
-    } else if (domainName === "Medical & Healthcare / Doctor") {
-        studyRoadmap = [
-            { category: "Clinical Certifications", topic: "BLS & ACLS Certification & Patient Care", recommendation: "Complete certified Basic Life Support (BLS) and ACLS modules.", priority: "HIGH", impact: "+30% Residency Odds" },
-            { category: "Healthcare Technology", topic: "Electronic Health Records (EHR) Systems", recommendation: "Familiarize with hospital EMR/EHR software platforms.", priority: "HIGH", impact: "+22% Clinical Adaptability" }
-        ];
-        suggestedJobs = [
-            { title: "Resident Medical Officer", match_score: 92, matched_skills: ["patient care", "diagnostics"], missing_skills: ["bls"], reason: "Ideal match for clinical medicine." }
-        ];
-    } else if (domainName === "Pure & Applied Science / Research") {
-        studyRoadmap = [
-            { category: "Scientific Data Analysis", topic: "Statistical Modeling using R / Python / SPSS", recommendation: "Practice hypothesis testing and data visualization for lab data.", priority: "HIGH", impact: "+28% Fellowship Odds" },
-            { category: "Laboratory Protocols", topic: "GLP Safety Standards & Protocol Rules", recommendation: "Study lab safety protocols and sample storage procedures.", priority: "HIGH", impact: "Mandatory for Research Labs" }
-        ];
-        suggestedJobs = [
-            { title: "Research Scientist & Lab Analyst", match_score: 88, matched_skills: ["laboratory", "excel"], missing_skills: ["spss"], reason: "High alignment with lab testing." }
-        ];
-    } else if (domainName === "Business, Finance & Commerce") {
-        studyRoadmap = [
-            { category: "Financial Modeling", topic: "Advanced Excel & Valuation Models", recommendation: "Master Pivot Tables, VLOOKUP, and DCF financial models.", priority: "HIGH", impact: "+30% Interview Rate" },
-            { category: "Business Intelligence", topic: "Power BI & Tableau Dashboarding", recommendation: "Build executive KPI dashboards connecting financial data.", priority: "HIGH", impact: "+25% Analytics Odds" }
-        ];
-        suggestedJobs = [
-            { title: "Financial Analyst", match_score: 88, matched_skills: ["excel", "sql"], missing_skills: ["power bi"], reason: "Ideal match for corporate finance." }
-        ];
-    } else {
-        studyRoadmap = [
-            { category: "Version Control", topic: "Git Branching & GitHub Workflow", recommendation: "Learn Git commands and host 2+ repositories on GitHub.", priority: "HIGH", impact: "+15% Tech Selection Rate" },
-            { category: "Backend Engineering", topic: "REST API Development (FastAPI / Node.js)", recommendation: "Build REST APIs and connect endpoints to SQL databases.", priority: "HIGH", impact: "+20% Backend Role Match" },
-            { category: "CS Fundamentals", topic: "Data Structures, Algorithms & LeetCode", recommendation: "Solve 3-5 coding problems weekly on HashMaps and Trees.", priority: "HIGH", impact: "Essential for Tech Interviews" }
-        ];
-        suggestedJobs = [
-            { title: "Python Developer", match_score: 85, matched_skills: ["python", "sql", "git"], missing_skills: ["fastapi"], reason: "Strong fit for Python backend development." },
-            { title: "Full Stack Developer", match_score: 80, matched_skills: ["javascript", "react", "html", "css"], missing_skills: ["nodejs"], reason: "Good web prototyping background." }
-        ];
-    }
-
-    return res.json({
-        is_valid_resume: true,
-        warning_message: null,
-        predicted_domain: domainName,
-        domain_icon: domainIcon,
-        domain_description: domainDesc,
-        action_score: 75.0,
-        metrics_score: 70.0,
-        structure_score: 100.0,
-        length_score: 90.0,
-        total_score: 82.0,
-        grade: "B",
-        hackathon_probability: 78.5,
-        internship_probability: 81.0,
-        hackathon_status: `${domainIcon} Strong Domain Contender`,
-        internship_status: `🌟 High ${domainName} Qualification Odds`,
-        feedback: [
-            { type: "pass", text: "Standard resume sections detected." },
-            { type: "pass", text: `Domain predicted as: ${domainIcon} ${domainName}.` }
-        ],
-        detected_skills: ["python", "excel", "figma", "git", "sql"],
-        company_skills: companySkills,
-        suggested_jobs: suggestedJobs,
-        study_roadmap: studyRoadmap,
-        skill_gaps: ["Advanced Domain Certifications"]
-    });
+    return res.json(ragAnalysis);
 });
 
 app.post("/api/auth/register", (req, res) => {
