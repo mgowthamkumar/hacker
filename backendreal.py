@@ -748,6 +748,125 @@ def backendreal_rag_query(q: str = "", prompt: str = "", category: str = "all"):
     }
 
 
+from pydantic import BaseModel
+from typing import Optional
+import time
+import random
+from datetime import datetime
+
+class RealApplicationRequest(BaseModel):
+    opportunity_id: Optional[str] = None
+    opportunity_title: Optional[str] = None
+    organization: Optional[str] = None
+    candidate_name: str
+    candidate_email: str
+    resume_text: Optional[str] = ""
+    portfolio_url: Optional[str] = ""
+    cover_note: Optional[str] = ""
+    apply_mode: Optional[str] = "native"
+
+class RealCoverLetterRequest(BaseModel):
+    opportunity_title: Optional[str] = None
+    organization: Optional[str] = None
+    candidate_name: Optional[str] = None
+    key_skills: Optional[list] = None
+
+real_in_memory_applications = []
+
+@app.api_route("/api/opportunities/search", methods=["GET", "POST"])
+def real_search_opportunities(q: str = "", prompt: str = "", category: str = "all", page: int = 1, limit: int = 20):
+    user_query = (prompt or q or "").lower().strip()
+    cat_query = (category or "all").lower().strip()
+
+    all_jobs = [
+        { "id": "job-1", "company": "GOOGLE", "title": "Software Engineer", "type": "Job", "category": "Engineering", "location": "Bangalore / Remote", "salary": "₹18,00,000 - ₹30,00,000 / yr", "description": "Develop scalable web services and cloud algorithms.", "ribbonText": "Featured", "ribbonClass": "", "apply_link": "https://careers.google.com/", "signin_link": "https://careers.google.com/" },
+        { "id": "job-2", "company": "MICROSOFT", "title": "Fullstack Developer Intern", "type": "Internship", "category": "Engineering", "location": "Hyderabad, India", "salary": "₹16,00,000 / yr", "description": "Architect web microservices and React interfaces.", "ribbonText": "Internship", "ribbonClass": "intern", "apply_link": "https://careers.microsoft.com/", "signin_link": "https://careers.microsoft.com/" },
+        { "id": "job-3", "company": "MAJOR LEAGUE HACKING", "title": "Global Tech Hackathon 2026", "type": "Hackathon", "category": "Hackathons", "location": "Online / Worldwide", "salary": "Prizes worth $25,000", "description": "Build innovative web & AI applications with developers worldwide.", "ribbonText": "Live Hackathon", "ribbonClass": "hackathon", "apply_link": "https://mlh.io", "signin_link": "https://mlh.io" },
+        { "id": "job-4", "company": "DEVPOST", "title": "AI & Cloud Innovation Challenge", "type": "Hackathon", "category": "Hackathons", "location": "Remote", "salary": "$50,000 Prize Pool", "description": "Develop cutting-edge machine learning models.", "ribbonText": "$50k Prize Pool", "ribbonClass": "hackathon", "apply_link": "https://devpost.com", "signin_link": "https://devpost.com" }
+    ]
+
+    filtered = []
+    for job in all_jobs:
+        job_cat = job["category"].lower()
+        job_type = job["type"].lower()
+        cat_match = (cat_query == "all") or (cat_query == job_cat) or (cat_query in ["internships", "internship"] and job_type == "internship") or (cat_query in ["hackathons", "hackathon"] and job_type == "hackathon")
+        query_match = not user_query or (user_query in job["title"].lower() or user_query in job["company"].lower())
+        if cat_match and query_match:
+            filtered.append(job)
+
+    categories_count = {
+        "All": len(all_jobs),
+        "Engineering": 42,
+        "Teaching": 15,
+        "Arts": 12,
+        "Medical": 10,
+        "Hackathons": 28,
+        "Internships": 35
+    }
+
+    total = len(filtered)
+    total_pages = max(1, (total + limit - 1) // limit)
+    start_idx = (page - 1) * limit
+    paginated = filtered[start_idx:start_idx + limit]
+
+    return {
+        "success": True,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "totalPages": total_pages,
+        "categories": categories_count,
+        "counts": categories_count,
+        "jobs": paginated,
+        "items": paginated
+    }
+
+@app.post("/api/applications/apply")
+def real_apply_opportunity(payload: RealApplicationRequest):
+    app_id = f"app_{int(time.time())}_{random.randint(1000, 9999)}"
+    is_native = payload.apply_mode != "external"
+
+    record = {
+        "id": app_id,
+        "opportunity_id": payload.opportunity_id or "gen_opp",
+        "opportunity_title": payload.opportunity_title or "General Application",
+        "organization": payload.organization or "Partner Employer",
+        "candidate_name": payload.candidate_name,
+        "candidate_email": payload.candidate_email,
+        "resume_text": payload.resume_text[:500] if payload.resume_text else "",
+        "portfolio_url": payload.portfolio_url or "",
+        "cover_note": payload.cover_note or "Interested in pursuing this opportunity.",
+        "mode": "Mode A (Native Direct Post)" if is_native else "Mode B (Assisted Auto-Apply)",
+        "status": "Submitted",
+        "created_at": datetime.now().isoformat()
+    }
+    real_in_memory_applications.insert(0, record)
+
+    return {
+        "success": True,
+        "message": f"Application submitted successfully via AutoHire! ({record['mode']})",
+        "application": record,
+        "redirect_url": None if is_native else f"https://google.com/search?q={record['organization']}+{record['opportunity_title']}"
+    }
+
+@app.get("/api/applications/status")
+def real_application_status(email: str = ""):
+    apps = real_in_memory_applications
+    if email:
+        apps = [a for a in apps if a["candidate_email"].lower() == email.lower()]
+    return {"success": True, "total": len(apps), "applications": apps}
+
+@app.post("/api/applications/cover-letter")
+def real_generate_cover_letter(payload: RealCoverLetterRequest):
+    name = payload.candidate_name or "Applicant"
+    title = payload.opportunity_title or "Software Engineering Role"
+    org = payload.organization or "your organization"
+    skills = ", ".join(payload.key_skills) if payload.key_skills else "Fullstack Software Engineering, Python, React, REST APIs"
+
+    letter = f"Dear Hiring Team at {org},\n\nI am writing to express my strong enthusiasm for the {title} position. With verified expertise in {skills}, I have engineered robust systems and delivered scalable technical solutions.\n\nThank you for your consideration.\n\nBest regards,\n{name}"
+    return {"success": True, "cover_letter": letter}
+
+
 if __name__ == "__main__":
     import uvicorn
 

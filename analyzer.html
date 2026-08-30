@@ -779,6 +779,41 @@
                 </div>
             </div>
 
+            <!-- VERBATIM EXTRACTED FACTS (DIRECT QUOTES) -->
+            <div class="section-card" id="verbatim-facts-card" style="display: none;">
+                <h2>📌 Verbatim Extracted Resume Facts (Direct Quotes)</h2>
+                <p class="subtitle">Strictly grounded facts extracted from your resume text without inference or assumption:</p>
+                <div id="verbatim-facts-content" style="display: flex; flex-direction: column; gap: 14px;"></div>
+            </div>
+
+            <!-- ACADEMIC & PROFESSIONAL TAXONOMY CARD -->
+            <div class="section-card" id="taxonomy-card" style="display: none;">
+                <h2>🏷️ Academic & Professional Taxonomy</h2>
+                <p class="subtitle">Verified candidate classification derived strictly from verbatim resume facts:</p>
+                <div id="taxonomy-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;"></div>
+            </div>
+
+            <!-- LEAD HIRING AUDITOR COMPETENCY GAP CARD -->
+            <div class="section-card" id="competency-audit-card" style="display: none;">
+                <h2>🎯 Hiring Competency Audit & Verification Gaps</h2>
+                <p class="subtitle">Audited comparison of verified skills against 8 non-negotiable role competencies:</p>
+                <div id="competency-audit-content" style="display: flex; flex-direction: column; gap: 14px;"></div>
+            </div>
+
+            <!-- PRECISION STUDY MANUAL CARD -->
+            <div class="section-card" id="precision-manual-card" style="display: none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+                    <div>
+                        <h2>📖 Precision Study Manual & Curriculum Pack</h2>
+                        <p class="subtitle" style="margin-bottom:0;">Auditor-level study modules strictly targeting your identified competency gaps:</p>
+                    </div>
+                    <a id="download-study-pack-btn" href="/api/study-pack/html" target="_blank" class="btn primary" style="padding:10px 18px; font-size:0.9rem; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                        📥 Download Study Pack (Printable PDF)
+                    </a>
+                </div>
+                <div id="precision-manual-content" style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:24px; font-family:'Inter', sans-serif; line-height:1.7; color:#e2e8f0; max-height:600px; overflow-y:auto; white-space:pre-wrap;"></div>
+            </div>
+
             <!-- PERSONALIZED STUDY ROADMAP -->
             <div class="section-card">
                 <h2>📚 Personalised "What to Study" Roadmap</h2>
@@ -1084,6 +1119,8 @@
                 guidanceMsg.innerHTML = `<div style="background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; font-weight: 700; font-size: 1.05rem;">⚠️ ${msg}</div>`;
                 guidanceMsg.style.display = "block";
                 alert("Please upload an correct resume");
+                setTimeout(() => { window.location.reload(); }, 1000);
+                return;
             }
 
             const domainTitle = data.predicted_domain || (data.domain && data.domain.title) || "Engineering & Technology Student";
@@ -1152,6 +1189,141 @@
                 `;
                 roadmapList.appendChild(el);
             });
+
+            const verbatimFactsCard = document.getElementById('verbatim-facts-card');
+            const verbatimFactsContent = document.getElementById('verbatim-facts-content');
+            if (data.verbatim_facts && verbatimFactsCard && verbatimFactsContent) {
+                const vf = data.verbatim_facts;
+                let html = '';
+
+                if (vf.explicit_degrees && vf.explicit_degrees.length > 0) {
+                    html += `<div style="background:rgba(15,23,42,0.6); padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+                        <strong style="color:var(--primary); font-size:0.95rem;">🎓 Explicit Degrees (Verbatim):</strong>
+                        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+                            ${vf.explicit_degrees.map(d => `<span class="chip" style="background:rgba(56,189,248,0.15); border-color:#38bdf8;">${d.degree_name} - ${d.major_field} (${d.institution})</span>`).join('')}
+                        </div>
+                    </div>`;
+                }
+
+                if (vf.explicit_tools_and_tech && vf.explicit_tools_and_tech.length > 0) {
+                    html += `<div style="background:rgba(15,23,42,0.6); padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+                        <strong style="color:#a855f7; font-size:0.95rem;">🛠️ Verbatim Tools & Tech (With Exact Sentence Quote):</strong>
+                        <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">
+                            ${vf.explicit_tools_and_tech.map(t => `<div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+                                <span style="font-weight:700; color:#38bdf8;">${t.name}</span>: <em style="color:#cbd5e1;">"${t.context_sentence_quote}"</em>
+                            </div>`).join('')}
+                        </div>
+                    </div>`;
+                }
+
+                if (vf.job_titles && vf.job_titles.length > 0) {
+                    html += `<div style="background:rgba(15,23,42,0.6); padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+                        <strong style="color:#22c55e; font-size:0.95rem;">💼 Job Titles & Positions:</strong>
+                        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+                            ${vf.job_titles.map(j => `<span class="chip" style="background:rgba(34,197,94,0.15); border-color:#22c55e;">${j.title} (${j.organization})</span>`).join('')}
+                        </div>
+                    </div>`;
+                }
+
+                if (vf.certifications && vf.certifications.length > 0) {
+                    html += `<div style="background:rgba(15,23,42,0.6); padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+                        <strong style="color:#eab308; font-size:0.95rem;">📜 Certifications:</strong>
+                        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+                            ${vf.certifications.map(c => `<span class="chip" style="background:rgba(234,179,8,0.15); border-color:#eab308;">${c}</span>`).join('')}
+                        </div>
+                    </div>`;
+                }
+
+                verbatimFactsContent.innerHTML = html || '<p style="color:var(--text-muted);">No direct quote matches found.</p>';
+                verbatimFactsCard.style.display = 'block';
+            }
+
+            const taxonomyCard = document.getElementById('taxonomy-card');
+            const taxonomyContent = document.getElementById('taxonomy-content');
+            if (data.taxonomy_analysis && taxonomyCard && taxonomyContent) {
+                const tax = data.taxonomy_analysis;
+                taxonomyContent.innerHTML = `
+                    <div style="background:rgba(15,23,42,0.6); padding:16px; border-radius:10px; border:1px solid rgba(56,189,248,0.2);">
+                        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Primary Discipline</div>
+                        <div style="font-size:1.1rem; font-weight:800; color:#38bdf8; margin-top:4px;">${tax.discipline || 'Engineering'}</div>
+                    </div>
+                    <div style="background:rgba(15,23,42,0.6); padding:16px; border-radius:10px; border:1px solid rgba(168,85,247,0.2);">
+                        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Precise Specialization</div>
+                        <div style="font-size:1.05rem; font-weight:700; color:#c084fc; margin-top:4px;">${tax.specialization || 'Software Engineering'}</div>
+                    </div>
+                    <div style="background:rgba(15,23,42,0.6); padding:16px; border-radius:10px; border:1px solid rgba(34,197,94,0.2);">
+                        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Target Industry Role</div>
+                        <div style="font-size:1.05rem; font-weight:700; color:#4ade80; margin-top:4px;">${tax.target_role || 'Software Engineer'}</div>
+                    </div>
+                    <div style="background:rgba(15,23,42,0.6); padding:16px; border-radius:10px; border:1px solid rgba(234,179,8,0.2);">
+                        <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Experience Tier</div>
+                        <div style="font-size:1.05rem; font-weight:700; color:#fde047; margin-top:4px;">${tax.experience_tier || 'Student/Fresh Graduate (0 yrs)'}</div>
+                    </div>
+                    <div style="grid-column: 1 / -1; background:rgba(255,255,255,0.03); padding:12px 16px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); font-size:0.88rem; color:#cbd5e1;">
+                        💡 <strong>Taxonomy Rationale:</strong> ${tax.rationale || 'Derived strictly from verified extracted facts.'}
+                    </div>
+                `;
+                taxonomyCard.style.display = 'block';
+            }
+
+            const competencyAuditCard = document.getElementById('competency-audit-card');
+            const competencyAuditContent = document.getElementById('competency-audit-content');
+            if (data.competency_audit && competencyAuditCard && competencyAuditContent) {
+                const ca = data.competency_audit;
+                let html = `
+                    <div style="background:rgba(15,23,42,0.7); padding:16px; border-radius:12px; border:1px solid rgba(56,189,248,0.3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Audited ATS Match Rating</div>
+                            <div style="font-size:1.8rem; font-weight:900; color:#38bdf8;">${ca.ats_score || 0}/100</div>
+                        </div>
+                        <div style="font-size:0.9rem; color:#cbd5e1; max-width:550px;">
+                            ${ca.scoring_rationale || ''}
+                        </div>
+                    </div>
+                `;
+
+                if (ca.verified_strengths && ca.verified_strengths.length > 0) {
+                    html += `
+                        <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); padding:14px; border-radius:10px;">
+                            <strong style="color:#4ade80;">✅ Verified Present Competencies (${ca.verified_strengths.length}):</strong>
+                            <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+                                ${ca.verified_strengths.map(s => `<span class="chip" style="background:rgba(34,197,94,0.2); border-color:#22c55e; color:#f0fdf4;">${s}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (ca.verified_gaps && ca.verified_gaps.length > 0) {
+                    html += `
+                        <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); padding:14px; border-radius:10px;">
+                            <strong style="color:#f87171;">⚠️ Audited Competency Gaps (${ca.verified_gaps.length}):</strong>
+                            <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                                ${ca.verified_gaps.map(g => `
+                                    <div style="background:rgba(15,23,42,0.6); padding:10px 14px; border-radius:8px; border-left:4px solid ${g.severity === 'Critical' ? '#ef4444' : '#f59e0b'};">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <strong style="color:#f8fafc; font-size:0.95rem;">${g.competency_name}</strong>
+                                            <span style="font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:12px; background:${g.severity === 'Critical' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}; color:${g.severity === 'Critical' ? '#fca5a5' : '#fde047'};">${g.severity} GAP</span>
+                                        </div>
+                                        <div style="font-size:0.83rem; color:#94a3b8; margin-top:4px;">
+                                            <span style="color:#c084fc;">[${g.competency_type}]</span> ${g.why_required}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                competencyAuditContent.innerHTML = html;
+                competencyAuditCard.style.display = 'block';
+            }
+
+            const precisionManualCard = document.getElementById('precision-manual-card');
+            const precisionManualContent = document.getElementById('precision-manual-content');
+            if ((data.compiled_typeset_manual || data.precision_study_manual) && precisionManualCard && precisionManualContent) {
+                precisionManualContent.textContent = data.compiled_typeset_manual || data.precision_study_manual;
+                precisionManualCard.style.display = 'block';
+            }
 
             const feedbackList = document.getElementById('feedback-list');
             feedbackList.innerHTML = '';

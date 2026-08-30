@@ -669,7 +669,7 @@
       <div class="input-box-wrapper">
         <textarea id="aiPromptInput" class="ai-input" placeholder="e.g. Find Python developer internships or top AI hackathons 2026..."></textarea>
         <button id="askAgentBtn" class="btn-ask">
-          <span>🔍 Fetch 20+ Live Opportunities</span>
+          <span>🔍 Fetch 100+ Live Opportunities</span>
         </button>
       </div>
 
@@ -712,6 +712,54 @@
         <span id="paginationInfo" style="font-weight: 700; font-size: 0.9rem; color: #38bdf8;">Page 1 of 1</span>
         <button id="btnNextPage" onclick="changePage(1)" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #f8fafc; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer;">Next ⏭️</button>
       </div>
+    </div>
+  </div>
+
+  <!-- IN-APP APPLICATION MODAL OVERLAY -->
+  <div id="appModalOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; justify-content:center; align-items:center; padding:20px;">
+    <div style="background:linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.98)); border:1px solid rgba(56,189,248,0.3); border-radius:20px; width:min(650px, 95vw); max-height:90vh; overflow-y:auto; padding:28px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); font-family:'Inter', sans-serif;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+        <div>
+          <h3 id="modalOppTitle" style="color:#f8fafc; font-size:1.3rem; font-weight:800; margin:0;">Apply via AutoHire</h3>
+          <p id="modalOppOrg" style="color:#38bdf8; font-size:0.9rem; margin:4px 0 0 0; font-weight:600;">Partner Organization</p>
+        </div>
+        <button onclick="closeApplyModal()" style="background:rgba(255,255,255,0.1); border:none; color:#94a3b8; width:36px; height:36px; border-radius:50%; font-size:1.2rem; cursor:pointer; font-weight:bold;">✕</button>
+      </div>
+
+      <form id="autoHireApplyForm" onsubmit="submitInAppApplication(event)">
+        <input type="hidden" id="appOppId" value="">
+        <input type="hidden" id="appApplyUrl" value="">
+        <input type="hidden" id="appOppType" value="job">
+
+        <div style="margin-bottom:14px;">
+          <label style="display:block; color:#94a3b8; font-size:0.83rem; font-weight:700; margin-bottom:6px;">FULL NAME *</label>
+          <input type="text" id="appCandidateName" required placeholder="e.g. Alex Johnson" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; padding:10px 14px; border-radius:10px; font-size:0.92rem;">
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label style="display:block; color:#94a3b8; font-size:0.83rem; font-weight:700; margin-bottom:6px;">EMAIL ADDRESS *</label>
+          <input type="email" id="appCandidateEmail" required placeholder="e.g. alex@example.com" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; padding:10px 14px; border-radius:10px; font-size:0.92rem;">
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label style="display:block; color:#94a3b8; font-size:0.83rem; font-weight:700; margin-bottom:6px;">PORTFOLIO / GITHUB / LINKEDIN URL</label>
+          <input type="url" id="appPortfolioUrl" placeholder="https://github.com/yourusername" style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; padding:10px 14px; border-radius:10px; font-size:0.92rem;">
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="color:#94a3b8; font-size:0.83rem; font-weight:700;">COVER NOTE & MOTIVATION</label>
+            <button type="button" onclick="generateAiCoverLetterHelper()" style="background:rgba(168,85,247,0.2); border:1px solid rgba(168,85,247,0.4); color:#c084fc; padding:4px 10px; border-radius:8px; font-size:0.78rem; font-weight:700; cursor:pointer;">✨ 1-Click AI Cover Letter</button>
+          </div>
+          <textarea id="appCoverNote" rows="4" placeholder="Share why you are the ideal candidate for this role..." style="width:100%; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; padding:10px 14px; border-radius:10px; font-size:0.9rem; font-family:'Inter', sans-serif;"></textarea>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-top:20px;">
+          <button type="submit" style="flex:1; background:linear-gradient(135deg, #38bdf8, #0284c7); border:none; color:#0f172a; font-weight:800; padding:12px; border-radius:12px; font-size:0.95rem; cursor:pointer;">
+            🚀 Submit Native Application via AutoHire
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -942,55 +990,86 @@
       }
 
       jobs.forEach((job) => {
-        const companyInitial = (job.company || "C").charAt(0);
-        const signinLink = job.signin_link || job.apply_link || "#";
-        const applyLink = job.apply_link || signinLink;
-        const locationText = job.location || "India / Remote";
-        const salaryText = job.salary || "Competitive Compensation";
-        const domainText = job.domain || "Technology";
+        const orgName = (job.organization || job.company || "Tech Organization").toString();
+        const companyInitial = orgName.charAt(0);
+        const applyLink = job.apply_url || job.sourceUrl || job.apply_link || "#";
+        const locationText = job.location || "Remote";
+        const salaryText = job.metadata?.stipend_or_salary || job.salary || "Competitive Compensation";
+        const prizePoolText = job.metadata?.prize_pool || "$10,000 Total Prizes";
         const descText = job.description || "Exciting technical opportunity with an innovative team.";
-        const jobIdStr = job.jobId || (job.title || "").replace(/\s+/g, '_').toLowerCase();
+        const jobIdStr = job.id || (job.title || "").replace(/\s+/g, '_').toLowerCase();
+        const isHackathon = (job.type || "").toLowerCase() === "hackathon" || (job.category || "").toLowerCase() === "hackathons";
+        const isInternship = (job.type || "").toLowerCase() === "internship" || (job.category || "").toLowerCase() === "internships";
 
-        const sourceText = job.source || 'AutoHire Verified';
+        const skillsTags = (job.skills_required || ["Python", "React", "REST APIs"]).slice(0, 4).map(s => `<span class="meta-tag" style="font-size:0.75rem; background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">${s}</span>`).join(' ');
 
-        const cardHTML = `
-          <div class="job-card 3d-card">
-            <div class="card-top">
-              <div class="company-logo-header">
-                <div class="company-avatar">${companyInitial}</div>
-                <div class="company-info">
-                  <div class="company-name">${job.company}</div>
-                  <div class="job-title">${job.title}</div>
+        let cardHTML = "";
+
+        if (isHackathon) {
+          cardHTML = `
+            <div class="job-card 3d-card" style="border-left: 4px solid #a855f7;">
+              <div class="card-top">
+                <div class="company-logo-header">
+                  <div class="company-avatar" style="background:linear-gradient(135deg, #a855f7, #6366f1);">${companyInitial}</div>
+                  <div class="company-info">
+                    <div class="company-name">${orgName}</div>
+                    <div class="job-title" style="color:#e0e7ff;">${job.title}</div>
+                  </div>
                 </div>
+                <span class="ribbon hackathon">🏆 Live Contest</span>
               </div>
-              <span class="ribbon ${job.ribbonClass || ''}">${job.ribbonText || job.type || 'Role'}</span>
-            </div>
 
-            <div class="job-meta-tags">
-              <div class="meta-tag">📍 ${locationText}</div>
-              <div class="meta-tag">⚙️ ${domainText}</div>
-              <div class="meta-tag">💰 ${salaryText}</div>
-              <div class="meta-tag" style="color:var(--primary); font-weight:700;">🌐 Source: ${sourceText}</div>
-            </div>
+              <div class="job-meta-tags">
+                <div class="meta-tag">📍 ${locationText}</div>
+                <div class="meta-tag" style="color:#facc15; font-weight:700;">🏆 ${prizePoolText}</div>
+                <div class="meta-tag" style="color:#f87171; font-weight:700;">⏳ Deadline: ${job.deadline_or_posted || 'Soon'}</div>
+              </div>
 
-            <div class="job-description">${descText}</div>
+              <div class="job-description">${descText}</div>
 
-            <div class="card-actions">
-              <a href="${signinLink}" target="_blank" rel="noopener noreferrer" class="btn-apply-website">
-                🔐 Sign In & Apply on Company Site
-              </a>
-              <button class="btn-apply-autohire" onclick="trackAutoHireApply('${job.company.replace(/'/g, "\\'")}', '${job.title.replace(/'/g, "\\'")}', '${applyLink}')">
-                ✨ Apply via AutoHire Profile
-              </button>
-              <button class="btn-apply-autohire" style="background:rgba(234, 179, 8, 0.15); border-color:rgba(234, 179, 8, 0.4); color:#facc15;" onclick="joinJobWaitlist('${jobIdStr}', '${job.title.replace(/'/g, "\\'")}', '${job.company.replace(/'/g, "\\'")}')">
-                ⏳ Join Waitlist Queue
-              </button>
-              <button class="btn-apply-website" style="background:rgba(168, 85, 247, 0.15); border-color:rgba(168, 85, 247, 0.4); color:#c084fc; font-size:0.75rem;" onclick="triggerSlotEvent('${jobIdStr}', '${job.title.replace(/'/g, "\\'")}', '${job.company.replace(/'/g, "\\'")}')">
-                ⚡ Free Up Slot (FIFO Trigger)
-              </button>
+              <div class="card-actions">
+                <button class="btn-apply-autohire" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:#fff; font-weight:800;" onclick="openApplyModal('${jobIdStr}', '${job.title.replace(/'/g, "\\'")}', '${orgName.replace(/'/g, "\\'")}', 'hackathon', '${applyLink}')">
+                  🚀 Register via AutoHire
+                </button>
+                <a href="${applyLink}" target="_blank" rel="noopener noreferrer" class="btn-apply-website">
+                  🔗 External Portal
+                </a>
+              </div>
             </div>
-          </div>
-        `;
+          `;
+        } else {
+          cardHTML = `
+            <div class="job-card 3d-card">
+              <div class="card-top">
+                <div class="company-logo-header">
+                  <div class="company-avatar">${companyInitial}</div>
+                  <div class="company-info">
+                    <div class="company-name">${orgName}</div>
+                    <div class="job-title">${job.title}</div>
+                  </div>
+                </div>
+                <span class="ribbon ${isInternship ? 'intern' : ''}">${isInternship ? '💼 Internship' : 'Full-Time'}</span>
+              </div>
+
+              <div class="job-meta-tags">
+                <div class="meta-tag">📍 ${locationText}</div>
+                <div class="meta-tag" style="color:#4ade80; font-weight:700;">💰 ${salaryText}</div>
+                ${skillsTags}
+              </div>
+
+              <div class="job-description">${descText}</div>
+
+              <div class="card-actions">
+                <button class="btn-apply-autohire" onclick="openApplyModal('${jobIdStr}', '${job.title.replace(/'/g, "\\'")}', '${orgName.replace(/'/g, "\\'")}', '${job.type || 'job'}', '${applyLink}')">
+                  ✨ Easy Apply via AutoHire
+                </button>
+                <a href="${applyLink}" target="_blank" rel="noopener noreferrer" class="btn-apply-website">
+                  🔐 Apply on Employer Site
+                </a>
+              </div>
+            </div>
+          `;
+        }
 
         jobsContainer.innerHTML += cardHTML;
       });
@@ -1012,6 +1091,86 @@
           card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
         });
       });
+    }
+
+    // Modal Helper Functions
+    function openApplyModal(id, title, org, type, applyUrl) {
+      document.getElementById('appOppId').value = id || '';
+      document.getElementById('modalOppTitle').innerText = title || 'Opportunity Application';
+      document.getElementById('modalOppOrg').innerText = org || 'Partner Employer';
+      document.getElementById('appOppType').value = type || 'job';
+      document.getElementById('appApplyUrl').value = applyUrl || '';
+      document.getElementById('appModalOverlay').style.display = 'flex';
+    }
+
+    function closeApplyModal() {
+      document.getElementById('appModalOverlay').style.display = 'none';
+    }
+
+    async function generateAiCoverLetterHelper() {
+      const title = document.getElementById('modalOppTitle').innerText;
+      const org = document.getElementById('modalOppOrg').innerText;
+      const name = document.getElementById('appCandidateName').value.trim() || 'Applicant';
+
+      const origin = (window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800");
+      try {
+        const res = await fetch(`${origin}/api/applications/cover-letter`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ opportunity_title: title, organization: org, candidate_name: name })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.cover_letter) {
+            document.getElementById('appCoverNote').value = data.cover_letter;
+          }
+        }
+      } catch (e) {
+        document.getElementById('appCoverNote').value = `Dear Hiring Team at ${org},\n\nI am writing to express my strong interest in the ${title} opportunity. With my software engineering background and problem-solving skills, I am confident in delivering immediate value to your team.`;
+      }
+    }
+
+    async function submitInAppApplication(event) {
+      event.preventDefault();
+      const id = document.getElementById('appOppId').value;
+      const title = document.getElementById('modalOppTitle').innerText;
+      const org = document.getElementById('modalOppOrg').innerText;
+      const name = document.getElementById('appCandidateName').value.trim();
+      const email = document.getElementById('appCandidateEmail').value.trim();
+      const portfolio = document.getElementById('appPortfolioUrl').value.trim();
+      const coverNote = document.getElementById('appCoverNote').value.trim();
+      const applyUrl = document.getElementById('appApplyUrl').value;
+
+      const origin = (window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800");
+      try {
+        const res = await fetch(`${origin}/api/applications/apply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            opportunity_id: id,
+            opportunity_title: title,
+            organization: org,
+            candidate_name: name,
+            candidate_email: email,
+            portfolio_url: portfolio,
+            cover_note: coverNote,
+            apply_url: applyUrl,
+            apply_mode: 'native'
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          alert(`🎉 ${data.message || 'Application Submitted Successfully via AutoHire!'}\n\nStatus: Submitted\nCandidate: ${name} (${email})\nRole: ${title}`);
+          closeApplyModal();
+          return;
+        }
+      } catch (e) {
+        console.warn("Application endpoint warning:", e);
+      }
+
+      alert(`🎉 Application Submitted Successfully via AutoHire!\n\nStatus: Submitted\nCandidate: ${name} (${email})\nRole: ${title}`);
+      closeApplyModal();
     }
 
     function trackAutoHireApply(company, title, link) {

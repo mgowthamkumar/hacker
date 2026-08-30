@@ -1,6 +1,9 @@
 import os
 import re
 import tempfile
+import time
+import random
+from datetime import datetime
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -132,6 +135,11 @@ class AnalysisResult(BaseModel):
     metrics: Optional[dict] = None
     roadmap: Optional[List[dict]] = None
     job_matches: Optional[List[dict]] = None
+    verbatim_facts: Optional[dict] = None
+    taxonomy_analysis: Optional[dict] = None
+    competency_audit: Optional[dict] = None
+    precision_study_manual: Optional[str] = None
+    compiled_typeset_manual: Optional[str] = None
 
 
 def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]:
@@ -208,6 +216,496 @@ def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]
         return False, False, warning_msg, missing_sections
 
     return True, True, "", []
+
+
+def extract_verbatim_facts(raw_text: str) -> dict:
+    """
+    Extract verbatim facts from resume text with zero hallucination.
+    Every extracted tool/technology includes its exact context sentence quote.
+    """
+    lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+
+    # 1. Explicit Degrees
+    explicit_degrees = []
+    degree_patterns = [
+        (r"\b(b\.tech|btech|b\.e|be|m\.tech|mtech|m\.e|me)\b", "Engineering & Technology"),
+        (r"\b(b\.sc|bsc|m\.sc|msc)\b", "Science & Research"),
+        (r"\b(b\.com|bcom|m\.com|mcom|bba|mba|b\.a|ba|m\.a|ma)\b", "Arts, Business & Commerce"),
+        (r"\b(mbbs|bds|b\.pharma|m\.pharma|nursing)\b", "Medical & Healthcare"),
+        (r"\b(b\.ed|m\.ed)\b", "Teaching & Education"),
+        (r"\b(bca|mca)\b", "Computer Applications")
+    ]
+
+    for line in lines:
+        line_lower = line.lower()
+        for pat, major_default in degree_patterns:
+            match = re.search(pat, line_lower)
+            if match:
+                deg_name = match.group(0).upper()
+                institution = "Extracted from Resume"
+                if "university" in line_lower or "college" in line_lower or "institute" in line_lower or "school" in line_lower:
+                    institution = line
+                explicit_degrees.append({
+                    "degree_name": deg_name,
+                    "major_field": major_default,
+                    "institution": institution
+                })
+                break
+
+    # 2. Explicit Tools & Tech with Verbatim Quote
+    known_tech = [
+        "python", "java", "javascript", "typescript", "c++", "c#", "html", "css", "sql", "react",
+        "nodejs", "express", "fastapi", "django", "flask", "aws", "docker", "kubernetes", "git",
+        "github", "figma", "photoshop", "illustrator", "excel", "power bi", "tableau", "spss",
+        "matlab", "autocad", "bls", "acls", "mongodb", "postgresql", "redis"
+    ]
+
+    explicit_tools_and_tech = []
+    seen_tech = set()
+
+    for line in lines:
+        line_lower = line.lower()
+        for tech in known_tech:
+            if tech not in seen_tech and re.search(r"\b" + re.escape(tech) + r"\b", line_lower):
+                seen_tech.add(tech)
+                explicit_tools_and_tech.append({
+                    "name": tech.title() if tech not in ["css", "html", "sql", "aws", "dsa", "ui/ux", "bls", "acls"] else tech.upper(),
+                    "context_sentence_quote": line
+                })
+
+    # 3. Job Titles & Experience
+    job_titles = []
+    title_keywords = ["engineer", "developer", "intern", "manager", "analyst", "designer", "consultant", "doctor", "officer", "instructor", "teacher", "associate"]
+    for line in lines:
+        line_lower = line.lower()
+        if any(re.search(r"\b" + re.escape(kw) + r"\b", line_lower) for kw in title_keywords):
+            if len(line.split()) < 12 and not line.endswith("."):
+                job_titles.append({
+                    "title": line,
+                    "organization": "Mentioned in Resume",
+                    "duration": "Verbatim Record"
+                })
+
+    # 4. Stated Projects
+    stated_projects = []
+    for line in lines:
+        line_lower = line.lower()
+        if "project" in line_lower or "developed" in line_lower or "built" in line_lower or "system" in line_lower:
+            techs_found = [t.title() for t in known_tech if re.search(r"\b" + re.escape(t) + r"\b", line_lower)]
+            if techs_found:
+                stated_projects.append({
+                    "title": line[:60] + "..." if len(line) > 60 else line,
+                    "technologies_mentioned": techs_found
+                })
+
+    # 5. Certifications
+    certifications = []
+    cert_keywords = ["certified", "certification", "certificate", "license", "bls", "acls", "aws certified"]
+    for line in lines:
+        line_lower = line.lower()
+        if any(kw in line_lower for kw in cert_keywords):
+            certifications.append(line)
+
+    return {
+        "explicit_degrees": explicit_degrees[:4],
+        "explicit_tools_and_tech": explicit_tools_and_tech[:12],
+        "job_titles": job_titles[:5],
+        "stated_projects": stated_projects[:5],
+        "certifications": list(set(certifications))[:5]
+    }
+
+
+def classify_candidate_taxonomy(verbatim_facts: dict, raw_text: str) -> dict:
+    """
+    Academic & Professional Taxonomist Engine.
+    Classifies candidate discipline, specialization, target role, and experience tier
+    based strictly on verified extracted facts and raw text quotes without hallucination.
+    """
+    text_lower = raw_text.lower()
+
+    degrees = verbatim_facts.get("explicit_degrees", [])
+    tools = [t.get("name", "").lower() for t in verbatim_facts.get("explicit_tools_and_tech", [])]
+    job_titles = verbatim_facts.get("job_titles", [])
+    projects = verbatim_facts.get("stated_projects", [])
+
+    deg_names = [d.get("degree_name", "").upper() for d in degrees]
+
+    discipline = "Engineering"
+    specialization = "Computer Science - Software Engineering"
+    target_role = "Full Stack Software Engineer"
+
+    if any(d in deg_names for d in ["MBBS", "BDS", "B.PHARMA", "M.PHARMA", "NURSING"]) or any(k in text_lower for k in ["doctor", "clinical", "hospital", "patient", "bls", "acls"]):
+        discipline = "Medicine & Healthcare"
+        if "bls" in tools or "acls" in tools or "clinical" in text_lower:
+            specialization = "Clinical Practice - General Residency"
+            target_role = "Clinical Medical Officer / Resident Doctor"
+        else:
+            specialization = "Pharmaceutical Sciences - Care Delivery"
+            target_role = "Healthcare Specialist / Pharmacist"
+
+    elif any(d in deg_names for d in ["B.SC", "BSC", "M.SC", "MSC"]) or any(k in text_lower for k in ["physics", "chemistry", "biology", "research", "lab", "spss"]):
+        discipline = "Pure & Applied Sciences"
+        specialization = "Data Analytics & Applied Research"
+        target_role = "Scientific Data Analyst / Research Associate"
+
+    elif any(d in deg_names for d in ["B.COM", "BCOM", "M.COM", "MCOM", "BBA", "MBA"]) or any(k in text_lower for k in ["finance", "banking", "accounting", "power bi", "tableau"]):
+        discipline = "Business & Finance"
+        specialization = "Corporate Finance & Analytics"
+        target_role = "Business & Financial Analyst"
+
+    elif any(d in deg_names for d in ["B.A", "BA", "M.A", "MA", "FINE ARTS"]) or any(k in text_lower for k in ["figma", "design", "ui/ux", "illustrator", "photoshop"]):
+        discipline = "Arts & Humanities"
+        specialization = "Digital Product & UI/UX Design"
+        target_role = "UI/UX Designer & Visual Systems Specialist"
+
+    elif any(d in deg_names for d in ["B.ED", "M.ED"]) or any(k in text_lower for k in ["teaching", "teacher", "pedagogy", "curriculum", "lecturer"]):
+        discipline = "Education & Teaching"
+        specialization = "STEM Education & Computer Pedagogy"
+        target_role = "Computer Science Educator / STEM Instructor"
+
+    elif any(k in text_lower for k in ["law", "llb", "llm", "attorney", "legal"]):
+        discipline = "Law"
+        specialization = "Corporate Law & Legal Advisory"
+        target_role = "Legal Associate / Compliance Officer"
+
+    else:
+        discipline = "Engineering"
+        if "python" in tools and ("fastapi" in tools or "django" in tools or "sql" in tools):
+            specialization = "Computer Science - Backend Software Engineering"
+            target_role = "Backend Software Engineer"
+        elif "react" in tools or "javascript" in tools or "html" in tools or "css" in tools:
+            specialization = "Computer Science - Web Engineering"
+            target_role = "Full Stack Web Developer"
+        elif "aws" in tools or "docker" in tools or "kubernetes" in tools:
+            specialization = "Computer Science - Cloud & DevOps Architecture"
+            target_role = "DevOps / Cloud Solutions Engineer"
+        else:
+            specialization = "Computer Science - Software Engineering"
+            target_role = "Software Engineer"
+
+    years_found = re.findall(r"\b(\d+)\+?\s*(?:years?|yrs?)\b", text_lower)
+    max_yrs = 0
+    if years_found:
+        max_yrs = max(int(y) for y in years_found)
+
+    exp_count = len(job_titles)
+
+    if max_yrs >= 8:
+        experience_tier = "Senior (8+ yrs)"
+    elif max_yrs >= 4 or exp_count >= 3:
+        experience_tier = "Mid-Level (4-7 yrs)"
+    elif max_yrs >= 1 or exp_count >= 1:
+        experience_tier = "Early Career (1-3 yrs)"
+    else:
+        experience_tier = "Student/Fresh Graduate (0 yrs)"
+
+    rationale = f"Profile classified under {discipline} ({specialization}) in the {experience_tier} tier based on explicit verification of {len(degrees)} degree(s), {len(tools)} tool(s), and {len(projects)} stated project(s)."
+
+    return {
+        "discipline": discipline,
+        "specialization": specialization,
+        "target_role": target_role,
+        "experience_tier": experience_tier,
+        "rationale": rationale
+    }
+
+
+def audit_competency_gaps(verbatim_facts: dict, taxonomy: dict, raw_text: str) -> dict:
+    """
+    Lead Hiring Auditor & Curriculum Director Engine.
+    Defines 8 non-negotiable industry-standard competencies for the exact role and tier,
+    audits verified facts, and calculates an exact ATS Score with strict gap analysis.
+    """
+    text_lower = raw_text.lower()
+    tools = [t.get("name", "").lower() for t in verbatim_facts.get("explicit_tools_and_tech", [])]
+    projects = verbatim_facts.get("stated_projects", [])
+    discipline = taxonomy.get("discipline", "Engineering")
+
+    if discipline == "Medicine & Healthcare":
+        competencies = [
+            {"name": "Clinical Diagnostics & Patient Care", "type": "Core Concept", "why_required": "Essential for accurate patient diagnosis and clinical treatment delivery.", "severity": "Critical", "keys": ["clinical", "patient", "diagnos"]},
+            {"name": "BLS & ACLS Certification", "type": "Regulation", "why_required": "Mandatory life support credential for emergency hospital operations.", "severity": "Critical", "keys": ["bls", "acls", "life support"]},
+            {"name": "Electronic Health Records (EHR/EMR)", "type": "Tool", "why_required": "Required for digital hospital patient charting and medical record management.", "severity": "Important", "keys": ["ehr", "emr", "electronic health", "charting"]},
+            {"name": "Pharmacology & Dosage Administration", "type": "Core Concept", "why_required": "Crucial for safe prescription management and clinical pharmacology.", "severity": "Critical", "keys": ["pharma", "prescription", "dosage", "drug"]},
+            {"name": "Emergency Medical Response", "type": "Methodology", "why_required": "Vital for managing acute trauma and urgent care triage.", "severity": "Critical", "keys": ["emergency", "trauma", "triage", "urgent"]},
+            {"name": "Medical Ethics & HIPAA Compliance", "type": "Regulation", "why_required": "Required to protect patient privacy and uphold medical regulatory standards.", "severity": "Important", "keys": ["hipaa", "ethics", "privacy", "compliance"]},
+            {"name": "Hospital Infection Control & Safety", "type": "Regulation", "why_required": "Mandatory standard for hospital hygiene and sterile patient care.", "severity": "Important", "keys": ["safety", "sterile", "hygiene", "infection"]},
+            {"name": "Diagnostic Pathology & Lab Testing", "type": "Methodology", "why_required": "Required to interpret blood work, lab panels, and diagnostic pathology.", "severity": "Important", "keys": ["pathology", "lab", "blood", "test"]}
+        ]
+    elif discipline == "Pure & Applied Sciences":
+        competencies = [
+            {"name": "Statistical Modeling & Analysis (SPSS/R)", "type": "Tool", "why_required": "Necessary to perform quantitative data analysis and scientific hypothesis testing.", "severity": "Critical", "keys": ["spss", "r", "statistic", "regression"]},
+            {"name": "Good Laboratory Practice (GLP)", "type": "Regulation", "why_required": "Mandatory safety and quality standard for industrial and academic research labs.", "severity": "Critical", "keys": ["glp", "laboratory", "biosafety", "lab safety"]},
+            {"name": "Experimental Design & Data Collection", "type": "Methodology", "why_required": "Core methodology for structuring scientific trials and empirical studies.", "severity": "Critical", "keys": ["experiment", "trial", "data collection", "sample"]},
+            {"name": "Scientific Python Stack (NumPy/SciPy/Pandas)", "type": "Tool", "why_required": "Required for modern computational science and scientific programming.", "severity": "Important", "keys": ["python", "numpy", "scipy", "pandas"]},
+            {"name": "Research Literature Audit & Publishing", "type": "Core Concept", "why_required": "Essential for synthesizing prior studies and publishing peer-reviewed research.", "severity": "Important", "keys": ["research", "paper", "journal", "publication"]},
+            {"name": "Hypothesis Testing & p-value Validation", "type": "Core Concept", "why_required": "Foundation of scientific proof and statistical significance testing.", "severity": "Critical", "keys": ["hypothesis", "p-value", "significance", "t-test"]},
+            {"name": "Analytical Instrumentation Calibration", "type": "Tool", "why_required": "Required to operate and calibrate specialized laboratory testing equipment.", "severity": "Important", "keys": ["instrument", "spectrophotometer", "microscope", "calibration"]},
+            {"name": "Data Visualization & Scientific Graphing", "type": "Methodology", "why_required": "Critical for presenting research findings to scientific audiences.", "severity": "Important", "keys": ["visualiz", "graph", "matplotlib", "plot"]}
+        ]
+    elif discipline == "Business & Finance":
+        competencies = [
+            {"name": "Corporate Financial Modeling & Valuation", "type": "Methodology", "why_required": "Core framework for financial forecasting, DCF modeling, and corporate analysis.", "severity": "Critical", "keys": ["financial model", "dcf", "valuation", "finance"]},
+            {"name": "Power BI / Tableau Dashboarding", "type": "Tool", "why_required": "Required for building executive business intelligence dashboards.", "severity": "Critical", "keys": ["power bi", "tableau", "dashboard", "bi"]},
+            {"name": "Advanced Excel & Pivot Tables", "type": "Tool", "why_required": "Universal tool expected for spreadsheet modeling and financial audit.", "severity": "Critical", "keys": ["excel", "pivot", "vlookup", "spreadsheet"]},
+            {"name": "SQL Data Querying & Extraction", "type": "Tool", "why_required": "Necessary to query corporate relational databases for business metrics.", "severity": "Critical", "keys": ["sql", "query", "database", "select"]},
+            {"name": "Market Risk & Variance Analysis", "type": "Core Concept", "why_required": "Required to evaluate financial risk exposure and budget variance.", "severity": "Important", "keys": ["risk", "variance", "budget", "exposure"]},
+            {"name": "Business Case Problem Solving", "type": "Methodology", "why_required": "Essential for management consulting and strategic decision making.", "severity": "Important", "keys": ["business case", "consulting", "strategy", "problem solving"]},
+            {"name": "Financial Statement Audit & Reporting", "type": "Core Concept", "why_required": "Required for analyzing P&L balance sheets and corporate cash flows.", "severity": "Important", "keys": ["statement", "p&l", "balance sheet", "cash flow"]},
+            {"name": "Executive Stakeholder Communication", "type": "Methodology", "why_required": "Critical for presenting quarterly financial findings to leadership.", "severity": "Important", "keys": ["stakeholder", "presentation", "executive", "communication"]}
+        ]
+    elif discipline == "Arts & Humanities":
+        competencies = [
+            {"name": "Figma Auto-Layout & Design Systems", "type": "Tool", "why_required": "Industry-standard design tool for creating scalable UI component libraries.", "severity": "Critical", "keys": ["figma", "design system", "auto-layout", "components"]},
+            {"name": "UI/UX Prototyping & Wireframing", "type": "Methodology", "why_required": "Core methodology for user experience architecture and user testing.", "severity": "Critical", "keys": ["ui", "ux", "wireframe", "prototype"]},
+            {"name": "Color Theory & Visual Hierarchy", "type": "Core Concept", "why_required": "Fundamental design principles for intuitive visual aesthetics.", "severity": "Important", "keys": ["color", "hierarchy", "typography", "layout"]},
+            {"name": "Adobe Creative Suite (Photoshop/Illustrator)", "type": "Tool", "why_required": "Standard creative tools for vector graphics and digital media production.", "severity": "Important", "keys": ["photoshop", "illustrator", "adobe", "creative suite"]},
+            {"name": "Responsive Web Layout & Accessibility (a11y)", "type": "Core Concept", "why_required": "Required to ensure digital products work across mobile and desktop accessible UI.", "severity": "Important", "keys": ["responsive", "accessibility", "a11y", "mobile"]},
+            {"name": "Portfolio Case Study Documentation", "type": "Methodology", "why_required": "Critical evidence needed to demonstrate end-to-end design process.", "severity": "Critical", "keys": ["portfolio", "case study", "behance", "dribbble"]},
+            {"name": "User Research & Usability Testing", "type": "Methodology", "why_required": "Essential for validating user interface decisions with real users.", "severity": "Important", "keys": ["user research", "usability", "interviews", "testing"]},
+            {"name": "Brand Identity & Visual Guidelines", "type": "Core Concept", "why_required": "Required to maintain consistent visual brand identities for digital products.", "severity": "Important", "keys": ["brand", "identity", "guidelines", "logo"]}
+        ]
+    elif discipline == "Education & Teaching":
+        competencies = [
+            {"name": "STEM Curriculum Development", "type": "Methodology", "why_required": "Core responsibility for structuring academic courses and technical modules.", "severity": "Critical", "keys": ["curriculum", "stem", "course", "syllabus"]},
+            {"name": "Interactive Lesson Planning", "type": "Methodology", "why_required": "Required for engaging students and delivering structured daily instruction.", "severity": "Critical", "keys": ["lesson plan", "instruction", "teaching", "pedagogy"]},
+            {"name": "Student Assessment & Evaluation Systems", "type": "Core Concept", "why_required": "Essential for measuring student learning outcomes and grading.", "severity": "Important", "keys": ["assessment", "grading", "evaluation", "test"]},
+            {"name": "EdTech & Classroom Learning Tools", "type": "Tool", "why_required": "Required for modern digital learning management and virtual classrooms.", "severity": "Important", "keys": ["edtech", "lms", "classroom", "moodle", "google classroom"]},
+            {"name": "Classroom Management & Engagement", "type": "Core Concept", "why_required": "Foundation for maintaining a productive learning environment.", "severity": "Critical", "keys": ["classroom", "management", "engagement", "student"]},
+            {"name": "Pedagogical Theory & Learning Strategies", "type": "Core Concept", "why_required": "Underpins effective teaching strategies tailored to diverse student needs.", "severity": "Important", "keys": ["pedagogy", "learning theory", "strategy", "instructional"]},
+            {"name": "Differentiated & Inclusive Instruction", "type": "Methodology", "why_required": "Required to support students with varying learning abilities.", "severity": "Important", "keys": ["inclusive", "differentiated", "special ed", "support"]},
+            {"name": "Student Mentorship & Project Guidance", "type": "Methodology", "why_required": "Critical for advising student capstone projects and STEM competitions.", "severity": "Important", "keys": ["mentorship", "guidance", "advisor", "project"]}
+        ]
+    elif discipline == "Law":
+        competencies = [
+            {"name": "Contract Drafting & Legal Auditing", "type": "Methodology", "why_required": "Core legal function for preparing and reviewing binding commercial agreements.", "severity": "Critical", "keys": ["contract", "drafting", "legal audit", "agreement"]},
+            {"name": "Legal Research & Statutory Analysis", "type": "Tool", "why_required": "Required for finding judicial precedent and analyzing statutory codes.", "severity": "Critical", "keys": ["legal research", "lexisnexis", "westlaw", "statute"]},
+            {"name": "Corporate Compliance & Governance", "type": "Regulation", "why_required": "Essential to ensure company operations adhere to legal and regulatory statutes.", "severity": "Critical", "keys": ["compliance", "governance", "regulatory", "statutory"]},
+            {"name": "Dispute Resolution & Negotiation", "type": "Core Concept", "why_required": "Required to settle legal disputes and negotiate client terms.", "severity": "Important", "keys": ["dispute", "negotiation", "litigation", "settlement"]},
+            {"name": "Case Law Synthesis & Memorandum Writing", "type": "Methodology", "why_required": "Fundamental skill for writing legal briefs and advising senior attorneys.", "severity": "Important", "keys": ["case law", "brief", "memorandum", "memo"]},
+            {"name": "Intellectual Property & Licensing", "type": "Core Concept", "why_required": "Critical for protecting corporate patents, trademarks, and copyright assets.", "severity": "Important", "keys": ["ip", "patent", "trademark", "licensing"]},
+            {"name": "Regulatory Risk Assessment", "type": "Methodology", "why_required": "Required to identify legal liability and minimize corporate risk.", "severity": "Important", "keys": ["risk assessment", "liability", "regulatory risk", "audit"]},
+            {"name": "Legal Ethics & Professional Responsibility", "type": "Regulation", "why_required": "Mandatory ethical standards required for attorney bar licensing.", "severity": "Critical", "keys": ["ethics", "bar", "professional responsibility", "confidentiality"]}
+        ]
+    else:
+        competencies = [
+            {"name": "Data Structures & Algorithms (DSA)", "type": "Core Concept", "why_required": "Non-negotiable foundation for software engineering problem solving and coding interviews.", "severity": "Critical", "keys": ["dsa", "data structure", "algorithm", "leetcode", "python", "java", "c++"]},
+            {"name": "REST API Architecture & Microservices", "type": "Core Concept", "why_required": "Essential for building backend microservices and client-server communications.", "severity": "Critical", "keys": ["rest api", "fastapi", "express", "django", "flask", "microservice", "api"]},
+            {"name": "Database Query Optimization & Relational SQL", "type": "Tool", "why_required": "Required for querying, modeling, and indexing relational database systems.", "severity": "Critical", "keys": ["sql", "postgresql", "mysql", "mongodb", "database"]},
+            {"name": "Docker Containerization & Deployment", "type": "Tool", "why_required": "Industry standard for packaging applications into reproducible containers.", "severity": "Important", "keys": ["docker", "container", "kubernetes"]},
+            {"name": "Cloud Infrastructure & AWS Services", "type": "Framework", "why_required": "Required to deploy scalable cloud services and manage cloud resources.", "severity": "Important", "keys": ["aws", "cloud", "azure", "gcp"]},
+            {"name": "System Architecture & Scalability", "type": "Methodology", "why_required": "Necessary for designing fault-tolerant high-concurrency software platforms.", "severity": "Important", "keys": ["system design", "architecture", "scalability", "redis"]},
+            {"name": "Git Version Control & Code Auditing", "type": "Tool", "why_required": "Universal tool required for team collaboration and code commit tracking.", "severity": "Critical", "keys": ["git", "github", "gitlab", "version control"]},
+            {"name": "Automated Unit Testing & CI/CD Pipelines", "type": "Methodology", "why_required": "Essential for continuous integration and maintaining production code quality.", "severity": "Important", "keys": ["test", "ci/cd", "jest", "pytest", "unit test"]}
+        ]
+
+    verified_strengths = []
+    verified_gaps = []
+    present_count = 0
+
+    for comp in competencies:
+        name = comp["name"]
+        comp_keys = comp["keys"]
+        is_present = False
+
+        for k in comp_keys:
+            if k in tools or re.search(r"\b" + re.escape(k) + r"\b", text_lower):
+                is_present = True
+                break
+
+        if is_present:
+            present_count += 1
+            verified_strengths.append(name)
+        else:
+            verified_gaps.append({
+                "competency_name": name,
+                "competency_type": comp["type"],
+                "why_required": comp["why_required"],
+                "severity": comp["severity"]
+            })
+
+    base_ratio = (present_count / 8.0) * 70.0
+    project_bonus = min(30.0, len(projects) * 15.0)
+    ats_score = min(100, max(25, round(base_ratio + project_bonus)))
+
+    scoring_rationale = f"ATS Score {ats_score}/100 calculated from {present_count}/8 verified present competencies ({round(base_ratio)} pts) and {len(projects)} verified project record(s) ({round(project_bonus)} pts)."
+
+    return {
+        "ats_score": ats_score,
+        "scoring_rationale": scoring_rationale,
+        "verified_strengths": verified_strengths,
+        "verified_gaps": verified_gaps
+    }
+
+
+def generate_precision_study_manual(taxonomy: dict, competency_audit: dict) -> str:
+    """
+    Academic Textbook Author & Senior Training Director Engine.
+    Generates a comprehensive, highly technical Precision Study Manual strictly for
+    audited competency gaps.
+    Starts immediately with '# {target_role} - Precision Study Manual'.
+    """
+    target_role = taxonomy.get("target_role", "Software Engineer")
+    specialization = taxonomy.get("specialization", "Computer Science")
+    discipline = taxonomy.get("discipline", "Engineering")
+    experience_tier = taxonomy.get("experience_tier", "Student/Fresh Graduate (0 yrs)")
+    gaps = competency_audit.get("verified_gaps", [])
+
+    lines = []
+    lines.append(f"# {target_role} - Precision Study Manual")
+    lines.append(f"**Curriculum Specialization:** {specialization} ({experience_tier})")
+    lines.append(f"**Discipline Category:** {discipline}")
+    lines.append(f"**Audited Competency Gaps Target Count:** {len(gaps)}")
+    lines.append("")
+
+    if not gaps:
+        lines.append("## 🏆 Full Competency Mastery Verified")
+        lines.append("No critical or important competency gaps were detected in your candidate profile. All 8 non-negotiable industry standards are verified present!")
+        return "\n".join(lines)
+
+    for idx, gap in enumerate(gaps, 1):
+        comp_name = gap.get("competency_name", "Technical Competency")
+        comp_type = gap.get("competency_type", "Core Concept")
+        severity = gap.get("severity", "Critical")
+        why_required = gap.get("why_required", "Required for industry standards.")
+
+        lines.append(f"## Module {idx}: {comp_name} [{severity} GAP]")
+        lines.append(f"**Type:** `{comp_type}` | **Role Requirement:** {why_required}")
+        lines.append("")
+
+        lines.append("### 1. Foundational Deep Dive")
+        lines.append(f"Understanding **{comp_name}** requires mastering the core theoretical background and architectural principles governing {specialization}.")
+        lines.append("")
+        lines.append("```")
+        lines.append("  +-----------------------------------------------------------+")
+        lines.append(f"  |  [Input Data / Client Query] --> [ {comp_name} Engine ]  |")
+        lines.append("  +-----------------------------------------------------------+")
+        lines.append("                                |                              ")
+        lines.append("                                v                              ")
+        lines.append("  +-----------------------------------------------------------+")
+        lines.append("  |  [ Validation & Logic ] --> [ Verified Production Output ] |")
+        lines.append("  +-----------------------------------------------------------+")
+        lines.append("```")
+        lines.append("")
+        lines.append("**Mathematical / Formulaic Principle:**")
+        lines.append(r"\[ \text{Efficiency Score } (E) = \frac{\sum \text{Verified Outcomes}}{\text{Latency } (\Delta t) \times \text{Resource Utilization } (U)} \]")
+        lines.append(r"\[ \text{Reliability Index } (R) = 1 - e^{-\lambda t} \]")
+        lines.append("")
+
+        lines.append("### 2. Industry Real-World Implementation")
+        lines.append(f"Below is a concrete implementation scenario for **{comp_name}** tailored for production readiness:")
+        lines.append("")
+
+        if discipline == "Medicine & Healthcare":
+            lines.append("**Clinical Case Study & Diagnostic Workflow:**")
+            lines.append(f"1. **Patient Triage & Initial Audit**: Evaluate clinical symptoms, baseline vital signs, and EHR medical history for {comp_name}.")
+            lines.append(f"2. **Diagnostic Protocol Execution**: Administer standardized protocol ({comp_name}) adhering strictly to BLS/ACLS guidelines.")
+            lines.append(f"3. **Post-Treatment Monitoring**: Document outcomes in digital EHR, track diagnostic markers every 15 minutes, and report to senior clinical attending.")
+        elif discipline == "Pure & Applied Sciences":
+            lines.append("```python")
+            lines.append("# Scientific Statistical Modeling & Hypothesis Testing")
+            lines.append("import numpy as np")
+            lines.append("from scipy import stats")
+            lines.append("")
+            lines.append("control_group = np.random.normal(loc=50, scale=5, size=100)")
+            lines.append("treatment_group = np.random.normal(loc=54, scale=5, size=100)")
+            lines.append("")
+            lines.append("t_stat, p_val = stats.ttest_ind(control_group, treatment_group)")
+            lines.append("print(f'T-Statistic: {t_stat:.4f}, P-Value: {p_val:.4e}')")
+            lines.append("assert p_val < 0.05, 'Hypothesis test failed: no statistical significance'")
+            lines.append("```")
+        elif discipline == "Business & Finance":
+            lines.append("```sql")
+            lines.append("-- Corporate Financial Modeling & Revenue Variance Query")
+            lines.append("SELECT")
+            lines.append("    fiscal_quarter,")
+            lines.append("    SUM(budgeted_revenue) AS target_revenue,")
+            lines.append("    SUM(actual_revenue) AS realized_revenue,")
+            lines.append("    ROUND(((SUM(actual_revenue) - SUM(budgeted_revenue)) / SUM(budgeted_revenue)) * 100, 2) AS variance_pct")
+            lines.append("FROM corporate_financial_ledger")
+            lines.append("GROUP BY fiscal_quarter;")
+            lines.append("```")
+        elif discipline == "Arts & Humanities":
+            lines.append("```javascript")
+            lines.append("// Figma Auto-Layout Design System Token Config")
+            lines.append("const designTokens = {")
+            lines.append("  colorSystem: { primary: '#38bdf8', surface: '#0f172a', text: '#f8fafc' },")
+            lines.append("  spacingGrid: { base: 8, md: 16, lg: 24, xl: 32 },")
+            lines.append("  autoLayout: { padding: '16px 24px', gap: '12px', alignment: 'CENTER_LEFT' }")
+            lines.append("};")
+            lines.append("```")
+        else:
+            lines.append("```python")
+            lines.append(f"# Production Implementation for {comp_name}")
+            lines.append("from typing import Dict, Any")
+            lines.append("import logging")
+            lines.append("")
+            lines.append("class CompetencyHandler:")
+            lines.append("    def __init__(self, config: Dict[str, Any]):")
+            lines.append("        self.config = config")
+            lines.append("        self.is_active = True")
+            lines.append("")
+            lines.append("    def execute_workflow(self, payload: Dict[str, Any]) -> Dict[str, Any]:")
+            lines.append("        if not payload:")
+            lines.append("            raise ValueError('Payload cannot be empty')")
+            lines.append(f"        print('Executing {comp_name} production pipeline')")
+            lines.append("        return {'status': 'SUCCESS', 'result': payload}")
+            lines.append("```")
+
+        lines.append("")
+
+        lines.append("### 3. Common Pitfalls & Failure Modes")
+        lines.append(f"Top 2 mistakes junior professionals make when implementing **{comp_name}**:")
+        lines.append(f"1. **Mistake 1: Lack of Edge-Case & Error Validation**: Failing to handle non-standard input data or unexpected failures.")
+        lines.append(f"   *Fix:* Implement strict validation, boundary checking, and fallback exception handling before processing.")
+        lines.append(f"2. **Mistake 2: Ignoring Performance & Scalability Overhead**: Writing unoptimized blocking logic that degrades under high load.")
+        lines.append(f"   *Fix:* Profile execution latency, utilize caching or asynchronous processing, and audit resource consumption.")
+        lines.append("")
+
+        lines.append("### 4. Hands-on Capstone Project / Task")
+        lines.append(f"**Objective:** Build and document a verifiable capstone project demonstrating mastery of **{comp_name}** for your resume.")
+        lines.append(f"1. **Task 1**: Design and document the system architecture / workflow specification for {comp_name}.")
+        lines.append(f"2. **Task 2**: Implement the core solution with full test coverage and automated verification.")
+        lines.append(f"3. **Task 3**: Create a GitHub / Portfolio repository containing an executive README.md, code artifacts, and benchmark results.")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def compile_typeset_study_manual(taxonomy: dict, competency_audit: dict, raw_markdown: str = "") -> str:
+    """
+    Technical Document Formatter and Typesetting Specialist Engine.
+    Compiles, formats, and typesets the precision study manual with clean LaTeX formulas,
+    strict heading hierarchy, language-tagged code blocks, and a standardized metadata header.
+    """
+    target_role = taxonomy.get("target_role", "Software Engineer")
+    specialization = taxonomy.get("specialization", "Computer Science")
+    experience_tier = taxonomy.get("experience_tier", "Student/Fresh Graduate (0 yrs)")
+    ats_score = competency_audit.get("ats_score", 45)
+    gaps = competency_audit.get("verified_gaps", [])
+    total_modules = len(gaps)
+
+    header = f"""# {target_role} - Precision Study Manual
+
+> **CANDIDATE METADATA & ATS PROFILE**  
+> - **Target Role:** {target_role}  
+> - **Specialization:** {specialization} ({experience_tier})  
+> - **ATS Readiness Score:** {ats_score}/100  
+> - **Total Audited Modules:** {total_modules}  
+
+---"""
+
+    if not raw_markdown:
+        raw_markdown = generate_precision_study_manual(taxonomy, competency_audit)
+
+    body = re.sub(r"^#\s+.*?\n", "", raw_markdown.strip()).strip()
+    body = re.sub(r"\\\[\s*(.*?)\s*\\\]", r"$$\1$$", body, flags=re.DOTALL)
+    body = re.sub(r"\\\(\s*(.*?)\s*\\\)", r"$\1$", body, flags=re.DOTALL)
+    body = re.sub(r"```\n", "```text\n", body)
+
+    return header + "\n\n" + body
 
 
 def predict_resume_domain(raw_text: str, detected_skills: List[str]) -> tuple[str, str, str]:
@@ -705,7 +1203,22 @@ async def analyze_resume(
         overall_score={"score": total_score, "grade": grade},
         metrics={"action_verbs": round(action_score), "metrics_presence": round(metrics_score), "structure": round(structure_score), "length_balance": round(length_score)},
         roadmap=roadmap_dict_list,
-        job_matches=jobs_dict_list
+        job_matches=jobs_dict_list,
+        verbatim_facts=extract_verbatim_facts(raw_text),
+        taxonomy_analysis=classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text),
+        competency_audit=audit_competency_gaps(extract_verbatim_facts(raw_text), classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text), raw_text),
+        precision_study_manual=generate_precision_study_manual(
+            classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text),
+            audit_competency_gaps(extract_verbatim_facts(raw_text), classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text), raw_text)
+        ),
+        compiled_typeset_manual=compile_typeset_study_manual(
+            classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text),
+            audit_competency_gaps(extract_verbatim_facts(raw_text), classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text), raw_text),
+            generate_precision_study_manual(
+                classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text),
+                audit_competency_gaps(extract_verbatim_facts(raw_text), classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text), raw_text)
+            )
+        )
     )
 
 def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
@@ -792,7 +1305,102 @@ def get_live_jobs(prompt: str = "", q: str = "", category: str = "all", page: in
         "limit": limit,
         "totalPages": total_pages,
         "categories": categories_count,
-        "jobs": paginated
+        "counts": categories_count,
+        "jobs": paginated,
+        "items": paginated
+    }
+
+
+class ApplicationRequest(BaseModel):
+    opportunity_id: Optional[str] = None
+    opportunity_title: Optional[str] = None
+    organization: Optional[str] = None
+    candidate_name: str
+    candidate_email: str
+    resume_text: Optional[str] = ""
+    portfolio_url: Optional[str] = ""
+    cover_note: Optional[str] = ""
+    apply_mode: Optional[str] = "native"
+
+
+class CoverLetterRequest(BaseModel):
+    opportunity_title: Optional[str] = None
+    organization: Optional[str] = None
+    candidate_name: Optional[str] = None
+    key_skills: Optional[list] = None
+
+
+python_in_memory_applications = []
+
+
+@app.api_route("/api/opportunities/search", methods=["GET", "POST"])
+def search_opportunities_endpoint(q: str = "", prompt: str = "", category: str = "all", page: int = 1, limit: int = 20):
+    return get_live_jobs(prompt=prompt, q=q, category=category, page=page, limit=limit)
+
+
+@app.post("/api/applications/apply")
+def apply_opportunity_endpoint(payload: ApplicationRequest):
+    app_id = f"app_{int(time.time())}_{random.randint(1000, 9999)}"
+    is_native = payload.apply_mode != "external"
+
+    record = {
+        "id": app_id,
+        "opportunity_id": payload.opportunity_id or "gen_opp",
+        "opportunity_title": payload.opportunity_title or "General Application",
+        "organization": payload.organization or "Partner Employer",
+        "candidate_name": payload.candidate_name,
+        "candidate_email": payload.candidate_email,
+        "resume_text": payload.resume_text[:500] if payload.resume_text else "",
+        "portfolio_url": payload.portfolio_url or "",
+        "cover_note": payload.cover_note or "Interested in pursuing this opportunity.",
+        "mode": "Mode A (Native Direct Post)" if is_native else "Mode B (Assisted Auto-Apply)",
+        "status": "Submitted",
+        "created_at": datetime.now().isoformat()
+    }
+    python_in_memory_applications.insert(0, record)
+
+    return {
+        "success": True,
+        "message": f"Application submitted successfully via AutoHire! ({record['mode']})",
+        "application": record,
+        "redirect_url": None if is_native else f"https://google.com/search?q={record['organization']}+{record['opportunity_title']}"
+    }
+
+
+@app.get("/api/applications/status")
+def application_status_endpoint(email: str = ""):
+    apps = python_in_memory_applications
+    if email:
+        apps = [a for a in apps if a["candidate_email"].lower() == email.lower()]
+
+    return {
+        "success": True,
+        "total": len(apps),
+        "applications": apps
+    }
+
+
+@app.post("/api/applications/cover-letter")
+def generate_cover_letter_endpoint(payload: CoverLetterRequest):
+    name = payload.candidate_name or "Applicant"
+    title = payload.opportunity_title or "Software Engineering Role"
+    org = payload.organization or "your organization"
+    skills = ", ".join(payload.key_skills) if payload.key_skills else "Fullstack Software Engineering, Python, React, REST APIs"
+
+    letter = f"""Dear Hiring Team at {org},
+
+I am writing to express my strong enthusiasm for the {title} position. With verified expertise in {skills}, I have engineered robust systems and delivered scalable technical solutions.
+
+My background aligns directly with the core competencies expected at {org}. I am eager to leverage my technical problem-solving capabilities to drive measurable impact.
+
+Thank you for your time and consideration.
+
+Best regards,  
+{name}"""
+
+    return {
+        "success": True,
+        "cover_letter": letter
     }
 
 

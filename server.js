@@ -505,23 +505,131 @@ async function fetchExpressJobs(prompt) {
     ];
 }
 
-app.get("/api/jobs", async (req, res) => {
+// --- Applications In-Memory Table ---
+const inMemoryApplications = [];
+
+// 1. Hybrid Search API Route (/api/opportunities/search)
+app.all("/api/opportunities/search", express.json(), async (req, res) => {
     try {
+        const query = req.query.q || req.query.prompt || (req.body && (req.body.q || req.body.prompt)) || "";
+        const category = req.query.category || req.query.cat || (req.body && req.body.category) || "all";
+        const page = parseInt(req.query.page || (req.body && req.body.page) || 1, 10);
+        const limit = parseInt(req.query.limit || (req.body && req.body.limit) || 20, 10);
+
+        const result = await ragEngine.searchOpportunities(query, category, page, limit);
+        return res.json(result);
+    } catch (error) {
+        console.error("[Opportunities Search Error]:", error);
         const aggregatedResult = await jobAggregator.getAggregatedJobs(req.query);
         return res.json(aggregatedResult);
+    }
+});
+
+app.get("/api/jobs", async (req, res) => {
+    try {
+        const category = req.query.category || req.query.cat || "all";
+        const query = req.query.q || req.query.prompt || "";
+        const page = parseInt(req.query.page || 1, 10);
+        const limit = parseInt(req.query.limit || 20, 10);
+
+        const searchResult = await ragEngine.searchOpportunities(query, category, page, limit);
+        return res.json(searchResult);
     } catch (error) {
-        const userPrompt = req.query.prompt || req.query.q || "Software Engineer";
-        const jobs = await fetchExpressJobs(userPrompt);
+        const aggregatedResult = await jobAggregator.getAggregatedJobs(req.query);
+        return res.json(aggregatedResult);
+    }
+});
+
+// 2. Native Application Handler Route (/api/applications/apply)
+app.post("/api/applications/apply", express.json(), async (req, res) => {
+    try {
+        const {
+            opportunity_id,
+            opportunity_title,
+            organization,
+            candidate_name,
+            candidate_email,
+            resume_text,
+            portfolio_url,
+            cover_note,
+            apply_mode
+        } = req.body || {};
+
+        if (!candidate_name || !candidate_email) {
+            return res.status(400).json({ success: false, error: "Candidate Name and Candidate Email are required." });
+        }
+
+        const applicationId = "app_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
+        const isNative = apply_mode !== "external";
+
+        const applicationRecord = {
+            id: applicationId,
+            opportunity_id: opportunity_id || "gen_opp_" + Date.now(),
+            opportunity_title: opportunity_title || "General Application",
+            organization: organization || "Partner Employer",
+            candidate_name: candidate_name.trim(),
+            candidate_email: candidate_email.trim(),
+            resume_text: (resume_text || "").slice(0, 500),
+            portfolio_url: portfolio_url || "",
+            cover_note: cover_note || "Interested in pursuing this opportunity.",
+            mode: isNative ? "Mode A (Native Direct Post)" : "Mode B (Assisted Auto-Apply)",
+            status: "Submitted",
+            created_at: new Date().toISOString()
+        };
+
+        inMemoryApplications.unshift(applicationRecord);
+        console.log(`[AutoHire Applications] New ${applicationRecord.mode} created for ${candidate_name} -> ${opportunity_title}`);
+
         return res.json({
             success: true,
-            total: jobs.length,
-            page: 1,
-            limit: 12,
-            totalPages: 1,
-            categories: { All: jobs.length },
-            jobs: jobs
+            message: `Application submitted successfully via AutoHire! (${applicationRecord.mode})`,
+            application: applicationRecord,
+            redirect_url: isNative ? null : (req.body.apply_url || "https://google.com/search?q=" + encodeURIComponent(organization + " " + opportunity_title))
         });
+    } catch (err) {
+        console.error("[Application API Error]:", err);
+        return res.status(500).json({ success: false, error: "Failed to process application." });
     }
+});
+
+// 3. Application Tracking Status Route (/api/applications/status)
+app.get("/api/applications/status", (req, res) => {
+    const email = (req.query.email || "").toString().toLowerCase();
+    let apps = inMemoryApplications;
+    if (email) {
+        apps = apps.filter(a => a.candidate_email.toLowerCase() === email);
+    }
+
+    return res.json({
+        success: true,
+        total: apps.length,
+        applications: apps
+    });
+});
+
+// 4. AI Tailored Cover Letter Generator Helper (/api/applications/cover-letter)
+app.post("/api/applications/cover-letter", express.json(), (req, res) => {
+    const { opportunity_title, organization, candidate_name, key_skills } = req.body || {};
+    const name = candidate_name || "Applicant";
+    const title = opportunity_title || "Software Engineering Role";
+    const org = organization || "your organization";
+    const skills = Array.isArray(key_skills) ? key_skills.join(", ") : (key_skills || "Fullstack Software Engineering, Python, React, REST APIs");
+
+    const letter = `Dear Hiring Team at ${org},
+
+I am writing to express my strong enthusiasm for the ${title} position. With verified expertise in ${skills}, I have engineered robust systems and delivered scalable technical solutions.
+
+My background aligns directly with the core competencies expected at ${org}. I am eager to leverage my technical problem-solving capabilities to drive measurable impact.
+
+Thank you for your time and consideration.
+
+Best regards,  
+${name}`;
+
+    return res.json({
+        success: true,
+        cover_letter: letter
+    });
 });
 
 // --- RAG (Retrieval-Augmented Generation) API Endpoints ---
@@ -600,6 +708,11 @@ app.post(["/api/rag/analyze", "/analyzer", "/api/analyzer"], upload.single("file
                 study_roadmap: (pyResult.study_roadmap && pyResult.study_roadmap.length > 0) ? pyResult.study_roadmap : ragAnalysis.study_roadmap,
                 job_matches: (pyResult.job_matches && pyResult.job_matches.length > 0) ? pyResult.job_matches : ragAnalysis.job_matches,
                 suggested_jobs: (pyResult.suggested_jobs && pyResult.suggested_jobs.length > 0) ? pyResult.suggested_jobs : ragAnalysis.suggested_jobs,
+                verbatim_facts: pyResult.verbatim_facts || ragAnalysis.verbatim_facts,
+                taxonomy_analysis: pyResult.taxonomy_analysis || ragAnalysis.taxonomy_analysis,
+                competency_audit: pyResult.competency_audit || ragAnalysis.competency_audit,
+                precision_study_manual: pyResult.precision_study_manual || ragAnalysis.precision_study_manual,
+                compiled_typeset_manual: pyResult.compiled_typeset_manual || ragAnalysis.compiled_typeset_manual,
                 feedback: Array.from(new Set([...(ragAnalysis.feedback || []), ...(pyResult.feedback ? pyResult.feedback.map(f => typeof f === 'string' ? f : f.text) : [])]))
             };
             return res.json(merged);
