@@ -13,16 +13,21 @@
 
   <style>
     :root {
-      --bg-dark: #0f172a;
-      --card-bg: #1e293b;
-      --card-border: #334155;
+      --bg-dark: #070b14;
+      --card-bg: rgba(30, 41, 59, 0.65);
+      --card-border: rgba(255, 255, 255, 0.12);
       --primary: #38bdf8;
+      --primary-glow: rgba(56, 189, 248, 0.35);
       --accent-purple: #a855f7;
       --accent-pink: #ec4899;
       --accent-yellow: #eab308;
       --success: #22c55e;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --shadow-3d: 0 20px 40px -15px rgba(0, 0, 0, 0.5), 0 0 30px rgba(56, 189, 248, 0.15);
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     * {
@@ -34,17 +39,61 @@
 
     body {
       background-color: var(--bg-dark);
-      background-image:
-        radial-gradient(at 10% 10%, rgba(56, 189, 248, 0.12) 0px, transparent 50%),
-        radial-gradient(at 90% 90%, rgba(168, 85, 247, 0.12) 0px, transparent 50%);
       color: var(--text-main);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* 3D Canvas Background */
+    #bg3dCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    /* Ambient Glow Blobs */
+    .ambient-glow {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.22;
+      animation: pulseGlow 12s ease-in-out infinite alternate;
+    }
+    .glow-1 {
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--primary), transparent);
+      top: -200px;
+      left: -150px;
+    }
+    .glow-2 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--accent-purple), transparent);
+      bottom: -150px;
+      right: -100px;
+      animation-delay: -6s;
+    }
+
+    @keyframes pulseGlow {
+      0% { transform: scale(1) translate(0, 0); }
+      100% { transform: scale(1.15) translate(40px, -30px); }
     }
 
     /* HEADER NAVIGATION */
     header {
+      position: relative;
+      z-index: 10;
       width: min(1200px, calc(100% - 40px));
       margin: 0 auto;
       padding: 20px 0;
@@ -53,10 +102,11 @@
       justify-content: space-between;
       gap: 20px;
       border-bottom: 1px solid var(--card-border);
+      backdrop-filter: blur(12px);
     }
 
     .brand {
-      font: 700 1.5rem "Space Grotesk", sans-serif;
+      font: 800 1.5rem "Space Grotesk", sans-serif;
       color: var(--text-main);
       text-decoration: none;
       display: flex;
@@ -65,7 +115,10 @@
     }
 
     .brand span {
-      color: var(--primary);
+      background: linear-gradient(135deg, var(--primary), var(--accent-purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     nav {
@@ -79,11 +132,12 @@
       text-decoration: none;
       font-size: 0.95rem;
       font-weight: 500;
-      transition: color 0.2s;
+      transition: color 0.25s, transform 0.25s;
     }
 
     nav a:hover, nav a.active {
       color: var(--primary);
+      transform: translateY(-1px);
     }
 
     .nav-actions {
@@ -94,54 +148,62 @@
 
     .btn-nav {
       border: 1px solid var(--card-border);
-      background: var(--card-bg);
+      background: rgba(255, 255, 255, 0.05);
       color: var(--text-main);
       padding: 8px 16px;
-      border-radius: 8px;
+      border-radius: 10px;
       font-weight: 600;
       font-size: 0.88rem;
       cursor: pointer;
       text-decoration: none;
-      transition: all 0.2s;
+      backdrop-filter: blur(10px);
+      transition: all 0.25s var(--ease-out);
     }
 
     .btn-nav:hover {
       border-color: var(--primary);
       color: var(--primary);
+      box-shadow: 0 0 15px var(--primary-glow);
     }
 
     .btn-nav-primary {
-      background: var(--primary);
-      color: #000;
+      background: linear-gradient(135deg, #0284c7 0%, #a855f7 100%);
+      color: #fff;
       border: none;
+      box-shadow: 0 4px 15px rgba(168, 85, 247, 0.35);
     }
 
     .btn-nav-primary:hover {
-      background: #7dd3fc;
-      color: #000;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
     }
 
     /* MAIN CONTENT */
     .container {
+      position: relative;
+      z-index: 1;
       width: min(1200px, calc(100% - 40px));
       margin: 30px auto 50px auto;
       flex: 1;
       display: grid;
       grid-template-columns: 360px 1fr;
-      gap: 24px;
+      gap: 28px;
     }
 
     /* SIDEBAR CHAT PANEL */
     .chat-panel {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      border-radius: 20px;
+      border-radius: var(--radius-lg);
       padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      box-shadow: var(--shadow-3d);
       height: fit-content;
+      backdrop-filter: blur(20px);
+      transform-style: preserve-3d;
+      perspective: 1000px;
     }
 
     .chat-header h2 {
@@ -157,37 +219,40 @@
     .chat-header p {
       color: var(--text-muted);
       font-size: 0.88rem;
-      margin-top: 4px;
-      line-height: 1.4;
+      margin-top: 6px;
+      line-height: 1.5;
     }
 
     .input-box-wrapper {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
     }
 
     textarea.ai-input {
       width: 100%;
-      height: 100px;
-      padding: 14px;
-      border-radius: 12px;
+      height: 110px;
+      padding: 16px;
+      border-radius: var(--radius-md);
       border: 1px solid var(--card-border);
-      background: var(--bg-dark);
+      background: rgba(15, 23, 42, 0.8);
       color: var(--text-main);
       font-size: 0.95rem;
       outline: none;
       resize: none;
+      backdrop-filter: blur(10px);
+      transition: border-color 0.25s, box-shadow 0.25s;
     }
 
     textarea.ai-input:focus {
       border-color: var(--primary);
+      box-shadow: 0 0 20px var(--primary-glow);
     }
 
     .btn-ask {
       padding: 14px;
       border: none;
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       background: linear-gradient(135deg, #0284c7 0%, #a855f7 100%);
       color: #fff;
       font-weight: 700;
@@ -197,22 +262,22 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      transition: all 0.3s;
-      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
+      transition: all 0.3s var(--ease-out);
+      box-shadow: 0 4px 20px rgba(2, 132, 199, 0.35);
     }
 
     .btn-ask:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(168, 85, 247, 0.4);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
     }
 
     /* QUICK PROMPT CHIPS */
     .prompt-chips-title {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.08em;
     }
 
     .chips-container {
@@ -222,59 +287,73 @@
     }
 
     .chip {
-      background: var(--bg-dark);
+      background: rgba(15, 23, 42, 0.8);
       border: 1px solid var(--card-border);
       color: var(--text-main);
-      padding: 6px 12px;
+      padding: 7px 14px;
       border-radius: 20px;
       font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
+      backdrop-filter: blur(10px);
+      transition: all 0.25s var(--ease-out);
     }
 
     .chip:hover, .chip.active {
       border-color: var(--primary);
       color: var(--primary);
-      background: rgba(56, 189, 248, 0.1);
+      background: rgba(56, 189, 248, 0.15);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+      transform: translateY(-1px);
     }
 
     /* JOBS DISPLAY LIST */
     .jobs-list {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 18px;
     }
 
     .agent-status-banner {
       background: rgba(56, 189, 248, 0.1);
-      border: 1px solid rgba(56, 189, 248, 0.3);
+      border: 1px solid rgba(56, 189, 248, 0.35);
       color: var(--primary);
-      padding: 12px 18px;
-      border-radius: 12px;
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
       font-weight: 600;
       font-size: 0.95rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      backdrop-filter: blur(12px);
+      animation: pulseBanner 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseBanner {
+      0% { box-shadow: 0 0 10px rgba(56, 189, 248, 0.1); }
+      100% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.3); }
     }
 
     .job-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 22px;
+      border-radius: var(--radius-lg);
+      padding: 24px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 16px;
       position: relative;
-      transition: border-color 0.2s, transform 0.2s;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(16px);
+      transition: all 0.35s var(--ease-out);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      transform-style: preserve-3d;
+      perspective: 1000px;
     }
 
     .job-card:hover {
       border-color: var(--primary);
-      transform: translateY(-2px);
+      transform: translateY(-4px) scale(1.01);
+      box-shadow: 0 15px 35px rgba(56, 189, 248, 0.2);
     }
 
     .card-top {
@@ -291,10 +370,10 @@
     }
 
     .company-avatar {
-      width: 46px;
-      height: 46px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0284c7, #a855f7);
       color: #fff;
       font-family: "Space Grotesk", sans-serif;
       font-size: 1.4rem;
@@ -302,6 +381,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
     }
 
     .company-info {
@@ -310,16 +390,16 @@
     }
 
     .company-name {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 700;
       color: var(--text-muted);
-      letter-spacing: 0.5px;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
     }
 
     .job-title {
       font-family: "Space Grotesk", sans-serif;
-      font-size: 1.25rem;
+      font-size: 1.3rem;
       font-weight: 700;
       color: var(--text-main);
     }
@@ -327,31 +407,31 @@
     .ribbon {
       background: rgba(56, 189, 248, 0.15);
       color: var(--primary);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      padding: 4px 12px;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 5px 14px;
       border-radius: 20px;
       font-size: 0.78rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.05em;
     }
 
     .ribbon.intern {
       background: rgba(168, 85, 247, 0.15);
       color: var(--accent-purple);
-      border-color: rgba(168, 85, 247, 0.3);
+      border-color: rgba(168, 85, 247, 0.35);
     }
 
     .ribbon.hackathon {
       background: rgba(236, 72, 153, 0.15);
       color: var(--accent-pink);
-      border-color: rgba(236, 72, 153, 0.3);
+      border-color: rgba(236, 72, 153, 0.35);
     }
 
     .job-meta-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px;
       font-size: 0.88rem;
       color: var(--text-muted);
     }
@@ -360,14 +440,14 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      background: var(--bg-dark);
+      background: rgba(15, 23, 42, 0.7);
       padding: 6px 12px;
       border-radius: 8px;
       border: 1px solid var(--card-border);
     }
 
     .job-description {
-      font-size: 0.93rem;
+      font-size: 0.95rem;
       color: #cbd5e1;
       line-height: 1.5;
     }
@@ -393,31 +473,34 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s;
+      transition: all 0.25s var(--ease-out);
     }
 
     .btn-apply-website:hover {
-      background: rgba(34, 197, 94, 0.25);
+      background: rgba(34, 197, 94, 0.3);
       color: #fff;
+      box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
     }
 
     .btn-apply-autohire {
       padding: 10px 18px;
       border-radius: 10px;
-      background: var(--primary);
+      background: linear-gradient(135deg, #0284c7 0%, #a855f7 100%);
       border: none;
-      color: #000;
+      color: #ffffff;
       font-weight: 700;
       font-size: 0.88rem;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s;
+      transition: all 0.25s var(--ease-out);
+      box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
     }
 
     .btn-apply-autohire:hover {
-      background: #7dd3fc;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
     }
 
     .status-message {
@@ -426,27 +509,116 @@
       color: var(--text-muted);
       font-size: 1.05rem;
       background: var(--card-bg);
-      border-radius: 16px;
+      border-radius: var(--radius-lg);
       border: 1px solid var(--card-border);
+      backdrop-filter: blur(16px);
+    }
+
+    .account-button {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      padding: 5px 14px 5px 6px;
+      background: var(--card-bg);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      backdrop-filter: blur(16px);
+      transition: all 0.25s;
+    }
+    .account-button:hover {
+      border-color: var(--primary);
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+    .account-button.visible {
+      display: inline-flex;
+    }
+    .account-logo {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #0f172a;
+      font-family: "Space Grotesk", sans-serif;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .account-user-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.1;
+    }
+    .account-name {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #ffffff;
+    }
+    .account-email {
+      max-width: 150px;
+      overflow: hidden;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 500;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .profile-card {
+      position: relative;
+      display: none;
+    }
+    .profile-card.visible {
+      display: block;
+    }
+    .profile-details {
+      position: absolute;
+      z-index: 999;
+      top: calc(100% + 10px);
+      right: 0;
+      width: 250px;
+      padding: 16px;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(24px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    }
+    .profile-details[hidden] {
+      display: none;
+    }
+    .profile-details h3 {
+      margin: 0 0 4px;
+      font-size: 0.95rem;
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      color: #ffffff;
     }
 
     @media (max-width: 900px) {
       .container {
         grid-template-columns: 1fr;
       }
-      header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
     }
   </style>
 </head>
 
 <body>
+  <!-- 3D Canvas Mesh Background -->
+  <canvas id="bg3dCanvas"></canvas>
+
+  <!-- Ambient Glow Effects -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
   <!-- HEADER NAVIGATION -->
   <header>
     <a href="index.html" class="brand">
-      🤖 Auto<span>Hire</span>
+      🤖 Auto<span>Hire AI</span>
     </a>
     <nav>
       <a href="index.html">Home</a>
@@ -456,15 +628,34 @@
       <a href="profile.html">Profile</a>
     </nav>
     <div class="nav-actions">
-      <a href="sign-in.html" class="btn-nav">Sign In</a>
-      <a href="register.html" class="btn-nav btn-nav-primary">Get Started</a>
+      <a href="sign-in.html" class="btn-nav" id="signInLink">Sign In</a>
+      <a href="register.html" class="btn-nav btn-nav-primary" id="createProfileLink">Get Started</a>
+      <div class="profile-card" id="profileCard">
+        <button class="account-button" id="accountButton" type="button" aria-expanded="false" aria-controls="profileDetails">
+          <span class="account-logo" id="accountLogo"></span>
+          <span class="account-user-info">
+            <span id="accountName" class="account-name"></span>
+            <span class="account-email" id="accountEmail"></span>
+          </span>
+        </button>
+        <div class="profile-details" id="profileDetails" hidden>
+          <h3 id="profileFullName"></h3>
+          <p class="profile-email" id="profileEmail" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:12px;"></p>
+          <div class="profile-links" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+            <a href="profile.html" style="font-weight:700;color:var(--primary);text-decoration:none;padding:6px 10px;background:rgba(255,255,255,0.05);border-radius:6px;">👤 View My Profile</a>
+            <a href="dashboard.html" style="font-weight:700;color:var(--primary);text-decoration:none;padding:6px 10px;background:rgba(255,255,255,0.05);border-radius:6px;">📊 Dashboard</a>
+          </div>
+          <button class="logout-button" id="switchAccountBtn" type="button" style="width:100%;border:none;border-radius:6px;padding:8px 12px;background:rgba(56,189,248,0.15);color:#38bdf8;font-weight:700;font-size:0.85rem;cursor:pointer;margin-bottom:8px;">🔄 Switch Account</button>
+          <button class="logout-button" id="logoutButton" type="button">🚪 Logout & Exit</button>
+        </div>
+      </div>
     </div>
   </header>
 
   <!-- MAIN CONTAINER -->
   <div class="container">
     <!-- CHAT SIDEBAR PANEL -->
-    <div class="chat-panel">
+    <div class="chat-panel 3d-card">
       <div class="chat-header">
         <h2>⚡ Ask AutoHire AI</h2>
         <p>Type your desired role, skills, hackathons, or company name. AutoHire retrieves 20+ live matches instantly!</p>
@@ -510,6 +701,71 @@
   </div>
 
   <script>
+    // 1. Canvas 3D Particle Animation
+    (function init3DCanvas() {
+        const canvas = document.getElementById("bg3dCanvas");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        let width = (canvas.width = window.innerWidth);
+        let height = (canvas.height = window.innerHeight);
+
+        const particles = [];
+        const particleCount = Math.min(Math.floor(width / 24), 55);
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.5,
+                radius: Math.random() * 2 + 1,
+                color: Math.random() > 0.5 ? "rgba(56, 189, 248, 0.35)" : "rgba(168, 85, 247, 0.25)"
+            });
+        }
+
+        window.addEventListener("resize", () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.x < 0 || p.x > width) p.vx *= -1;
+                if (p.y < 0 || p.y > height) p.vy *= -1;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+
+                for (let j = i + 1; j < particles.length; j++) {
+                    const p2 = particles[j];
+                    const dx = p.x - p2.x;
+                    const dy = p.y - p2.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 120) {
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.strokeStyle = `rgba(56, 189, 248, ${0.12 * (1 - dist / 120)})`;
+                        ctx.lineWidth = 0.8;
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    })();
+
+    // 2. Interactive AI Logic & Display Functions
     const aiPromptInput = document.getElementById("aiPromptInput");
     const askAgentBtn = document.getElementById("askAgentBtn");
     const jobsContainer = document.getElementById("jobsContainer");
@@ -518,24 +774,12 @@
 
     let allLoadedJobs = [];
 
-    // Dynamic backend origin detector
     function getBackendOrigins() {
       const origins = [];
-      
-      // Tier 1: Configured AutoHire API origin
-      if (window.AUTOHIRE_API_ORIGIN) {
-        origins.push(window.AUTOHIRE_API_ORIGIN);
-      }
-      
-      // Tier 2: Relative origin if page is web-hosted
-      if (window.location.origin && window.location.origin !== "null") {
-        origins.push(window.location.origin);
-      }
-
-      // Tier 3: Local FastAPI / Express development servers
+      if (window.AUTOHIRE_API_ORIGIN) origins.push(window.AUTOHIRE_API_ORIGIN);
+      if (window.location.origin && window.location.origin !== "null") origins.push(window.location.origin);
       origins.push("http://127.0.0.1:5501");
       origins.push("http://127.0.0.1:8800");
-
       return Array.from(new Set(origins));
     }
 
@@ -555,9 +799,7 @@
           { company: "MAJOR LEAGUE HACKING (MLH)", title: "Global Tech Hackathon 2026", type: "Hackathon", domain: "Software & AI", location: "Online / Global", salary: "Prizes worth $25,000", description: "Compete with developer teams worldwide, gain mentorship, and build awesome tech projects.", ribbonText: "Live Hackathon", ribbonClass: "hackathon", apply_link: "https://mlh.io", signin_link: "https://mlh.io/users/sign_in" },
           { company: "DEVPOST", title: "Global AI & Cloud Innovation Challenge", type: "Hackathon", domain: "Generative AI", location: "Remote", salary: "Prizes worth $50,000", description: "Develop cutting-edge machine learning applications using modern web & cloud APIs.", ribbonText: "$50k Prize Pool", ribbonClass: "hackathon", apply_link: "https://devpost.com", signin_link: "https://devpost.com/login" },
           { company: "GOOGLE FOR DEVELOPERS", title: "Build with AI Global Hackathon", type: "Hackathon", domain: "AI / ML", location: "Global / Online", salary: "Google Cloud Credits", description: "Build real-world prototypes with Google engineers using Gemini and TensorFlow.", ribbonText: "Google Official", ribbonClass: "hackathon", apply_link: "https://developers.google.com", signin_link: "https://accounts.google.com" },
-          { company: "META", title: "Meta Hacker Cup 2026", type: "Hackathon", domain: "Algorithmic Coding", location: "Worldwide / Online", salary: "$100,000 Total Purse", description: "Meta's annual global algorithmic programming contest.", ribbonText: "Meta Event", ribbonClass: "hackathon", apply_link: "https://www.facebook.com/codingcompetitions/hacker-cup/", signin_link: "https://www.facebook.com/login/" },
-          { company: "ETHGLOBAL", title: "ETHGlobal Web3 Hackathon", type: "Hackathon", domain: "Smart Contracts", location: "Remote", salary: "$125,000 Bounties", description: "Build decentralized protocols, DeFi dApps, and smart contracts.", ribbonText: "Web3 Flagship", ribbonClass: "hackathon", apply_link: "https://ethglobal.com/", signin_link: "https://ethglobal.com/login" },
-          { company: "MICROSOFT", title: "Imagine Cup Student World Championship", type: "Hackathon", domain: "AI & Cloud", location: "Global Online", salary: "$100,000 Prize + Azure", description: "Global student developer competition to launch AI prototypes.", ribbonText: "World Cup", ribbonClass: "hackathon", apply_link: "https://imaginecup.microsoft.com/", signin_link: "https://imaginecup.microsoft.com/" }
+          { company: "META", title: "Meta Hacker Cup 2026", type: "Hackathon", domain: "Algorithmic Coding", location: "Worldwide / Online", salary: "$100,000 Total Purse", description: "Meta's annual global algorithmic programming contest.", ribbonText: "Meta Event", ribbonClass: "hackathon", apply_link: "https://www.facebook.com/codingcompetitions/hacker-cup/", signin_link: "https://www.facebook.com/login/" }
         ];
       }
 
@@ -576,18 +818,7 @@
         { company: "OPENAI", title: "Research Engineer - AI Systems", type: "Job", domain: "Generative AI", location: "Remote / Global", salary: "₹28,00,000+ / yr", description: "Advance state-of-the-art transformer neural networks and deep learning models.", ribbonText: "Hot Opportunity", ribbonClass: "", apply_link: "https://openai.com/careers/", signin_link: "https://openai.com/careers/" },
         { company: "AMAZON", title: "Backend Software Development Engineer", type: "Job", domain: "AWS Commerce", location: "Chennai / Bangalore, India", salary: "₹15,00,000 - ₹24,00,000 / yr", description: "Build robust distributed backend platforms powering cloud marketplace transactions worldwide.", ribbonText: "Actively Hiring", ribbonClass: "", apply_link: "https://www.amazon.jobs/", signin_link: "https://www.amazon.jobs/" },
         { company: "META", title: "Production Engineering Intern", type: "Internship", domain: "Infrastructure", location: "Gurgaon, India / Remote", salary: "₹19,00,000 - ₹34,00,000 / yr", description: "Scale global networking infrastructure, data center automation, and distributed web services.", ribbonText: "High Growth", ribbonClass: "intern", apply_link: "https://www.metacareers.com/", signin_link: "https://www.metacareers.com/" },
-        { company: "APPLE", title: "iOS Application Developer", type: "Job", domain: "Mobile Engineering", location: "Hyderabad / Bangalore, India", salary: "₹17,00,000 - ₹30,00,000 / yr", description: "Build high-performance client applications and frameworks for millions of Apple devices.", ribbonText: "Apple Team", ribbonClass: "", apply_link: "https://www.apple.com/careers/", signin_link: "https://www.apple.com/careers/" },
-        { company: "NVIDIA", title: "CUDA & Deep Learning Engineer", type: "Job", domain: "AI Compute", location: "Pune / Bangalore, India", salary: "₹22,00,000 - ₹38,00,000 / yr", description: "Accelerate neural network training pipelines using CUDA C++, PyTorch, and TensorRT.", ribbonText: "AI Leader", ribbonClass: "", apply_link: "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite", signin_link: "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite" },
-        { company: "NETFLIX", title: "Streaming Backend Engineer", type: "Job", domain: "Cloud & Media", location: "Remote / Mumbai", salary: "₹25,00,000 - ₹40,00,000 / yr", description: "Optimize real-time video streaming delivery algorithms and microservices architectures.", ribbonText: "Top Tier", ribbonClass: "", apply_link: "https://jobs.netflix.com/", signin_link: "https://jobs.netflix.com/" },
-        { company: "UBER", title: "Logistics & Systems Engineer", type: "Job", domain: "Transportation Tech", location: "Bangalore, India", salary: "₹16,50,000 - ₹27,00,000 / yr", description: "Engineer low-latency dispatch algorithms, Geospatial routing, and transaction systems.", ribbonText: "Actively Hiring", ribbonClass: "", apply_link: "https://www.uber.com/us/en/careers/", signin_link: "https://www.uber.com/us/en/careers/" },
-        { company: "RAZORPAY", title: "Fintech Platform Engineer", type: "Job", domain: "Fintech", location: "Bangalore, India", salary: "₹14,00,000 - ₹24,00,000 / yr", description: "Build high-reliability payment gateway APIs handling millions of online digital transactions.", ribbonText: "Fintech Leader", ribbonClass: "", apply_link: "https://razorpay.com/jobs/", signin_link: "https://razorpay.com/jobs/" },
-        { company: "AIRBNB", title: "Fullstack Platform Developer", type: "Job", domain: "Hospitality Tech", location: "Remote / Global", salary: "₹20,00,000 - ₹35,00,000 / yr", description: "Build web components, payment integrations, and search recommendation workflows.", ribbonText: "100% Remote", ribbonClass: "", apply_link: "https://careers.airbnb.com/", signin_link: "https://careers.airbnb.com/" },
-        { company: "SPOTIFY", title: "Audio Recommendation Engineer", type: "Job", domain: "Music Tech", location: "Remote / Global", salary: "₹18,00,000 - ₹32,00,000 / yr", description: "Implement machine learning recommendation models and personal audio discovery features.", ribbonText: "Global Remote", ribbonClass: "", apply_link: "https://lifeatspotify.com/jobs", signin_link: "https://lifeatspotify.com/jobs" },
-        { company: "DELOITTE DIGITAL", title: "Cloud Solutions DevOps Specialist", type: "Job", domain: "Consulting Tech", location: "Hyderabad / Pune, India", salary: "₹10,00,000 - ₹18,00,000 / yr", description: "Architect enterprise cloud migrations, CI/CD automated deployment pipelines, and Kubernetes clusters.", ribbonText: "Enterprise", ribbonClass: "", apply_link: "https://www.deloitte.com/global/en/careers.html", signin_link: "https://www.deloitte.com/global/en/careers.html" },
-        { company: "TCS DIGITAL", title: "Graduate Systems Engineer Trainee", type: "Job", domain: "IT Services", location: "Chennai / Mumbai / Kolkata", salary: "₹7,00,000 - ₹11,00,000 / yr", description: "Entry-level software engineering program covering Java, Cloud, Data Engineering, and Web Development.", ribbonText: "Fresher Friendly", ribbonClass: "", apply_link: "https://www.tcs.com/careers", signin_link: "https://www.naukri.com/nlogin/login" },
-        { company: "INFOSYS", title: "Specialist Programmer - Web & Cloud", type: "Job", domain: "Software Services", location: "Bangalore / Mysore", salary: "₹8,00,000 - ₹13,00,000 / yr", description: "Develop fullstack microservices and cloud-native solutions for Fortune 500 enterprise clients.", ribbonText: "Mass Hiring", ribbonClass: "", apply_link: "https://www.infosys.com/careers.html", signin_link: "https://www.naukri.com/nlogin/login" },
-        { company: "SWIGGY", title: "Fullstack Logistics Engineer", type: "Job", domain: "E-Commerce", location: "Bangalore, India", salary: "₹15,00,000 - ₹26,00,000 / yr", description: "Work on quick-commerce order routing, dynamic pricing algorithms, and mobile web clients.", ribbonText: "Fast Paced", ribbonClass: "", apply_link: "https://careers.swiggy.com/", signin_link: "https://careers.swiggy.com/" },
-        { company: "ZOMATO", title: "Data Analyst & Business Intelligence", type: "Job", domain: "Analytics", location: "Gurgaon, India", salary: "₹12,00,000 - ₹20,00,000 / yr", description: "Analyze user metrics, delivery efficiency data, and construct executive dashboards using SQL & Python.", ribbonText: "Data Role", ribbonClass: "", apply_link: "https://www.zomato.com/careers", signin_link: "https://www.zomato.com/careers" }
+        { company: "APPLE", title: "iOS Application Developer", type: "Job", domain: "Mobile Engineering", location: "Hyderabad / Bangalore, India", salary: "₹17,00,000 - ₹30,00,000 / yr", description: "Build high-performance client applications and frameworks for millions of Apple devices.", ribbonText: "Apple Team", ribbonClass: "", apply_link: "https://www.apple.com/careers/", signin_link: "https://www.apple.com/careers/" }
       ];
     }
 
@@ -618,9 +849,7 @@
               break;
             }
           }
-        } catch (e) {
-          // Try next origin in fallback list
-        }
+        } catch (e) {}
       }
 
       if (!opportunities || opportunities.length === 0) {
@@ -674,7 +903,7 @@
         const descText = job.description || "Exciting technical opportunity with an innovative team.";
 
         const cardHTML = `
-          <div class="job-card">
+          <div class="job-card 3d-card">
             <div class="card-top">
               <div class="company-logo-header">
                 <div class="company-avatar">${companyInitial}</div>
@@ -707,6 +936,24 @@
 
         jobsContainer.innerHTML += cardHTML;
       });
+
+      // Bind 3D tilt hover to dynamically created job cards
+      document.querySelectorAll(".job-card").forEach((card) => {
+        card.addEventListener("mousemove", (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          const rotateX = ((y - centerY) / centerY) * -6;
+          const rotateY = ((x - centerX) / centerX) * 6;
+          card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1.01)`;
+        });
+
+        card.addEventListener("mouseleave", () => {
+          card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
+        });
+      });
     }
 
     function trackAutoHireApply(company, title, link) {
@@ -727,6 +974,23 @@
     
     // Perform initial load
     fetchAgentJobs();
+
+    // Header Auth Management Integration
+    (function initAuthHeader() {
+        if (window.AutoHireAuth) {
+            window.AutoHireAuth.initHeader();
+        }
+        const apiOrigin = window.AUTOHIRE_API_ORIGIN || "http://localhost:5000";
+        fetch(`${apiOrigin}/api/profile`, { credentials: "include" })
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (data && data.user && window.AutoHireAuth) {
+                    window.AutoHireAuth.saveUser(data.user, data.profile);
+                    window.AutoHireAuth.initHeader();
+                }
+            })
+            .catch(() => {});
+    })();
   </script>
 </body>
 

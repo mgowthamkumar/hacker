@@ -14,10 +14,10 @@ jobs:
 
       - name: Check Vercel Token Secret
         id: check_token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
-            echo "VERCEL_TOKEN secret is not set in GitHub secrets."
-            echo "Note: Vercel GitHub App automatically deploys pushes to main branch natively."
+          if [ -z "$VERCEL_TOKEN" ]; then
             echo "has_token=false" >> $GITHUB_OUTPUT
           else
             echo "has_token=true" >> $GITHUB_OUTPUT
@@ -27,11 +27,15 @@ jobs:
         if: steps.check_token.outputs.has_token == 'true'
         uses: amondnet/vercel-action@v20
         with:
+          zeit-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: --prod --confirm --name autohire
           working-directory: ./
         env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           HOST: "0.0.0.0"
           PORT: "5501"
+
+
+

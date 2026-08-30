@@ -5,37 +5,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Sign in to your AutoHire career workspace.">
-    <title>Sign in | AutoHire</title>
+    <title>Sign in | AutoHire AI</title>
     <script src="https://accounts.google.com/gsi/client" async></script>
     <script src="api-config.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
         :root {
-            --bg: #070b14;
-            --bg-card: rgba(15, 23, 42, 0.75);
-            --border: rgba(255, 255, 255, 0.1);
-            --green: #00ff41;
-            --green-glow: rgba(0, 255, 65, 0.25);
-            --cyan: #38bdf8;
-            --purple: #a855f7;
+            --bg-dark: #070b14;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.35);
+            --accent-purple: #a855f7;
+            --accent-pink: #ec4899;
+            --success: #22c55e;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
-            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --radius-lg: 24px;
+            --radius-md: 14px;
+            --shadow-3d: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 35px rgba(56, 189, 248, 0.15);
             --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: "DM Sans", sans-serif; }
 
         body {
             min-height: 100vh;
@@ -43,294 +38,262 @@
             display: grid;
             place-items: center;
             padding: 24px;
-            font-family: "Inter", sans-serif;
-            background: var(--bg);
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             overflow-x: hidden;
             position: relative;
-            color: var(--text-main);
         }
 
-        /* ── Animated background orbs ── */
-        .bg-orbs {
+        /* 3D Canvas Mesh Background */
+        #bg3dCanvas {
             position: fixed;
-            inset: 0;
-            pointer-events: none;
-            overflow: hidden;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             z-index: 0;
+            pointer-events: none;
+            opacity: 0.5;
         }
 
-        .orb {
-            position: absolute;
+        /* Ambient Glow Blobs */
+        .ambient-glow {
+            position: fixed;
             border-radius: 50%;
-            filter: blur(90px);
-            opacity: 0.25;
-            animation: orbFloat linear infinite;
-        }
-
-        .orb-1 {
-            width: 500px; height: 500px;
-            background: radial-gradient(circle, var(--green), transparent);
-            top: -150px; left: -100px;
-            animation-duration: 22s;
-            animation-delay: 0s;
-        }
-        .orb-2 {
-            width: 400px; height: 400px;
-            background: radial-gradient(circle, var(--cyan), transparent);
-            bottom: -100px; right: -80px;
-            animation-duration: 28s;
-            animation-delay: -8s;
-        }
-        .orb-3 {
-            width: 350px; height: 350px;
-            background: radial-gradient(circle, var(--purple), transparent);
-            top: 40%; left: 60%;
-            animation-duration: 18s;
-            animation-delay: -14s;
-        }
-
-        @keyframes orbFloat {
-            0%   { transform: translate(0, 0) scale(1); }
-            33%  { transform: translate(30px, -40px) scale(1.08); }
-            66%  { transform: translate(-20px, 20px) scale(0.96); }
-            100% { transform: translate(0, 0) scale(1); }
-        }
-
-        /* Grid texture overlay */
-        .bg-grid {
-            position: fixed;
-            inset: 0;
+            filter: blur(120px);
             pointer-events: none;
             z-index: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-            background-size: 40px 40px;
+            opacity: 0.25;
+            animation: pulseGlow 12s ease-in-out infinite alternate;
+        }
+        .glow-1 {
+            width: 550px;
+            height: 550px;
+            background: radial-gradient(circle, var(--primary), transparent);
+            top: -150px;
+            left: -100px;
+        }
+        .glow-2 {
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, var(--accent-purple), transparent);
+            bottom: -100px;
+            right: -80px;
+            animation-delay: -6s;
         }
 
-        /* ── Auth card ── */
+        @keyframes pulseGlow {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.15) translate(40px, -30px); }
+        }
+
+        /* AUTH SHELL CARD */
         .shell {
             width: min(440px, 100%);
             padding: 40px;
-            border-radius: 24px;
-            background: var(--bg-card);
-            backdrop-filter: blur(28px);
-            -webkit-backdrop-filter: blur(28px);
-            border: 1px solid var(--border);
-            box-shadow:
-                0 32px 80px rgba(0, 0, 0, 0.7),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
+            background: var(--card-bg);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--shadow-3d);
             position: relative;
             z-index: 1;
-            animation: cardEntry 0.7s var(--ease-out) both;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-        .shell:hover {
-            border-color: rgba(0, 255, 65, 0.3);
-            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 255, 65, 0.08);
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            transition: transform 0.4s var(--ease-out), box-shadow 0.4s;
         }
 
-        @keyframes cardEntry {
-            from { opacity: 0; transform: translateY(32px) scale(0.97); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
+        .shell:hover {
+            border-color: var(--primary);
+            box-shadow: 0 30px 60px rgba(56, 189, 248, 0.25);
         }
 
         .brand {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             color: #fff;
-            font: 700 1.5rem "Space Grotesk", sans-serif;
-            letter-spacing: -.04em;
+            font: 800 1.5rem "Space Grotesk", sans-serif;
             text-decoration: none;
-            transition: opacity 0.2s;
         }
-        .brand:hover { opacity: 0.9; }
-        .brand span { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
+        .brand span {
+            background: linear-gradient(135deg, var(--primary), var(--accent-purple));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
         h1 {
-            margin: 32px 0 6px;
+            margin: 24px 0 6px;
             font: 800 2.2rem "Space Grotesk", sans-serif;
-            letter-spacing: -.05em;
-            color: #fff;
+            letter-spacing: -0.04em;
+            color: var(--text-main);
         }
 
         .intro {
-            margin: 0 0 28px;
+            margin-bottom: 28px;
             color: var(--text-muted);
-            font-size: .95rem;
+            font-size: 0.95rem;
         }
 
         label {
             display: block;
             margin: 18px 0 8px;
-            font-size: .82rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.8);
-            letter-spacing: .02em;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         input {
             width: 100%;
             padding: 14px 18px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.04);
-            color: #fff;
-            font: 500 .95rem "Inter", sans-serif;
-            transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-md);
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--text-main);
+            font-size: 0.95rem;
             outline: none;
-        }
-        input::placeholder { color: rgba(255,255,255,0.3); }
-        input:focus {
-            border-color: var(--green);
-            background: rgba(255, 255, 255, 0.07);
-            box-shadow: 0 0 0 3px rgba(0, 255, 65, 0.2);
+            backdrop-filter: blur(10px);
+            transition: border-color 0.25s, box-shadow 0.25s;
         }
 
-        /* ── Primary submit button ── */
-        button[type="submit"], .btn-primary {
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        button[type="submit"] {
             width: 100%;
             margin-top: 24px;
             padding: 15px 20px;
-            border: 0;
-            border-radius: 12px;
-            background: var(--green);
-            color: #050811;
-            font: 700 .95rem "Inter", sans-serif;
+            border: none;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, #0284c7 0%, #a855f7 100%);
+            color: #ffffff;
+            font-family: "Space Grotesk", sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
             cursor: pointer;
-            transition: transform 0.25s var(--ease-spring),
-                        box-shadow 0.25s var(--ease-out),
-                        opacity 0.2s, background 0.2s;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 0 20px var(--green-glow);
-        }
-        button[type="submit"]::after, .btn-primary::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
-            transform: translateX(-100%);
-            transition: transform 0.5s;
-        }
-        button[type="submit"]:hover::after, .btn-primary:hover::after {
-            transform: translateX(100%);
-        }
-        button[type="submit"]:hover, .btn-primary:hover {
-            transform: translateY(-2px);
-            background: #26ff59;
-            box-shadow: 0 10px 30px rgba(0, 255, 65, 0.4);
-        }
-        button[type="submit"]:active, .btn-primary:active {
-            transform: translateY(0) scale(0.98);
-        }
-        button[type="submit"]:disabled, .btn-primary:disabled {
-            cursor: wait;
-            opacity: .6;
+            transition: all 0.3s var(--ease-out);
+            box-shadow: 0 4px 20px rgba(168, 85, 247, 0.35);
         }
 
-        /* ── Divider ── */
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(168, 85, 247, 0.55);
+        }
+
         .divider {
             display: flex;
             align-items: center;
             gap: 12px;
             margin: 24px 0;
-            color: rgba(255,255,255,0.4);
-            font-size: .82rem;
-            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-transform: uppercase;
         }
+
         .divider::before, .divider::after {
             content: "";
             height: 1px;
             flex: 1;
-            background: var(--border);
+            background: var(--card-border);
         }
 
-        /* ── Google button wrapper ── */
         .google-button {
             min-height: 44px;
             display: flex;
             justify-content: center;
         }
 
-        /* ── GitHub button ── */
         .github-button {
             width: 100%;
             margin-top: 14px;
             padding: 14px 18px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            color: #fff;
-            font: 600 .92rem "Inter", sans-serif;
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-md);
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--text-main);
+            font-weight: 700;
+            font-size: 0.92rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
             text-decoration: none;
-            transition: background 0.25s, border-color 0.25s, transform 0.25s var(--ease-spring), box-shadow 0.25s;
+            backdrop-filter: blur(10px);
+            transition: all 0.25s var(--ease-out);
         }
+
         .github-button:hover {
-            background: rgba(255, 255, 255, 0.12);
-            border-color: rgba(255, 255, 255, 0.35);
+            border-color: var(--primary);
+            color: var(--primary);
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 15px var(--primary-glow);
         }
+
         .github-button svg {
             width: 20px;
             height: 20px;
-            fill: #fff;
+            fill: currentColor;
             flex-shrink: 0;
         }
 
-        /* ── Error message ── */
         .message {
             min-height: 20px;
-            margin: 12px 0 0;
+            margin: 14px 0 0;
             color: #f87171;
-            font-size: .84rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
         }
 
-        /* ── Footer link ── */
         .footer {
-            margin: 26px 0 0;
-            color: rgba(255, 255, 255, 0.45);
+            margin-top: 26px;
+            color: var(--text-muted);
             text-align: center;
-            font-size: .88rem;
+            font-size: 0.88rem;
         }
+
         .footer a {
-            color: var(--lime);
-            font-weight: 600;
+            color: var(--primary);
+            font-weight: 700;
             text-decoration: none;
-            transition: opacity 0.2s;
         }
-        .footer a:hover { opacity: 0.8; }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
 
         @media (max-width: 480px) {
-            .shell { padding: 28px 22px; }
+            .shell { padding: 28px 20px; }
         }
     </style>
 </head>
 
 <body>
-    <div class="bg-orbs" aria-hidden="true">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-        <div class="orb orb-3"></div>
-    </div>
-    <div class="bg-grid" aria-hidden="true"></div>
+    <!-- 3D Canvas Mesh Background -->
+    <canvas id="bg3dCanvas"></canvas>
 
-    <main class="shell">
-        <a class="brand" href="index.html">Auto<span>Hire</span></a>
+    <!-- Ambient Glow Effects -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <main class="shell 3d-card">
+        <a class="brand" href="index.html">🤖 Auto<span>Hire AI</span></a>
         <h1>Sign in</h1>
         <p class="intro">Continue to your career workspace.</p>
 
         <form id="loginForm">
             <label for="emailInput">Email address</label>
-            <input id="emailInput" type="email" autocomplete="email" required>
+            <input id="emailInput" type="email" autocomplete="email" required placeholder="you@example.com">
             <label for="passInput">Password</label>
-            <input id="passInput" type="password" autocomplete="current-password" required>
-            <button id="loginButton" type="submit">Sign in</button>
+            <input id="passInput" type="password" autocomplete="current-password" required placeholder="••••••••">
+            <button id="loginButton" type="submit">Sign in to Workspace</button>
             <div class="message" id="loginMessage" role="status"></div>
         </form>
 
@@ -350,22 +313,101 @@
             Continue with GitHub
         </a>
 
-        <p class="footer">New to AutoHire? <a href="create-account.html">Create an account</a></p>
+        <p class="footer">New to AutoHire? <a href="register.html">Create an account</a></p>
     </main>
 
     <script>
+        // 1. Canvas 3D Particle Mesh
+        (function init3DCanvas() {
+            const canvas = document.getElementById("bg3dCanvas");
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            let width = (canvas.width = window.innerWidth);
+            let height = (canvas.height = window.innerHeight);
+
+            const particles = [];
+            const particleCount = Math.min(Math.floor(width / 24), 50);
+
+            for (let i = 0; i < particleCount; i++) {
+                particles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    radius: Math.random() * 2 + 1,
+                    color: Math.random() > 0.5 ? "rgba(56, 189, 248, 0.35)" : "rgba(168, 85, 247, 0.25)"
+                });
+            }
+
+            window.addEventListener("resize", () => {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            });
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if (p.x < 0 || p.x > width) p.vx *= -1;
+                    if (p.y < 0 || p.y > height) p.vy *= -1;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const p2 = particles[j];
+                        const dx = p.x - p2.x;
+                        const dy = p.y - p2.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < 120) {
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.strokeStyle = `rgba(56, 189, 248, ${0.12 * (1 - dist / 120)})`;
+                            ctx.lineWidth = 0.8;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        })();
+
+        // 2. 3D Card Perspective Tilt
+        const card = document.querySelector(".shell");
+        if (card) {
+            card.addEventListener("mousemove", (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = ((y - centerY) / centerY) * -5;
+                const rotateY = ((x - centerX) / centerX) * 5;
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1.01)`;
+            });
+
+            card.addEventListener("mouseleave", () => {
+                card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
+            });
+        }
+
+        // 3. Auth Handlers Logic
         const apiOrigin = window.AUTOHIRE_API_ORIGIN;
         const apiUrl = window.AUTOHIRE_API_URL;
         const loginMessage = document.getElementById("loginMessage");
 
-        function showServerError() {
-            loginMessage.textContent = `Cannot connect to the AutoHire backend at ${apiOrigin}.`;
-        }
-
         async function handleCredentialResponse(response) {
             let googleUser = null;
             try {
-                // Decode Google JWT ID Token payload directly in JS
                 const base64Url = response.credential.split('.')[1];
                 const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
                 const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
@@ -401,14 +443,17 @@
             }
 
             if (googleUser && googleUser.email) {
-                const profileObj = {
-                    fullName: googleUser.name,
-                    emailAddress: googleUser.email,
-                    picture: googleUser.picture || ""
-                };
-                googleUser.profile = profileObj;
-                localStorage.setItem("autoHireProfile", JSON.stringify(profileObj));
-                localStorage.setItem("loggedInUser", JSON.stringify(googleUser));
+                if (window.AutoHireAuth) {
+                    window.AutoHireAuth.saveUser(googleUser);
+                } else {
+                    const profileObj = {
+                        fullName: googleUser.name,
+                        emailAddress: googleUser.email,
+                        picture: googleUser.picture || ""
+                    };
+                    localStorage.setItem("autoHireProfile", JSON.stringify(profileObj));
+                    localStorage.setItem("loggedInUser", JSON.stringify(googleUser));
+                }
                 window.location.href = "index.html";
             } else {
                 loginMessage.textContent = "Google sign-in could not be completed.";
@@ -437,6 +482,9 @@
                     loginMessage.textContent = data.message || "Invalid email or password.";
                     return;
                 }
+                if (data.user && window.AutoHireAuth) {
+                    window.AutoHireAuth.saveUser(data.user);
+                }
                 window.location.href = "index.html";
             } catch (error) {
                 const email = document.getElementById("emailInput").value.trim().toLowerCase();
@@ -447,18 +495,36 @@
                     loginMessage.textContent = "Invalid email or password.";
                     return;
                 }
-                localStorage.setItem("autoHireProfile", JSON.stringify(user));
-                localStorage.setItem("loggedInUser", JSON.stringify(user));
+                if (window.AutoHireAuth) {
+                    window.AutoHireAuth.saveUser(user);
+                } else {
+                    localStorage.setItem("autoHireProfile", JSON.stringify(user));
+                    localStorage.setItem("loggedInUser", JSON.stringify(user));
+                }
                 window.location.href = "index.html";
             } finally {
                 loginButton.disabled = false;
-                loginButton.textContent = "Sign in";
+                loginButton.textContent = "Sign in to Workspace";
             }
         });
 
-        fetch(`${apiUrl}/me`, { credentials: "include" }).then(async (response) => {
-            if (response.ok) window.location.href = "index.html";
-        }).catch(() => { });
+        window.addEventListener("DOMContentLoaded", () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get("switch") === "true") {
+                loginMessage.style.color = "#38bdf8";
+                loginMessage.textContent = "🔄 Account reset. Select or sign in with another account below:";
+                if (window.google && window.google.accounts && window.google.accounts.id) {
+                    window.google.accounts.id.disableAutoSelect();
+                }
+            } else {
+                const currentUser = window.AutoHireAuth ? window.AutoHireAuth.getUser() : null;
+                if (currentUser) {
+                    fetch(`${apiUrl}/me`, { credentials: "include" }).then(async (response) => {
+                        if (response.ok) window.location.href = "index.html";
+                    }).catch(() => { });
+                }
+            }
+        });
     </script>
 </body>
 
