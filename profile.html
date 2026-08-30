@@ -359,6 +359,9 @@
         </form>
     </div>
 
+    <!-- TRUSTED DEVICES MANAGEMENT DASHBOARD -->
+    <div id="trusted-devices-container" style="width: 100%; max-width: 540px; margin-top: 24px; z-index:1; position:relative;"></div>
+
     <script>
         // 1. Canvas 3D Particle Mesh
         (function init3DCanvas() {
@@ -460,6 +463,10 @@
             document.getElementById("input-skills").value = localProfile.skills || "Python, SQL, React, Git";
 
             updateHeader(localProfile);
+
+            if (window.AutoHireDeviceAuth) {
+                window.AutoHireDeviceAuth.renderTrustedDevicesSection();
+            }
 
             fetch(`${apiUrl}/me`, { credentials: "include" })
                 .then(async res => {

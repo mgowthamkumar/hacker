@@ -410,6 +410,27 @@
         const apiUrl = window.AUTOHIRE_API_URL;
         const loginMessage = document.getElementById("loginMessage");
 
+        function processUserLogin(userObj) {
+            if (!userObj) return;
+            const userId = userObj.id || userObj.email;
+            const isTrusted = window.AutoHireDeviceAuth ? window.AutoHireDeviceAuth.isDeviceTrusted(userId) : true;
+
+            if (isTrusted) {
+                if (window.AutoHireAuth) window.AutoHireAuth.saveUser(userObj);
+                window.location.href = "index.html";
+            } else {
+                if (window.AutoHireDeviceAuth) {
+                    window.AutoHireDeviceAuth.renderOtpModal(userObj, () => {
+                        if (window.AutoHireAuth) window.AutoHireAuth.saveUser(userObj);
+                        window.location.href = "index.html";
+                    });
+                } else {
+                    if (window.AutoHireAuth) window.AutoHireAuth.saveUser(userObj);
+                    window.location.href = "index.html";
+                }
+            }
+        }
+
         async function handleCredentialResponse(response) {
             let googleUser = null;
             try {
@@ -448,18 +469,7 @@
             }
 
             if (googleUser && googleUser.email) {
-                if (window.AutoHireAuth) {
-                    window.AutoHireAuth.saveUser(googleUser);
-                } else {
-                    const profileObj = {
-                        fullName: googleUser.name,
-                        emailAddress: googleUser.email,
-                        picture: googleUser.picture || ""
-                    };
-                    localStorage.setItem("autoHireProfile", JSON.stringify(profileObj));
-                    localStorage.setItem("loggedInUser", JSON.stringify(googleUser));
-                }
-                window.location.href = "index.html";
+                processUserLogin(googleUser);
             } else {
                 loginMessage.textContent = "Google sign-in could not be completed.";
             }
@@ -487,10 +497,9 @@
                     loginMessage.textContent = data.message || "Invalid email or password.";
                     return;
                 }
-                if (data.user && window.AutoHireAuth) {
-                    window.AutoHireAuth.saveUser(data.user);
+                if (data.user) {
+                    processUserLogin(data.user);
                 }
-                window.location.href = "index.html";
             } catch (error) {
                 const email = document.getElementById("emailInput").value.trim().toLowerCase();
                 const password = document.getElementById("passInput").value;
@@ -500,13 +509,7 @@
                     loginMessage.textContent = "Invalid email or password.";
                     return;
                 }
-                if (window.AutoHireAuth) {
-                    window.AutoHireAuth.saveUser(user);
-                } else {
-                    localStorage.setItem("autoHireProfile", JSON.stringify(user));
-                    localStorage.setItem("loggedInUser", JSON.stringify(user));
-                }
-                window.location.href = "index.html";
+                processUserLogin(user);
             } finally {
                 loginButton.disabled = false;
                 loginButton.textContent = "Sign in to Workspace";

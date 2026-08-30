@@ -97,6 +97,14 @@
         document.head.appendChild(script);
     }
 
+    // Dynamically load device-auth.js if not already present
+    if (!document.querySelector('script[src="device-auth.js"]')) {
+        const script = document.createElement("script");
+        script.src = "device-auth.js";
+        script.async = true;
+        document.head.appendChild(script);
+    }
+
     // Global Permanent Google Sign-In & Account Switcher Auth Handler
     window.AutoHireAuth = {
         getUser() {
