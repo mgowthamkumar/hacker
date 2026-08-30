@@ -1065,12 +1065,12 @@
             resultsSection.style.display = 'flex';
             resultsSection.scrollIntoView({ behavior: 'smooth' });
 
-            if (data.warning_message || data.warning_msg) {
-                guidanceMsg.innerText = `ℹ️ ${data.warning_message || data.warning_msg}`;
+            if (data.warning_message || data.warning_msg || data.is_valid_resume === false) {
+                guidanceMsg.innerHTML = `<div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 14px 18px; border-radius: 12px; margin-bottom: 20px; font-weight: 600;">⚠️ ${data.warning_message || data.warning_msg || "Please upload a complete resume containing Personal Details, Career Objective, Education, Technical Skills, and Languages!"}</div>`;
                 guidanceMsg.style.display = "block";
             }
 
-            const domainTitle = data.predicted_domain || (data.domain && data.domain.title) || "Engineering & Computer Science";
+            const domainTitle = data.predicted_domain || (data.domain && data.domain.title) || "Engineering & Technology Student";
             const domainIcon = data.domain_icon || (data.domain && data.domain.icon) || "🎓";
             const domainDesc = data.domain_description || (data.domain && data.domain.description) || "Field-tailored analysis";
 
@@ -1123,8 +1123,7 @@
                 const categoryText = item.category || 'Skill Goal';
                 const descText = item.desc || item.description || 'Targeted study material.';
                 const impactText = item.impact || 'Boost Selection Odds';
-                const topicParam = encodeURIComponent(titleText);
-                const pdfUrl = `${window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800"}/api/study-pack/pdf?topic=${topicParam}`;
+                const escapedTitle = titleText.replace(/'/g, "\\'");
 
                 el.innerHTML = `
                     <div style="font-size: 0.78rem; font-weight: 700; color: var(--primary); text-transform: uppercase;">${categoryText}</div>
@@ -1132,7 +1131,7 @@
                     <p style="font-size: 0.88rem; color: var(--text-muted);">${descText}</p>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px;">
                       <div style="font-size:0.83rem; font-weight:700; color:var(--success);">✨ ${impactText}</div>
-                      <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer" style="padding:6px 12px; font-size:0.8rem; background:rgba(56, 189, 248, 0.15); border:1px solid #38bdf8; color:#38bdf8; border-radius:8px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📥 Download Study Pack (PDF)</a>
+                      <button onclick="downloadStudyPackPdf('${escapedTitle}')" style="padding:8px 14px; font-size:0.83rem; background:rgba(56, 189, 248, 0.18); border:1px solid #38bdf8; color:#38bdf8; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">📥 Download Study Pack (PDF)</button>
                     </div>
                 `;
                 roadmapList.appendChild(el);
@@ -1182,6 +1181,68 @@
             const barEl = document.getElementById(`bar-${id}`);
             if (scoreEl) scoreEl.innerText = `${rounded}%`;
             if (barEl) barEl.style.width = `${rounded}%`;
+        }
+
+        function downloadStudyPackPdf(topicTitle) {
+            const topicParam = encodeURIComponent(topicTitle || "Data Structures & Algorithms Mastery");
+            const apiOrigin = window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800";
+            const pdfUrl = `${apiOrigin}/api/study-pack/pdf?topic=${topicParam}`;
+
+            const win = window.open(pdfUrl, '_blank');
+            setTimeout(() => {
+                if (!win || win.closed || typeof win.closed === 'undefined') {
+                    openClientPrintableWindow(topicTitle);
+                }
+            }, 600);
+        }
+
+        function openClientPrintableWindow(topicTitle) {
+            const printableWindow = window.open('', '_blank', 'width=800,height=900');
+            if (!printableWindow) return;
+
+            printableWindow.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AutoHire RAG Study Pack - ${topicTitle}</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 30px; }
+    .header { border-bottom: 2px solid #38bdf8; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 22px; font-weight: 800; color: #38bdf8; }
+    .title-box { background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .category-badge { display: inline-block; background: #a855f7; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+    h1 { margin: 0 0 8px 0; color: #f8fafc; font-size: 24px; }
+    p { line-height: 1.6; color: #cbd5e1; font-size: 14px; }
+    .section-title { font-size: 18px; color: #38bdf8; margin-top: 24px; margin-bottom: 12px; border-left: 4px solid #38bdf8; padding-left: 10px; font-weight: 700; }
+    .card { background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+    .level { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+    @media print { body { background: #fff; color: #000; } .title-box, .card { border-color: #ccc; background: #f9f9f9; } h1, .section-title, .logo { color: #000; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">✨ AutoHire RAG Study Pack</div>
+    <div>Auto-Generated PDF</div>
+  </div>
+  <div class="title-box">
+    <span class="category-badge">Target Skill Roadmap</span>
+    <h1>${topicTitle}</h1>
+    <p>RAG Match analysis identified "${topicTitle}" as a key recommended topic to boost your candidate odds.</p>
+  </div>
+  <div class="section-title">📖 Core Theoretical Fundamentals</div>
+  <div class="card">
+    <p style="margin:0;">Master core concepts, problem-solving patterns, and production architectural best practices for ${topicTitle}.</p>
+  </div>
+  <div class="section-title">🚀 Difficulty Progression Roadmap</div>
+  <div class="card"><div class="level">🟢 Easy (Fundamentals)</div><p style="margin:4px 0 0 0;">Q1. Explain foundational syntax, keywords, and core principles of ${topicTitle}.</p></div>
+  <div class="card"><div class="level">🟡 Medium (Application)</div><p style="margin:4px 0 0 0;">Q2. Implement an intermediate practical feature using ${topicTitle}.</p></div>
+  <div class="card"><div class="level">🔴 Hard (Production Scale)</div><p style="margin:4px 0 0 0;">Q3. Architect an end-to-end production solution optimizing ${topicTitle}.</p></div>
+  <script>
+    window.onload = function() { setTimeout(function() { window.print(); }, 500); };
+  </script>
+</body>
+</html>`);
+            printableWindow.document.close();
         }
 
         // Header Auth Management

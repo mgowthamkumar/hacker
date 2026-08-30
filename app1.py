@@ -5,13 +5,78 @@ from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 app = FastAPI(title="AutoHire RAG AI Resume Analyzer API")
 
 @app.get("/")
 async def home():
     return FileResponse("analyzer.html")
+
+@app.get("/api/study-pack/pdf")
+@app.get("/api/study-pack/html")
+async def get_study_pack_pdf(topic: str = "Data Structures & Algorithms Mastery", name: str = "Candidate"):
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AutoHire RAG Study Pack - {topic}</title>
+  <style>
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 40px; }}
+    .header {{ border-bottom: 2px solid #38bdf8; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }}
+    .logo {{ font-size: 24px; font-weight: 800; color: #38bdf8; text-decoration: none; }}
+    .title-box {{ background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 24px; margin-bottom: 24px; }}
+    .category-badge {{ display: inline-block; background: #a855f7; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }}
+    h1 {{ margin: 0 0 10px 0; color: #f8fafc; font-size: 26px; }}
+    p {{ line-height: 1.6; color: #94a3b8; }}
+    .section-title {{ font-size: 20px; color: #38bdf8; margin-top: 30px; margin-bottom: 16px; border-left: 4px solid #38bdf8; padding-left: 12px; }}
+    .progression-card {{ background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 18px; margin-bottom: 14px; }}
+    .level-header {{ font-weight: 700; font-size: 16px; margin-bottom: 6px; }}
+    .q-text {{ color: #e2e8f0; font-weight: 600; margin-bottom: 4px; }}
+    .footer {{ text-align: center; margin-top: 50px; font-size: 12px; color: #64748b; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 20px; }}
+    @media print {{ body {{ background: #fff; color: #000; }} .title-box, .progression-card {{ border-color: #ccc; background: #f9f9f9; }} h1, .section-title, .logo {{ color: #000; }} }}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">✨ AutoHire RAG Study Pack</div>
+    <div>Candidate: {name}</div>
+  </div>
+
+  <div class="title-box">
+    <span class="category-badge">RAG Vector Roadmap</span>
+    <h1>{topic}</h1>
+    <p><strong>Rationale:</strong> RAG Vector Match analysis identified "{topic}" as a critical skill gap to maximize your interview success rate.</p>
+  </div>
+
+  <div class="section-title">📖 Core Theoretical Fundamentals</div>
+  <div class="progression-card">
+    <p style="color: #cbd5e1; margin: 0;">Comprehensive theoretical framework, problem solving patterns, and core architectural principles for mastering {topic}.</p>
+  </div>
+
+  <div class="section-title">🚀 Difficulty Progression Roadmap</div>
+  <div class="progression-card">
+    <div class="level-header">🟢 Easy (Fundamentals)</div>
+    <div class="q-text">Q1. Define key terms, syntax patterns, and fundamental concepts for {topic}.</div>
+  </div>
+  <div class="progression-card">
+    <div class="level-header">🟡 Medium (Application)</div>
+    <div class="q-text">Q2. Solve an intermediate practical challenge involving {topic} design.</div>
+  </div>
+  <div class="progression-card">
+    <div class="level-header">🔴 Hard (Production Scale)</div>
+    <div class="q-text">Q3. Architect an end-to-end production solution applying {topic} principles.</div>
+  </div>
+
+  <div class="footer">
+    AutoHire AI RAG Grounded Career Engine &copy; 2026. All rights reserved.
+  </div>
+  <script>
+    window.onload = function() {{ setTimeout(function() {{ window.print(); }}, 600); }};
+  </script>
+</body>
+</html>"""
+    return HTMLResponse(content=html_content)
 
 # Enable CORS for local HTML frontend interaction
 app.add_middleware(
@@ -138,10 +203,11 @@ def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]
     if not any(anchor in lower_text for anchor in languages_anchors):
         missing_sections.append("Languages")
 
-    if word_count < 10:
-        return False, False, "Please provide more resume text for analysis.", missing_sections
+    if missing_sections:
+        warning_msg = f"⚠️ Invalid Resume Alert: Document is missing required section(s): {', '.join(missing_sections)}. Please upload a complete resume containing Personal Details, Career Objective, Education, Technical Skills, and Languages!"
+        return False, False, warning_msg, missing_sections
 
-    return True, True, "", missing_sections
+    return True, True, "", []
 
 
 def predict_resume_domain(raw_text: str, detected_skills: List[str]) -> tuple[str, str, str]:
@@ -212,11 +278,11 @@ def predict_resume_domain(raw_text: str, detected_skills: List[str]) -> tuple[st
         top_domain = "engineering"
 
     domain_meta = {
-        "arts": ("Arts, Design & Humanities", "🎨", "Focused on creative arts, visual design, media, copywriting, UI/UX, and literature."),
-        "doctor": ("Medical & Healthcare / Doctor", "🩺", "Focused on clinical medicine, patient care, surgical procedures, nursing, and health sciences."),
-        "science": ("Pure & Applied Science / Research", "🔬", "Focused on scientific research, laboratory experimentation, chemistry, biology, and data analytics."),
-        "business": ("Business, Finance & Commerce", "💼", "Focused on business administration, finance, marketing, human resources, and operations."),
-        "engineering": ("Engineering & Computer Science", "💻", "Focused on software development, technology systems, data engineering, and technical problem solving.")
+        "arts": ("Arts & Commerce Student", "🎨", "Degree background in Arts, Humanities, Fine Arts, Design, or Commerce."),
+        "doctor": ("Medical & Healthcare Student", "🩺", "Degree background in Medical Sciences, MBBS, Pharmacy, Nursing, or Clinical Healthcare."),
+        "science": ("Science & Research Student", "🔬", "Degree background in B.Sc, M.Sc, Pure Sciences, Mathematics, or Laboratory Research."),
+        "business": ("Arts & Commerce Student", "📊", "Degree background in B.Com, M.Com, BBA, MBA, Finance, or Commerce."),
+        "engineering": ("Engineering & Technology Student", "💻", "Degree background in B.Tech, M.Tech, B.E, M.E, BCA, MCA, or Computer Science.")
     }
 
     return domain_meta[top_domain]
