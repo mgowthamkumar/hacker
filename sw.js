@@ -1,15 +1,106 @@
-// AutoHire Service Worker for Web Push Notifications & Background Waitlist Events
-const CACHE_NAME = 'autohire-sw-v1';
+// AutoHire Service Worker: Offline Cache Engine & Web Push Notifications
+const CACHE_NAME = 'autohire-pwa-v1';
+const STATIC_ASSETS = [
+  '/',
+  'index.html',
+  'chatbot.html',
+  'analyzer.html',
+  'dashboard.html',
+  'profile.html',
+  'sign-in.html',
+  'register.html',
+  'getstarted.html',
+  'api-config.js',
+  'waitlist-system.js',
+  'manifest.json',
+  'icon-192.svg',
+  'icon-512.svg'
+];
 
+// Install Event: Cache Core Static Resources
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS).catch((err) => {
+        console.warn('PWA Asset caching notice:', err);
+      });
+    }).then(() => self.skipWaiting())
+  );
 });
 
+// Activate Event: Cleanup Old Caches
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
-// Handle Background Push Event
+// Fetch Interceptor: Cache-First for Static Assets, Network-First for API Requests
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
+
+  // Ignore non-GET requests
+  if (request.method !== 'GET') return;
+
+  // Strategy 1: Network-First for API endpoints with Fallback Cache
+  if (url.pathname.includes('/api/')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(request).then((cachedResponse) => {
+            if (cachedResponse) return cachedResponse;
+            return new Response(JSON.stringify({ error: 'Offline mode active', jobs: [] }), {
+              headers: { 'Content-Type': 'application/json' }
+            });
+          });
+        })
+    );
+    return;
+  }
+
+  // Strategy 2: Cache-First with Network Update for Static HTML/CSS/JS/Assets
+  event.respondWith(
+    caches.match(request).then((cachedResponse) => {
+      if (cachedResponse) {
+        // Fetch background update
+        fetch(request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, networkResponse));
+          }
+        }).catch(() => {});
+        return cachedResponse;
+      }
+
+      return fetch(request).then((response) => {
+        if (response && response.status === 200 && response.type === 'basic') {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        }
+        return response;
+      }).catch(() => {
+        if (request.headers.get('accept').includes('text/html')) {
+          return caches.match('index.html');
+        }
+      });
+    })
+  );
+});
+
+// Web Push Notification Handler
 self.addEventListener('push', (event) => {
   let data = {
     title: 'A spot opened up!',
@@ -28,8 +119,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: 'background.png.jpeg',
-    badge: 'background.png.jpeg',
+    icon: 'icon-192.svg',
+    badge: 'icon-192.svg',
     data: {
       url: data.url || 'chatbot.html',
       jobId: data.jobId
@@ -48,7 +139,7 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Handle Notification Click Action
+// Notification Click Handler
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 

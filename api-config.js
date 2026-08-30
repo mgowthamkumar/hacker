@@ -29,6 +29,61 @@
     window.AUTOHIRE_ANALYZER_ORIGIN = analyzerOrigin;
     window.AUTOHIRE_API_URL = `${apiOrigin}/api/auth`;
 
+    // 1. PWA Service Worker & Install Prompt Event Listener
+    let deferredPwaPrompt = null;
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPwaPrompt = e;
+        window.deferredPwaPrompt = e;
+        initPwaInstallButton();
+    });
+
+    function initPwaInstallButton() {
+        if (document.getElementById("autohire-pwa-install-btn")) return;
+
+        const navActions = document.querySelector(".nav-actions") || document.querySelector(".auth-links");
+        if (!navActions) return;
+
+        const installBtn = document.createElement("button");
+        installBtn.id = "autohire-pwa-install-btn";
+        installBtn.type = "button";
+        installBtn.style.cssText = "display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, rgba(56,189,248,0.15), rgba(168,85,247,0.15)); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; font-weight:700; font-size:0.85rem; padding:8px 14px; border-radius:999px; cursor:pointer; backdrop-filter:blur(12px); transition:all 0.25s;";
+        installBtn.innerHTML = `📱 Install App`;
+
+        installBtn.addEventListener("click", async () => {
+            if (deferredPwaPrompt || window.deferredPwaPrompt) {
+                const promptEvent = deferredPwaPrompt || window.deferredPwaPrompt;
+                promptEvent.prompt();
+                const choice = await promptEvent.userChoice;
+                if (choice.outcome === "accepted") {
+                    installBtn.style.display = "none";
+                }
+                deferredPwaPrompt = null;
+                window.deferredPwaPrompt = null;
+            } else {
+                alert("📱 To install AutoHire AI as an app on your device:\n\n• iOS (Safari): Tap Share ➔ 'Add to Home Screen'\n• Android / Chrome: Tap 3 dots menu ➔ 'Install App' or 'Add to Home Screen'");
+            }
+        });
+
+        // Insert before profileCard or bell container
+        const profileCard = document.getElementById("profileCard") || document.getElementById("autohire-bell-container");
+        if (profileCard && profileCard.parentNode === navActions) {
+            navActions.insertBefore(installBtn, profileCard);
+        } else {
+            navActions.appendChild(installBtn);
+        }
+    }
+
+    // Register Service Worker if supported
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("sw.js").catch((err) => {
+                console.warn("PWA Service Worker registration notice:", err);
+            });
+        });
+    }
+
     // Dynamically load waitlist-system.js if not already present
     if (!document.querySelector('script[src="waitlist-system.js"]')) {
         const script = document.createElement("script");
@@ -192,6 +247,12 @@
             if (window.AutoHireWaitlist) {
                 window.AutoHireWaitlist.initHeaderBellUI();
             }
+
+            initPwaInstallButton();
         }
     };
+
+    window.addEventListener("DOMContentLoaded", () => {
+        initPwaInstallButton();
+    });
 })();
