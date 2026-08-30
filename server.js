@@ -9,6 +9,7 @@ const { spawn } = require("child_process");
 const app = express();
 const jobAggregator = require("./job-aggregator.js");
 const ragEngine = require("./rag-engine.js");
+const studyPackGenerator = require("./study-pack-generator.js");
 jobAggregator.startDailyScheduler();
 
 let analyzerProcess;
@@ -552,6 +553,23 @@ app.post("/api/rag/analyze", express.json(), upload.single("file"), async (req, 
     const targetSkills = (req.body && req.body.company_skills) || "";
     const analysis = await ragEngine.analyzeResumeWithRag(resumeText, targetSkills);
     return res.json(analysis);
+});
+
+// --- Study Pack Printable Document & PDF Generator Endpoints ---
+app.get(["/api/study-pack/pdf", "/api/study-pack/html"], async (req, res) => {
+    const topic = req.query.topic || req.query.gap || "Data Structures & Algorithms Mastery";
+    const name = req.query.name || "Candidate User";
+    const data = studyPackGenerator.generateStudyPackData(topic, name);
+    const html = studyPackGenerator.generateStudyPackHtml(data);
+    res.setHeader("Content-Type", "text/html");
+    return res.send(html);
+});
+
+app.get("/api/study-pack/data", async (req, res) => {
+    const topic = req.query.topic || req.query.gap || "Data Structures & Algorithms Mastery";
+    const name = req.query.name || "Candidate User";
+    const data = studyPackGenerator.generateStudyPackData(topic, name);
+    return res.json(data);
 });
 
 // Resume Analyzer Proxy & Express Standalone Handler

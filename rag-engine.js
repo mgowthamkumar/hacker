@@ -148,22 +148,93 @@ class RagEngine {
 
   ingestStudyResources() {
     const resources = [
-      // Engineering & DSA
-      { id: "study_dsa_1", title: "Data Structures & Algorithms Roadmap", category: "Engineering", type: "StudyGuide", text: "Master Arrays, Linked Lists, Trees, Dynamic Programming, and Graph algorithms. Practice 50+ LeetCode problems to boost technical interview odds." },
-      { id: "study_system_design_1", title: "Scalable System Design & Microservices", category: "Engineering", type: "StudyGuide", text: "Learn load balancing, caching strategies (Redis), database sharding, REST/GraphQL APIs, and message queues (Kafka, RabbitMQ)." },
-      { id: "study_fullstack_1", title: "Modern Fullstack Web Development", category: "Engineering", type: "StudyGuide", text: "Build React, Next.js, Node.js Express, and PostgreSQL applications with state management and authentication." },
-      
-      // Teaching & Education
-      { id: "study_teaching_1", title: "Computer Science Pedagogy & Curriculum", category: "Teaching", type: "StudyGuide", text: "Structure hands-on programming labs, interactive coding quizzes, and project-based software education for students." },
-      { id: "study_teaching_2", title: "Online Course Creation & Assessment", category: "Teaching", type: "StudyGuide", text: "Design video lectures, automated autograders, and technical curriculum roadmaps for EdTech platforms." },
-      
-      // Arts & Design
-      { id: "study_arts_1", title: "UI/UX Design Systems & Figma Prototyping", category: "Arts", type: "StudyGuide", text: "Master color theory, glassmorphism, responsive grid layouts, design tokens, accessibility (WCAG), and interactive Figma prototypes." },
-      { id: "study_arts_2", title: "3D Graphics & Motion Animation", category: "Arts", type: "StudyGuide", text: "Build 3D web graphics using Three.js, WebGL shaders, Blender modeling, and GSAP micro-animations." },
+      // 1. ENGINEERING & COMPUTER SCIENCE (DSA, System Design, Fullstack, AI)
+      {
+        id: "study_dsa_full",
+        title: "Data Structures & Algorithms Mastery",
+        category: "Engineering",
+        type: "StudyGuide",
+        text: "Comprehensive DSA Guide: Covers Arrays, Hash Maps, Two Pointers, Sliding Window, Trees, Graphs, Dynamic Programming, and Greedy Algorithms.",
+        questions: {
+          easy: "Q1. Implement Two-Sum using Hash Map in O(n) time. Explain why Hash Map reduces lookup complexity to O(1).",
+          medium: "Q2. Solve Lowest Common Ancestor in a Binary Tree using DFS recursion. What is the space complexity of the call stack?",
+          hard: "Q3. Solve Longest Increasing Subsequence using Dynamic Programming & Binary Search in O(n log n) time."
+        },
+        theory: "Fundamental algorithms optimize time & space efficiency. Time complexity ranges from O(1) constant time to O(n!) factorial. Understanding data structures like Heaps and Disjoint Sets is essential for high-scale backend engineering."
+      },
+      {
+        id: "study_system_design_full",
+        title: "High-Scalability System Design & Architecture",
+        category: "Engineering",
+        type: "StudyGuide",
+        text: "System Design Framework: Covers Microservices, Caching (Redis), Load Balancing, Database Sharding, Rate Limiting, and Pub/Sub Messaging.",
+        questions: {
+          easy: "Q1. Compare SQL (Relational) vs NoSQL (Document/Key-Value) databases for transactional consistency.",
+          medium: "Q2. Design an API Rate Limiter using Token Bucket / Leaky Bucket algorithm. Handle distributed Redis counters.",
+          hard: "Q3. Architect a scalable Distributed Notification System handling 10 Million push notifications per minute."
+        },
+        theory: "Distributed systems manage high availability, CAP theorem trade-offs (Consistency, Availability, Partition Tolerance), and horizontal scaling via load balancers and message brokers."
+      },
 
-      // Medical & Healthcare
-      { id: "study_medical_1", title: "Healthcare Data Analytics & Informatics", category: "Medical", type: "StudyGuide", text: "Analyze clinical health records, EHR standards (HL7/FHIR), SQL health databases, and predictive medical AI models." },
-      { id: "study_medical_2", title: "Biomedical Signal Processing & AI", category: "Medical", type: "StudyGuide", text: "Process ECG/EEG signals, medical imaging classification, and clinical decision support algorithms." }
+      // 2. TEACHING & EDUCATION (Pedagogy, EdTech, STEM)
+      {
+        id: "study_teaching_full",
+        title: "Computer Science Pedagogy & Active Learning",
+        category: "Teaching",
+        type: "StudyGuide",
+        text: "Educational Framework: Curriculum Design, Bloom's Taxonomy, Project-Based Learning, Automated Grading Systems, and Student Mentorship.",
+        questions: {
+          easy: "Q1. How do you apply Bloom's Taxonomy when creating introductory Python coding exercises?",
+          medium: "Q2. Design a 6-week hands-on Web Development curriculum for undergraduate students with continuous assessments.",
+          hard: "Q3. Formulate an automated autograder evaluation pipeline that safely sandboxes untrusted student code submissions."
+        },
+        theory: "Active learning increases student retention by 50% compared to passive lecturing. Incorporating pair programming and automated diagnostic feedback creates engaging learning environments."
+      },
+
+      // 3. ARTS & DESIGN (UI/UX, Glassmorphism, 3D WebGL)
+      {
+        id: "study_arts_full",
+        title: "UI/UX Design Systems & 3D Interactive Graphics",
+        category: "Arts",
+        type: "StudyGuide",
+        text: "Design Systems & Motion: Color Theory, Grid Systems, Glassmorphism visual effects, Accessibility (WCAG 2.1), Figma Auto-Layout, and Three.js 3D WebGL shaders.",
+        questions: {
+          easy: "Q1. What are the key color contrast accessibility guidelines under WCAG 2.1 AA standard for text elements?",
+          medium: "Q2. How do you construct a reusable Design Token system in Figma and translate it into CSS Custom Properties?",
+          hard: "Q3. Write a Three.js fragment shader that animates a 3D glowing cybernetic torus mesh responding to mouse cursor position."
+        },
+        theory: "User interface design combines cognitive ergonomics with visual hierarchy. Glassmorphism employs backdrop-filters and subtle borders to create spatial depth."
+      },
+
+      // 4. MEDICAL & HEALTHCARE (Informatics, Clinical AI)
+      {
+        id: "study_medical_full",
+        title: "Healthcare Informatics & Medical AI Systems",
+        category: "Medical",
+        type: "StudyGuide",
+        text: "Medical Data Engineering: Electronic Health Records (EHR), HL7/FHIR Data Protocols, Medical Imaging (DICOM), Clinical Decision Support, and HIPAA Compliance.",
+        questions: {
+          easy: "Q1. Explain the role of the FHIR standard in modern medical data interoperability.",
+          medium: "Q2. Design a data pipeline to securely parse DICOM medical image metadata while ensuring HIPAA de-identification.",
+          hard: "Q3. Build a predictive Convolutional Neural Network (CNN) model for automated chest X-ray disease classification with ROC-AUC analysis."
+        },
+        theory: "Medical informatics requires strict patient privacy (HIPAA/GDPR) combined with standardized data formats like LOINC and SNOMED CT for diagnostic accuracy."
+      },
+
+      // 5. BUSINESS & PRODUCT MANAGEMENT
+      {
+        id: "study_business_full",
+        title: "Product Strategy & Technical Business Analytics",
+        category: "Business",
+        type: "StudyGuide",
+        text: "Product Lifecycle Management: Market Sizing, Customer Journey Mapping, A/B Testing Experiments, OKRs, and SaaS Unit Economics (LTV/CAC).",
+        questions: {
+          easy: "Q1. Define LTV (Lifetime Value) and CAC (Customer Acquisition Cost) and explain the ideal ratio for SaaS products.",
+          medium: "Q2. How do you design a statistical A/B test to evaluate candidate signup conversion on a landing page?",
+          hard: "Q3. Formulate a product roadmap for scaling an enterprise AI platform from MVP to 100k active monthly users."
+        },
+        theory: "Product management bridges engineering, user experience, and business strategy by prioritizing user impact and quantitative data metrics."
+      }
     ];
 
     resources.forEach(res => this.vectorStore.addDocument(res));

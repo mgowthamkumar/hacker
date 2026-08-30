@@ -961,15 +961,15 @@
             }
 
             const targetSkills = companySkillsInput.value.trim();
-            const analyzerOrigin = window.AUTOHIRE_ANALYZER_ORIGIN || window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:5503";
+            const apiOrigin = window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800";
 
             try {
                 const formData = new FormData();
-                if (selectedFile) formData.append('resume', selectedFile);
+                if (selectedFile) formData.append('file', selectedFile);
                 if (extractedText) formData.append('resume_text', extractedText);
-                if (targetSkills) formData.append('target_skills', targetSkills);
+                if (targetSkills) formData.append('company_skills', targetSkills);
 
-                const response = await fetch(`${analyzerOrigin}/api/analyze_resume`, {
+                const response = await fetch(`${apiOrigin}/api/rag/analyze`, {
                     method: 'POST',
                     body: formData
                 });
@@ -1077,11 +1077,17 @@
             (data.roadmap || []).forEach(item => {
                 const el = document.createElement('div');
                 el.className = 'roadmap-item';
+                const topicParam = encodeURIComponent(item.title || "Custom Skill Accelerator");
+                const pdfUrl = `${window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800"}/api/study-pack/pdf?topic=${topicParam}`;
+
                 el.innerHTML = `
                     <div style="font-size: 0.78rem; font-weight: 700; color: var(--primary); text-transform: uppercase;">${item.category || 'Skill Goal'}</div>
                     <strong style="font-family:'Space Grotesk', sans-serif; font-size: 1.1rem; color: var(--text-main);">${item.title}</strong>
                     <p style="font-size: 0.88rem; color: var(--text-muted);">${item.desc}</p>
-                    <div style="font-size:0.83rem; font-weight:700; color:var(--success); margin-top:4px;">✨ ${item.impact || 'Boost Odds'}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px;">
+                      <div style="font-size:0.83rem; font-weight:700; color:var(--success);">✨ ${item.impact || 'Boost Odds'}</div>
+                      <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer" style="padding:6px 12px; font-size:0.8rem; background:rgba(56, 189, 248, 0.15); border:1px solid #38bdf8; color:#38bdf8; border-radius:8px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📥 Download Study Pack (PDF)</a>
+                    </div>
                 `;
                 roadmapList.appendChild(el);
             });
