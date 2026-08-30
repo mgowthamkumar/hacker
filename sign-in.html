@@ -406,9 +406,16 @@
                     emailAddress: googleUser.email,
                     picture: googleUser.picture || ""
                 };
+                googleUser.picture = googleUser.picture || "";
                 googleUser.profile = profileObj;
                 localStorage.setItem("autoHireProfile", JSON.stringify(profileObj));
                 localStorage.setItem("loggedInUser", JSON.stringify(googleUser));
+                if (googleUser.picture) {
+                    localStorage.setItem("userAvatar", googleUser.picture);
+                    localStorage.setItem("profilePic", googleUser.picture);
+                }
+                localStorage.setItem("username", googleUser.name);
+                localStorage.setItem("user", googleUser.name);
                 window.location.href = "index.html";
             } else {
                 loginMessage.textContent = "Google sign-in could not be completed.";
