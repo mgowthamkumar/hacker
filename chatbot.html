@@ -885,7 +885,7 @@
       }
 
       allLoadedJobs = jobs;
-      agentMessage.innerText = `🤖 Agent: Aggregated ${responseData?.total || jobs.length} live opportunities (Page ${currentPage} of ${totalPagesCount})!`;
+      agentMessage.innerHTML = `🧠 <strong>RAG AI Grounded Vector Search</strong>: Aggregated ${responseData?.total || jobs.length} vector-matched opportunities (Page ${currentPage} of ${totalPagesCount})!`;
       categoryFilterBar.style.display = "flex";
       agentMessage.style.display = "flex";
       displayJobs(jobs);

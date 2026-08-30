@@ -8,6 +8,7 @@ const { spawn } = require("child_process");
 
 const app = express();
 const jobAggregator = require("./job-aggregator.js");
+const ragEngine = require("./rag-engine.js");
 jobAggregator.startDailyScheduler();
 
 let analyzerProcess;
@@ -516,9 +517,41 @@ app.get("/api/jobs", async (req, res) => {
             page: 1,
             limit: 12,
             totalPages: 1,
-            jobs: jobs
-        });
-    }
+});
+
+// --- RAG (Retrieval-Augmented Generation) API Endpoints ---
+app.all("/api/rag/query", express.json(), async (req, res) => {
+    const query = req.query.q || req.query.prompt || (req.body && (req.body.q || req.body.prompt)) || "Which jobs match my skills?";
+    const category = req.query.category || (req.body && req.body.category) || "all";
+    const result = await ragEngine.answerQueryWithRag(query, category);
+    return res.json(result);
+});
+
+app.get("/api/rag/search", async (req, res) => {
+    const query = req.query.q || req.query.prompt || "";
+    const k = parseInt(req.query.k || 5, 10);
+    const category = req.query.category || "all";
+    const matches = ragEngine.similaritySearch(query, k, category);
+    return res.json({
+        success: true,
+        query,
+        count: matches.length,
+        results: matches.map(m => ({
+            id: m.document.id,
+            category: m.document.category,
+            type: m.document.type,
+            title: m.document.metadata.title || m.document.id,
+            similarityScore: Math.round(m.similarityScore * 100) + "%",
+            metadata: m.document.metadata
+        }))
+    });
+});
+
+app.post("/api/rag/analyze", express.json(), upload.single("file"), async (req, res) => {
+    const resumeText = (req.body && req.body.resume_text) || (req.file ? req.file.buffer.toString() : "") || "Software Engineer resume with Python, React, SQL and AWS.";
+    const targetSkills = (req.body && req.body.company_skills) || "";
+    const analysis = await ragEngine.analyzeResumeWithRag(resumeText, targetSkills);
+    return res.json(analysis);
 });
 
 // Resume Analyzer Proxy & Express Standalone Handler
