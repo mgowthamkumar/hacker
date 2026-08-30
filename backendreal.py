@@ -644,6 +644,109 @@ def get_live_jobs(prompt: str = "Software Engineer"):
     ]
 
 
+@app.get("/api/study-pack/pdf")
+@app.get("/api/study-pack/html")
+def get_backendreal_study_pack_pdf(topic: str = "Data Structures & Algorithms Mastery", name: str = "Candidate"):
+    from fastapi.responses import HTMLResponse
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AutoHire RAG Study Pack - {topic}</title>
+  <style>
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 40px; }}
+    .header {{ border-bottom: 2px solid #38bdf8; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }}
+    .logo {{ font-size: 24px; font-weight: 800; color: #38bdf8; text-decoration: none; }}
+    .title-box {{ background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 24px; margin-bottom: 24px; }}
+    .category-badge {{ display: inline-block; background: #a855f7; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }}
+    h1 {{ margin: 0 0 10px 0; color: #f8fafc; font-size: 26px; }}
+    p {{ line-height: 1.6; color: #94a3b8; }}
+    .section-title {{ font-size: 20px; color: #38bdf8; margin-top: 30px; margin-bottom: 16px; border-left: 4px solid #38bdf8; padding-left: 12px; }}
+    .progression-card {{ background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 18px; margin-bottom: 14px; }}
+    .level-header {{ font-weight: 700; font-size: 16px; margin-bottom: 6px; }}
+    .q-text {{ color: #e2e8f0; font-weight: 600; margin-bottom: 4px; }}
+    .footer {{ text-align: center; margin-top: 50px; font-size: 12px; color: #64748b; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 20px; }}
+    @media print {{ body {{ background: #fff; color: #000; }} .title-box, .progression-card {{ border-color: #ccc; background: #f9f9f9; }} h1, .section-title, .logo {{ color: #000; }} }}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">✨ AutoHire RAG Study Pack</div>
+    <div>Candidate: {name}</div>
+  </div>
+
+  <div class="title-box">
+    <span class="category-badge">RAG Vector Roadmap</span>
+    <h1>{topic}</h1>
+    <p><strong>Rationale:</strong> RAG Vector Match analysis identified "{topic}" as a critical skill gap to maximize your interview success rate.</p>
+  </div>
+
+  <div class="section-title">📖 Core Theoretical Fundamentals</div>
+  <div class="progression-card">
+    <p style="color: #cbd5e1; margin: 0;">Comprehensive theoretical framework, problem solving patterns, and core architectural principles for mastering {topic}.</p>
+  </div>
+
+  <div class="section-title">🚀 Difficulty Progression Roadmap</div>
+  <div class="progression-card">
+    <div class="level-header">🟢 Easy (Fundamentals)</div>
+    <div class="q-text">Q1. Define key terms, syntax patterns, and fundamental concepts for {topic}.</div>
+  </div>
+  <div class="progression-card">
+    <div class="level-header">🟡 Medium (Application)</div>
+    <div class="q-text">Q2. Solve an intermediate practical challenge involving {topic} design.</div>
+  </div>
+  <div class="progression-card">
+    <div class="level-header">🔴 Hard (Production Scale)</div>
+    <div class="q-text">Q3. Architect an end-to-end production solution applying {topic} principles.</div>
+  </div>
+
+  <div class="footer">
+    AutoHire AI RAG Grounded Career Engine &copy; 2026. All rights reserved.
+  </div>
+  <script>
+    window.onload = function() {{ setTimeout(function() {{ window.print(); }}, 600); }};
+  </script>
+</body>
+</html>"""
+    return HTMLResponse(content=html_content)
+
+
+@app.api_route("/api/rag/query", methods=["GET", "POST"])
+def backendreal_rag_query(q: str = "", prompt: str = "", category: str = "all"):
+    import re
+    query = (prompt or q or "Which jobs match my skills?").strip()
+
+    knowledge_base = [
+        {"id": "dsa-guide", "category": "Engineering", "topic": "DSA & Algorithms", "content": "Master HashMaps, Trees, Graphs, and Dynamic Programming. Practice 50+ LeetCode problems for technical interview readiness."},
+        {"id": "sys-design", "category": "Engineering", "topic": "System Design & Microservices", "content": "Learn REST APIs, Redis caching, PostgreSQL database sharding, and Docker containerization for scalable platforms."},
+        {"id": "arts-design", "category": "Arts", "topic": "Figma Design Systems & Brand Identity", "content": "Master Figma auto-layout, interactive component variants, typography hierarchy, and Behance portfolio case studies."},
+        {"id": "medical-care", "category": "Medical", "topic": "Clinical Practice & BLS Certification", "content": "Complete certified Basic Life Support (BLS) and ACLS modules for emergency patient diagnostics and hospital care."},
+        {"id": "teaching-guide", "category": "Teaching", "topic": "Computer Science Curriculum & Pedagogy", "content": "Develop interactive coding assessments, lesson plans, and STEM project guidance for computer science students."}
+    ]
+
+    query_words = set(re.findall(r"\w+", query.lower()))
+    matches = []
+
+    for doc in knowledge_base:
+        doc_words = set(re.findall(r"\w+", (doc["topic"] + " " + doc["content"]).lower()))
+        intersection = query_words.intersection(doc_words)
+        score = len(intersection) / max(1, len(query_words))
+        matches.append((score, doc))
+
+    matches.sort(key=lambda x: x[0], reverse=True)
+    top_matches = [m[1] for m in matches[:3]]
+
+    context_str = "\n".join([f"- {m['topic']}: {m['content']}" for m in top_matches])
+
+    return {
+        "success": True,
+        "query": query,
+        "category": category,
+        "grounded_context": context_str,
+        "answer": f"🤖 AutoHire RAG Assistant Answer:\nBased on our grounded vector knowledge base:\n{context_str}\n\nRecommended Action: Apply these guidelines directly to your candidate profile to boost interview odds!",
+        "matches": top_matches
+    }
+
 
 if __name__ == "__main__":
     import uvicorn

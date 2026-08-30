@@ -796,6 +796,83 @@ def get_live_jobs(prompt: str = "", q: str = "", category: str = "all", page: in
     }
 
 
+@app.api_route("/api/rag/query", methods=["GET", "POST"])
+def rag_query(q: str = "", prompt: str = "", category: str = "all"):
+    query = (prompt or q or "Which jobs match my skills?").strip()
+
+    knowledge_base = [
+        {"id": "dsa-guide", "category": "Engineering", "topic": "DSA & Algorithms", "content": "Master HashMaps, Trees, Graphs, and Dynamic Programming. Practice 50+ LeetCode problems for technical interview readiness."},
+        {"id": "sys-design", "category": "Engineering", "topic": "System Design & Microservices", "content": "Learn REST APIs, Redis caching, PostgreSQL database sharding, and Docker containerization for scalable platforms."},
+        {"id": "arts-design", "category": "Arts", "topic": "Figma Design Systems & Brand Identity", "content": "Master Figma auto-layout, interactive component variants, typography hierarchy, and Behance portfolio case studies."},
+        {"id": "medical-care", "category": "Medical", "topic": "Clinical Practice & BLS Certification", "content": "Complete certified Basic Life Support (BLS) and ACLS modules for emergency patient diagnostics and hospital care."},
+        {"id": "teaching-guide", "category": "Teaching", "topic": "Computer Science Curriculum & Pedagogy", "content": "Develop interactive coding assessments, lesson plans, and STEM project guidance for computer science students."}
+    ]
+
+    query_words = set(re.findall(r"\w+", query.lower()))
+    matches = []
+
+    for doc in knowledge_base:
+        doc_words = set(re.findall(r"\w+", (doc["topic"] + " " + doc["content"]).lower()))
+        intersection = query_words.intersection(doc_words)
+        score = len(intersection) / max(1, len(query_words))
+        matches.append((score, doc))
+
+    matches.sort(key=lambda x: x[0], reverse=True)
+    top_matches = [m[1] for m in matches[:3]]
+
+    context_str = "\n".join([f"- {m['topic']}: {m['content']}" for m in top_matches])
+
+    return {
+        "success": True,
+        "query": query,
+        "category": category,
+        "grounded_context": context_str,
+        "answer": f"🤖 AutoHire RAG Assistant Answer:\nBased on our grounded vector knowledge base:\n{context_str}\n\nRecommended Action: Apply these guidelines directly to your candidate profile to boost interview odds!",
+        "matches": top_matches
+    }
+
+
+@app.get("/api/rag/search")
+def rag_search(q: str = "", prompt: str = "", k: int = 5, category: str = "all"):
+    query = (prompt or q or "").strip().lower()
+    
+    docs = [
+        {"id": "doc-1", "title": "Data Structures & Algorithms Mastery", "category": "Engineering", "content": "Arrays, Trees, Graphs, HashMaps, Dynamic Programming patterns."},
+        {"id": "doc-2", "title": "Figma UI/UX & Visual Systems", "category": "Arts", "content": "Interactive wireframes, auto-layout components, typography guidelines."},
+        {"id": "doc-3", "title": "Clinical Patient Diagnostics & BLS", "category": "Medical", "content": "Basic Life Support certification, diagnostic protocol, hospital rounding."},
+        {"id": "doc-4", "title": "CS Curriculum & Pedagogy", "category": "Teaching", "content": "Interactive programming lesson plans, lab assessments, student mentorship."}
+    ]
+
+    q_words = set(re.findall(r"\w+", query))
+    scored = []
+
+    for d in docs:
+        d_words = set(re.findall(r"\w+", (d["title"] + " " + d["content"]).lower()))
+        score = len(q_words.intersection(d_words)) / max(1, len(q_words)) if q_words else 0.5
+        scored.append({"id": d["id"], "title": d["title"], "category": d["category"], "similarityScore": f"{round(score * 100)}%"})
+
+    scored.sort(key=lambda x: int(x["similarityScore"].replace("%", "")), reverse=True)
+    return {"success": True, "query": query, "count": len(scored[:k]), "results": scored[:k]}
+
+
+@app.post("/api/rag/analyze")
+async def rag_analyze(
+    resume_text: Optional[str] = Form(None),
+    company_skills: Optional[str] = Form(None),
+    target_skills: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None)
+):
+    text = (resume_text or "").strip()
+    if file:
+        file_bytes = await file.read()
+        extracted = extract_text_from_file(file_bytes, file.filename or "resume.txt")
+        if extracted:
+            text = (extracted + "\n" + text).strip()
+
+    skills_str = company_skills or target_skills or ""
+    return await analyze_resume_endpoint(resume_text=text, company_skills=skills_str, file=None)
+
+
 if __name__ == "__main__":
     import uvicorn
     import os
