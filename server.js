@@ -518,6 +518,10 @@ app.get("/api/jobs", async (req, res) => {
             page: 1,
             limit: 12,
             totalPages: 1,
+            categories: { All: jobs.length },
+            jobs: jobs
+        });
+    }
 });
 
 // --- RAG (Retrieval-Augmented Generation) API Endpoints ---

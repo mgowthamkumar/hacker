@@ -793,8 +793,10 @@
       const origins = [];
       if (window.AUTOHIRE_API_ORIGIN) origins.push(window.AUTOHIRE_API_ORIGIN);
       if (window.location.origin && window.location.origin !== "null") origins.push(window.location.origin);
-      origins.push("http://127.0.0.1:5501");
       origins.push("http://127.0.0.1:8800");
+      origins.push("http://127.0.0.1:5503");
+      origins.push("http://127.0.0.1:5501");
+      origins.push("http://127.0.0.1:5000");
       return Array.from(new Set(origins));
     }
 

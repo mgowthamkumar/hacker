@@ -736,6 +736,66 @@ def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
     return file_bytes.decode("utf-8", errors="ignore")
 
 
+@app.get("/api/jobs")
+def get_live_jobs(prompt: str = "", q: str = "", category: str = "all", page: int = 1, limit: int = 12):
+    user_query = (prompt or q or "").lower().strip()
+    cat_query = (category or "all").lower().strip()
+
+    all_jobs = [
+        { "id": "job-1", "company": "GOOGLE", "title": "Software Engineer", "type": "Job", "category": "Engineering", "location": "Bangalore / Remote", "salary": "₹18,00,000 - ₹30,00,000 / yr", "description": "Develop scalable web services and cloud algorithms.", "ribbonText": "Featured", "ribbonClass": "", "apply_link": "https://careers.google.com/", "signin_link": "https://careers.google.com/" },
+        { "id": "job-2", "company": "MICROSOFT", "title": "Fullstack Developer Intern", "type": "Internship", "category": "Engineering", "location": "Hyderabad, India", "salary": "₹16,00,000 / yr", "description": "Architect web microservices and React interfaces.", "ribbonText": "Internship", "ribbonClass": "intern", "apply_link": "https://careers.microsoft.com/", "signin_link": "https://careers.microsoft.com/" },
+        { "id": "job-3", "company": "MAJOR LEAGUE HACKING", "title": "Global Tech Hackathon 2026", "type": "Hackathon", "category": "Hackathons", "location": "Online / Worldwide", "salary": "Prizes worth $25,000", "description": "Build innovative web & AI applications with developers worldwide.", "ribbonText": "Live Hackathon", "ribbonClass": "hackathon", "apply_link": "https://mlh.io", "signin_link": "https://mlh.io" },
+        { "id": "job-4", "company": "DEVPOST", "title": "AI & Cloud Innovation Challenge", "type": "Hackathon", "category": "Hackathons", "location": "Remote", "salary": "$50,000 Prize Pool", "description": "Develop cutting-edge machine learning models.", "ribbonText": "$50k Prize Pool", "ribbonClass": "hackathon", "apply_link": "https://devpost.com", "signin_link": "https://devpost.com" },
+        { "id": "job-5", "company": "KENDRIYA VIDYALAYA / EDTECH", "title": "Computer Science Instructor", "type": "Job", "category": "Teaching", "location": "Bangalore / Remote", "salary": "₹6,00,000 - ₹12,00,000 / yr", "description": "Teach programming languages, algorithms, and CS fundamentals.", "ribbonText": "Urgent Hiring", "ribbonClass": "", "apply_link": "https://www.indeed.com", "signin_link": "https://www.indeed.com" },
+        { "id": "job-6", "company": "ADOBE & GRAPHIC STUDIOS", "title": "UI/UX & Brand Designer", "type": "Job", "category": "Arts", "location": "Remote / Mumbai", "salary": "₹8,00,000 - ₹14,00,000 / yr", "description": "Create visual design systems, logos, and UI prototypes.", "ribbonText": "Creative Role", "ribbonClass": "", "apply_link": "https://www.behance.net", "signin_link": "https://www.behance.net" },
+        { "id": "job-7", "company": "APOLLO HOSPITALS", "title": "Resident Medical Officer", "type": "Job", "category": "Medical", "location": "Chennai / Delhi", "salary": "₹12,00,000 - ₹20,00,000 / yr", "description": "Clinical patient care, diagnostic reviews, and ER support.", "ribbonText": "Medical Lead", "ribbonClass": "", "apply_link": "https://www.apollohospitals.com", "signin_link": "https://www.apollohospitals.com" }
+    ]
+
+    filtered = []
+    for job in all_jobs:
+        job_cat = job["category"].lower()
+        job_type = job["type"].lower()
+
+        cat_match = (cat_query == "all") or (cat_query == job_cat) or (cat_query in ["internships", "internship"] and job_type == "internship") or (cat_query in ["hackathons", "hackathon"] and job_type == "hackathon")
+        
+        query_match = not user_query or (
+            user_query in job["title"].lower() or
+            user_query in job["company"].lower() or
+            user_query in job["description"].lower() or
+            user_query in job["category"].lower() or
+            user_query in job["type"].lower() or
+            user_query in job["location"].lower()
+        )
+
+        if cat_match and query_match:
+            filtered.append(job)
+
+    categories_count = {
+        "All": len(all_jobs),
+        "Engineering": len([j for j in all_jobs if j["category"] == "Engineering"]),
+        "Teaching": len([j for j in all_jobs if j["category"] == "Teaching"]),
+        "Arts": len([j for j in all_jobs if j["category"] == "Arts"]),
+        "Medical": len([j for j in all_jobs if j["category"] == "Medical"]),
+        "Hackathons": len([j for j in all_jobs if j["type"] == "Hackathon"]),
+        "Internships": len([j for j in all_jobs if j["type"] == "Internship"])
+    }
+
+    total = len(filtered)
+    total_pages = max(1, (total + limit - 1) // limit)
+    start_idx = (page - 1) * limit
+    paginated = filtered[start_idx:start_idx + limit]
+
+    return {
+        "success": True,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "totalPages": total_pages,
+        "categories": categories_count,
+        "jobs": paginated
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     import os
