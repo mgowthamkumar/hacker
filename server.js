@@ -7,6 +7,9 @@ const crypto = require("crypto");
 const { spawn } = require("child_process");
 
 const app = express();
+const jobAggregator = require("./job-aggregator.js");
+jobAggregator.startDailyScheduler();
+
 let analyzerProcess;
 let jobsProcess;
 
@@ -501,34 +504,21 @@ async function fetchExpressJobs(prompt) {
 }
 
 app.get("/api/jobs", async (req, res) => {
-    const userPrompt = req.query.prompt || req.query.q || "Software Engineer";
-
     try {
-        const upstreamUrl = new URL(`http://${jobsHost}:${jobsBackendPort}/api/jobs`);
-        upstreamUrl.search = req.originalUrl.replace(/^\/api\/jobs/, "") || `?prompt=${encodeURIComponent(userPrompt)}`;
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-
-        const response = await fetch(upstreamUrl.toString(), {
-            headers: { Accept: "application/json" },
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-            const payload = await response.text();
-            res.status(response.status);
-            res.set("content-type", response.headers.get("content-type") || "application/json");
-            return res.send(payload);
-        }
+        const aggregatedResult = await jobAggregator.getAggregatedJobs(req.query);
+        return res.json(aggregatedResult);
     } catch (error) {
-        // Python backend not running or timed out — seamlessly use Express job generator
+        const userPrompt = req.query.prompt || req.query.q || "Software Engineer";
+        const jobs = await fetchExpressJobs(userPrompt);
+        return res.json({
+            success: true,
+            total: jobs.length,
+            page: 1,
+            limit: 12,
+            totalPages: 1,
+            jobs: jobs
+        });
     }
-
-    // Express standalone job generator fallback
-    const jobs = await fetchExpressJobs(userPrompt);
-    return res.json(jobs);
 });
 
 // Resume Analyzer Proxy & Express Standalone Handler

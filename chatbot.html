@@ -692,15 +692,25 @@
       <div id="agentMessage" class="agent-status-banner" style="display: none;"></div>
       
       <!-- Category Filter Pills -->
-      <div id="categoryFilterBar" class="chips-container" style="display: none;">
-        <div class="chip active" onclick="filterCategory('all', this)">All Results (<span id="count-all">0</span>)</div>
-        <div class="chip" onclick="filterCategory('Job', this)">Full-Time Jobs (<span id="count-job">0</span>)</div>
-        <div class="chip" onclick="filterCategory('Internship', this)">Internships (<span id="count-intern">0</span>)</div>
-        <div class="chip" onclick="filterCategory('Hackathon', this)">Hackathons (<span id="count-hack">0</span>)</div>
+      <div id="categoryFilterBar" class="chips-container" style="display: none; margin-bottom: 16px; flex-wrap: wrap;">
+        <div class="chip active" onclick="filterCategory('all', this)">🌟 All (<span id="count-all">0</span>)</div>
+        <div class="chip" onclick="filterCategory('Engineering', this)">💻 Engineering (<span id="count-eng">0</span>)</div>
+        <div class="chip" onclick="filterCategory('Teaching', this)">🎓 Teaching (<span id="count-teach">0</span>)</div>
+        <div class="chip" onclick="filterCategory('Arts', this)">🎨 Arts & Design (<span id="count-arts">0</span>)</div>
+        <div class="chip" onclick="filterCategory('Medical', this)">🩺 Medical (<span id="count-med">0</span>)</div>
+        <div class="chip" onclick="filterCategory('Hackathons', this)">🏆 Hackathons (<span id="count-hack">0</span>)</div>
+        <div class="chip" onclick="filterCategory('Internships', this)">💼 Internships (<span id="count-intern">0</span>)</div>
       </div>
 
       <div id="jobsContainer">
         <div class="status-message">🤖 AI Agent is ready! Type your request or choose a quick prompt to begin.</div>
+      </div>
+
+      <!-- Pagination Bar Controls -->
+      <div id="paginationBar" style="display: none; justify-content: center; align-items: center; gap: 14px; margin-top: 24px; padding: 16px; background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; backdrop-filter: blur(16px);">
+        <button id="btnPrevPage" onclick="changePage(-1)" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #f8fafc; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer;">⏮️ Previous</button>
+        <span id="paginationInfo" style="font-weight: 700; font-size: 0.9rem; color: #38bdf8;">Page 1 of 1</span>
+        <button id="btnNextPage" onclick="changePage(1)" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #f8fafc; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer;">Next ⏭️</button>
       </div>
     </div>
   </div>
@@ -827,21 +837,26 @@
       ];
     }
 
-    async function fetchAgentJobs() {
-      jobsContainer.innerHTML = '<div class="status-message">🤖 AutoHire AI Agent is analyzing real-time job listings...</div>';
-      agentMessage.style.display = "none";
-      categoryFilterBar.style.display = "none";
+    let currentCategory = 'all';
+    let currentPage = 1;
+    let totalPagesCount = 1;
 
-      const userQuery = aiPromptInput.value.trim() || "Software Engineer";
+    async function fetchAgentJobs(page = 1) {
+      currentPage = page;
+      jobsContainer.innerHTML = '<div class="status-message">🤖 AutoHire AI Agent is aggregating 100+ live jobs, hackathons, and teaching opportunities...</div>';
+      agentMessage.style.display = "none";
+
+      const userQuery = aiPromptInput.value.trim() || "";
       const backendOrigins = getBackendOrigins();
-      let opportunities = null;
+      let responseData = null;
 
       for (const origin of backendOrigins) {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2500);
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-          const response = await fetch(`${origin}/api/jobs?prompt=${encodeURIComponent(userQuery)}`, {
+          const url = `${origin}/api/jobs?category=${encodeURIComponent(currentCategory)}&page=${currentPage}&limit=12&prompt=${encodeURIComponent(userQuery)}`;
+          const response = await fetch(url, {
             signal: controller.signal,
             headers: { Accept: "application/json" }
           });
@@ -849,44 +864,70 @@
 
           if (response.ok) {
             const data = await response.json();
-            if (Array.isArray(data) && data.length > 0) {
-              opportunities = data;
+            if (data && (Array.isArray(data.jobs) || Array.isArray(data))) {
+              responseData = data;
               break;
             }
           }
         } catch (e) {}
       }
 
-      if (!opportunities || opportunities.length === 0) {
-        opportunities = generateClientFallbackJobs(userQuery);
-        agentMessage.innerText = `🤖 Agent: Retrieved ${opportunities.length} tailored opportunities for "${userQuery}".`;
+      let jobs = [];
+      if (responseData) {
+        jobs = Array.isArray(responseData) ? responseData : (responseData.jobs || []);
+        totalPagesCount = responseData.totalPages || 1;
+        if (responseData.categories) {
+          updateFilterCounts(responseData.categories);
+        }
       } else {
-        agentMessage.innerText = `🤖 Agent: Successfully fetched ${opportunities.length} live opportunities matching your prompt!`;
+        jobs = generateClientFallbackJobs(userQuery);
+        totalPagesCount = 1;
       }
 
-      allLoadedJobs = opportunities;
-      updateFilterCounts(opportunities);
+      allLoadedJobs = jobs;
+      agentMessage.innerText = `🤖 Agent: Aggregated ${responseData?.total || jobs.length} live opportunities (Page ${currentPage} of ${totalPagesCount})!`;
       categoryFilterBar.style.display = "flex";
       agentMessage.style.display = "flex";
-      displayJobs(opportunities);
+      displayJobs(jobs);
+      updatePaginationControls();
     }
 
-    function updateFilterCounts(jobs) {
-      document.getElementById('count-all').innerText = jobs.length;
-      document.getElementById('count-job').innerText = jobs.filter(j => j.type === 'Job').length;
-      document.getElementById('count-intern').innerText = jobs.filter(j => j.type === 'Internship').length;
-      document.getElementById('count-hack').innerText = jobs.filter(j => j.type === 'Hackathon').length;
+    function updateFilterCounts(counts) {
+      if (!counts) return;
+      if (document.getElementById('count-all')) document.getElementById('count-all').innerText = counts.All || counts.all || 0;
+      if (document.getElementById('count-eng')) document.getElementById('count-eng').innerText = counts.Engineering || 0;
+      if (document.getElementById('count-teach')) document.getElementById('count-teach').innerText = counts.Teaching || 0;
+      if (document.getElementById('count-arts')) document.getElementById('count-arts').innerText = counts.Arts || 0;
+      if (document.getElementById('count-med')) document.getElementById('count-med').innerText = counts.Medical || 0;
+      if (document.getElementById('count-hack')) document.getElementById('count-hack').innerText = counts.Hackathons || 0;
+      if (document.getElementById('count-intern')) document.getElementById('count-intern').innerText = counts.Internships || 0;
     }
 
     function filterCategory(catType, element) {
       document.querySelectorAll('#categoryFilterBar .chip').forEach(c => c.classList.remove('active'));
       if (element) element.classList.add('active');
+      currentCategory = catType;
+      fetchAgentJobs(1);
+    }
 
-      if (catType === 'all') {
-        displayJobs(allLoadedJobs);
-      } else {
-        const filtered = allLoadedJobs.filter(j => (j.type || '').toLowerCase() === catType.toLowerCase());
-        displayJobs(filtered);
+    function changePage(delta) {
+      const newPage = currentPage + delta;
+      if (newPage >= 1 && newPage <= totalPagesCount) {
+        fetchAgentJobs(newPage);
+      }
+    }
+
+    function updatePaginationControls() {
+      const paginationBar = document.getElementById("paginationBar");
+      const info = document.getElementById("paginationInfo");
+      const prevBtn = document.getElementById("btnPrevPage");
+      const nextBtn = document.getElementById("btnNextPage");
+
+      if (paginationBar && info) {
+        paginationBar.style.display = "flex";
+        info.innerText = `Page ${currentPage} of ${totalPagesCount}`;
+        if (prevBtn) prevBtn.disabled = (currentPage <= 1);
+        if (nextBtn) nextBtn.disabled = (currentPage >= totalPagesCount);
       }
     }
 
@@ -908,6 +949,8 @@
         const descText = job.description || "Exciting technical opportunity with an innovative team.";
         const jobIdStr = job.jobId || (job.title || "").replace(/\s+/g, '_').toLowerCase();
 
+        const sourceText = job.source || 'AutoHire Verified';
+
         const cardHTML = `
           <div class="job-card 3d-card">
             <div class="card-top">
@@ -925,6 +968,7 @@
               <div class="meta-tag">📍 ${locationText}</div>
               <div class="meta-tag">⚙️ ${domainText}</div>
               <div class="meta-tag">💰 ${salaryText}</div>
+              <div class="meta-tag" style="color:var(--primary); font-weight:700;">🌐 Source: ${sourceText}</div>
             </div>
 
             <div class="job-description">${descText}</div>
