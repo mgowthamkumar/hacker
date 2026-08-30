@@ -901,6 +901,7 @@
         const salaryText = job.salary || "Competitive Compensation";
         const domainText = job.domain || "Technology";
         const descText = job.description || "Exciting technical opportunity with an innovative team.";
+        const jobIdStr = job.jobId || (job.title || "").replace(/\s+/g, '_').toLowerCase();
 
         const cardHTML = `
           <div class="job-card 3d-card">
@@ -927,8 +928,14 @@
               <a href="${signinLink}" target="_blank" rel="noopener noreferrer" class="btn-apply-website">
                 🔐 Sign In & Apply on Company Site
               </a>
-              <button class="btn-apply-autohire" onclick="trackAutoHireApply('${job.company}', '${job.title}', '${applyLink}')">
+              <button class="btn-apply-autohire" onclick="trackAutoHireApply('${job.company.replace(/'/g, "\\'")}', '${job.title.replace(/'/g, "\\'")}', '${applyLink}')">
                 ✨ Apply via AutoHire Profile
+              </button>
+              <button class="btn-apply-autohire" style="background:rgba(234, 179, 8, 0.15); border-color:rgba(234, 179, 8, 0.4); color:#facc15;" onclick="joinJobWaitlist('${jobIdStr}', '${job.title.replace(/'/g, "\\'")}', '${job.company.replace(/'/g, "\\'")}')">
+                ⏳ Join Waitlist Queue
+              </button>
+              <button class="btn-apply-website" style="background:rgba(168, 85, 247, 0.15); border-color:rgba(168, 85, 247, 0.4); color:#c084fc; font-size:0.75rem;" onclick="triggerSlotEvent('${jobIdStr}', '${job.title.replace(/'/g, "\\'")}', '${job.company.replace(/'/g, "\\'")}')">
+                ⚡ Free Up Slot (FIFO Trigger)
               </button>
             </div>
           </div>
@@ -967,6 +974,23 @@
       alert(`✅ Application recorded! Opening ${company} portal...`);
       if (link && link !== "#") {
         window.open(link, "_blank");
+      }
+    }
+
+    function joinJobWaitlist(jobId, title, company) {
+      if (window.AutoHireWaitlist) {
+        window.AutoHireWaitlist.joinWaitlist({ jobId, title, company });
+      }
+    }
+
+    function triggerSlotEvent(jobId, title, company) {
+      if (window.AutoHireWaitlist) {
+        const notifiedUser = window.AutoHireWaitlist.freeUpSlot(jobId, title, company);
+        if (notifiedUser) {
+          alert(`⚡ Free Slot Event Triggered!\n\nNext in line notified (FIFO): ${notifiedUser.userName} (${notifiedUser.userEmail})\nStatus updated to 'notified' with a 24-hour expiry.\nCheck the 🔔 Notification Bell Icon in the top header!`);
+        } else {
+          alert(`ℹ️ Waitlist for "${title}" is currently empty. Join the waitlist first to test the FIFO notification trigger!`);
+        }
       }
     }
 

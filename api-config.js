@@ -29,6 +29,19 @@
     window.AUTOHIRE_ANALYZER_ORIGIN = analyzerOrigin;
     window.AUTOHIRE_API_URL = `${apiOrigin}/api/auth`;
 
+    // Dynamically load waitlist-system.js if not already present
+    if (!document.querySelector('script[src="waitlist-system.js"]')) {
+        const script = document.createElement("script");
+        script.src = "waitlist-system.js";
+        script.async = true;
+        script.onload = () => {
+            if (window.AutoHireWaitlist) {
+                window.AutoHireWaitlist.initHeaderBellUI();
+            }
+        };
+        document.head.appendChild(script);
+    }
+
     // Global Permanent Google Sign-In & Account Switcher Auth Handler
     window.AutoHireAuth = {
         getUser() {
@@ -69,6 +82,10 @@
             if (u.name) {
                 localStorage.setItem("username", u.name);
                 localStorage.setItem("user", u.name);
+            }
+            // Request push notification permissions on user sign in
+            if (window.AutoHireWaitlist) {
+                window.AutoHireWaitlist.requestPermission();
             }
         },
 
@@ -137,6 +154,10 @@
                 if (createProfileLink) createProfileLink.style.display = "none";
                 if (accountButton) accountButton.classList.add("visible");
                 if (profileCard) profileCard.classList.add("visible");
+
+                if (window.AutoHireWaitlist) {
+                    window.AutoHireWaitlist.requestPermission();
+                }
             }
 
             if (accountButton && profileDetails) {
@@ -166,6 +187,10 @@
                     e.preventDefault();
                     this.logout(true);
                 });
+            }
+
+            if (window.AutoHireWaitlist) {
+                window.AutoHireWaitlist.initHeaderBellUI();
             }
         }
     };
