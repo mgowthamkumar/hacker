@@ -204,7 +204,7 @@ def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]
         missing_sections.append("Languages")
 
     if missing_sections:
-        warning_msg = f"⚠️ Invalid Resume Alert: Document is missing required section(s): {', '.join(missing_sections)}. Please upload a complete resume containing Personal Details, Career Objective, Education, Technical Skills, and Languages!"
+        warning_msg = f"⚠️ Invalid Resume Alert: Document does not contain Personal Details ({', '.join(missing_sections)}). Please upload an correct resume!"
         return False, False, warning_msg, missing_sections
 
     return True, True, "", []

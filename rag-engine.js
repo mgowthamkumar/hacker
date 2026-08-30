@@ -371,7 +371,7 @@ class RagEngine {
     }
 
     const isValidResume = missingSections.length === 0;
-    const warningMessage = isValidResume ? null : `⚠️ Invalid Resume Alert: Document is missing required section(s): ${missingSections.join(", ")}. Please upload a complete resume containing Personal Details, Career Objective, Education, Technical Skills, and Languages!`;
+    const warningMessage = isValidResume ? null : `⚠️ Invalid Resume Alert: Document does not contain Personal Details (${missingSections.join(", ")}). Please upload an correct resume!`;
 
     // 2. Precise Degree Subject Classification
     let domainTitle = "Engineering & Technology Student";

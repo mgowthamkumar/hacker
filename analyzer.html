@@ -952,6 +952,20 @@
                 extractedText = selectedFile.name.replace(/[^a-zA-Z0-9\s]/g, ' ');
             }
 
+            const textLower = extractedText.toLowerCase();
+            const hasEmail = /[\w\.-]+@[\w\.-]+\.\w+/.test(extractedText) || textLower.includes("email");
+            const hasPhone = /\+?\d[\d\s-]{7,}/.test(extractedText) || ["phone", "mobile", "contact", "call"].some(k => textLower.includes(k));
+            const hasPersonal = ["linkedin", "github", "portfolio", "location", "address", "city", "state", "pincode", "name"].some(k => textLower.includes(k));
+
+            if (!(hasEmail || hasPhone || hasPersonal)) {
+                guidanceMsg.innerHTML = `<div style="background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; font-weight: 700; font-size: 1.05rem;">⚠️ Invalid Resume: Personal details missing. Please upload an correct resume!</div>`;
+                guidanceMsg.style.display = "block";
+                alert("Please upload an correct resume");
+                btnAnalyze.disabled = false;
+                btnAnalyze.innerText = "🚀 Calculate Selection Odds & Generate Study Roadmap";
+                return;
+            }
+
             const targetSkills = companySkillsInput.value.trim();
             const apiOrigin = window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800";
             const originsToTry = [
@@ -1005,15 +1019,15 @@
             const keywords = ['python', 'java', 'c++', 'javascript', 'react', 'node', 'sql', 'html', 'css', 'git', 'aws', 'docker', 'machine learning', 'api', 'mongodb'];
             const foundSkills = keywords.filter(k => text.includes(k));
 
-            let fieldTitle = "Engineering & Computer Science";
+            let fieldTitle = "Engineering & Technology Student";
             let fieldIcon = "💻";
 
             if (text.includes("design") || text.includes("ui") || text.includes("ux") || text.includes("figma")) {
-                fieldTitle = "UI/UX Design & Product Creation";
+                fieldTitle = "Arts & Commerce Student";
                 fieldIcon = "🎨";
             } else if (text.includes("data") || text.includes("analytics") || text.includes("pandas") || text.includes("sql")) {
-                fieldTitle = "Data Science & Business Analytics";
-                fieldIcon = "📊";
+                fieldTitle = "Science & Research Student";
+                fieldIcon = "🔬";
             }
 
             const hackathonOdds = Math.min(95, Math.max(55, foundSkills.length * 8 + 35));
@@ -1066,8 +1080,10 @@
             resultsSection.scrollIntoView({ behavior: 'smooth' });
 
             if (data.warning_message || data.warning_msg || data.is_valid_resume === false) {
-                guidanceMsg.innerHTML = `<div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 14px 18px; border-radius: 12px; margin-bottom: 20px; font-weight: 600;">⚠️ ${data.warning_message || data.warning_msg || "Please upload a complete resume containing Personal Details, Career Objective, Education, Technical Skills, and Languages!"}</div>`;
+                const msg = data.warning_message || data.warning_msg || "Please upload an correct resume";
+                guidanceMsg.innerHTML = `<div style="background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; font-weight: 700; font-size: 1.05rem;">⚠️ ${msg}</div>`;
                 guidanceMsg.style.display = "block";
+                alert("Please upload an correct resume");
             }
 
             const domainTitle = data.predicted_domain || (data.domain && data.domain.title) || "Engineering & Technology Student";
