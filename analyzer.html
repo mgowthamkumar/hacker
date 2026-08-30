@@ -670,8 +670,8 @@
             <div class="dropzone" id="dropzone">
                 <div class="icon-circle">📄</div>
                 <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; margin-bottom: 6px;">Drop your Resume here or Click to Upload</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Supports PDF or TXT resume files</p>
-                <input type="file" id="file-input" class="file-input" accept=".pdf,.txt">
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Supports PDF, TXT, DOC, DOCX, RTF</p>
+                <input type="file" id="file-input" class="file-input" accept=".pdf,.txt,.doc,.docx,.rtf">
                 <div id="file-info" class="file-info"></div>
             </div>
 
@@ -761,47 +761,22 @@
                 <div id="study-roadmap-list" class="roadmap-grid"></div>
             </div>
 
-            <!-- RESUME AUDIT BREAKDOWN -->
+            <!-- DETAILED ATS FEEDBACK -->
             <div class="section-card">
-                <h2>🔍 Resume Metric Breakdown</h2>
-                <p class="subtitle">Detailed evaluation of action verbs, metrics, structure, and detected skills:</p>
-                
-                <div class="metrics-grid">
-                    <div class="metric-subitem">
-                        <div class="metric-sublabel"><span>Action Impact Verbs</span><span id="score-action">0%</span></div>
-                        <div class="prob-bar-container"><div id="bar-action" class="prob-bar-fill" style="background: var(--primary);"></div></div>
-                    </div>
-                    <div class="metric-subitem">
-                        <div class="metric-sublabel"><span>Quantifiable Metrics (%)</span><span id="score-metrics">0%</span></div>
-                        <div class="prob-bar-container"><div id="bar-metrics" class="prob-bar-fill" style="background: var(--accent-purple);"></div></div>
-                    </div>
-                    <div class="metric-subitem">
-                        <div class="metric-sublabel"><span>Section Structure</span><span id="score-structure">0%</span></div>
-                        <div class="prob-bar-container"><div id="bar-structure" class="prob-bar-fill" style="background: var(--success);"></div></div>
-                    </div>
-                    <div class="metric-subitem">
-                        <div class="metric-sublabel"><span>Word Balance</span><span id="score-length">0%</span></div>
-                        <div class="prob-bar-container"><div id="bar-length" class="prob-bar-fill" style="background: var(--accent-yellow);"></div></div>
-                    </div>
-                </div>
-
-                <div style="margin-top: 25px;">
-                    <h3 style="font-size: 1.1rem; margin-bottom: 12px;">Key Feedback Statements</h3>
-                    <ul id="feedback-list" class="feedback-list"></ul>
-                </div>
+                <h2>📋 Detailed ATS Audit & Improvements</h2>
+                <ul id="feedback-list" class="feedback-list"></ul>
             </div>
 
-            <!-- SUGGESTED CAREER ROLES -->
+            <!-- TARGET JOB MATCHES -->
             <div class="section-card">
-                <h2>💼 Matched Role Suggestions</h2>
-                <p class="subtitle">Based on your detected technical skills and experience:</p>
-                <div id="job-suggestions" class="suggestions-list"></div>
+                <h2>🎯 Live Matching Opportunities</h2>
+                <div id="job-suggestions" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // 1. Canvas 3D Particle Mesh
+        // 1. Canvas 3D Particle Mesh Background
         (function init3DCanvas() {
             const canvas = document.getElementById("bg3dCanvas");
             if (!canvas) return;
@@ -810,14 +785,14 @@
             let height = (canvas.height = window.innerHeight);
 
             const particles = [];
-            const particleCount = Math.min(Math.floor(width / 24), 55);
+            const particleCount = Math.min(Math.floor(width / 24), 45);
 
             for (let i = 0; i < particleCount; i++) {
                 particles.push({
                     x: Math.random() * width,
                     y: Math.random() * height,
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: (Math.random() - 0.5) * 0.5,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: (Math.random() - 0.5) * 0.4,
                     radius: Math.random() * 2 + 1,
                     color: Math.random() > 0.5 ? "rgba(56, 189, 248, 0.35)" : "rgba(168, 85, 247, 0.25)"
                 });
@@ -865,25 +840,7 @@
             animate();
         })();
 
-        // 2. 3D Tilt Hover
-        document.querySelectorAll(".3d-card, .upload-section").forEach((card) => {
-            card.addEventListener("mousemove", (e) => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                const rotateX = ((y - centerY) / centerY) * -5;
-                const rotateY = ((x - centerX) / centerX) * 5;
-                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1.01)`;
-            });
-
-            card.addEventListener("mouseleave", () => {
-                card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
-            });
-        });
-
-        // 3. Resume Analysis & PDF Parsing Logic
+        // 2. Resume File Upload & Detection Logic
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('file-input');
         const fileInfo = document.getElementById('file-info');
@@ -919,7 +876,7 @@
             const ext = (file.name.split('.').pop() || '').toLowerCase();
             
             if (ext === 'txt') {
-                return await file.text();
+                try { return await file.text(); } catch (e) {}
             }
             
             if (ext === 'pdf' && window.pdfjsLib) {
@@ -938,7 +895,14 @@
                     console.warn("Client-side PDF extraction notice: attempting text fallback.");
                 }
             }
-            return "";
+
+            try {
+                const raw = await file.text();
+                const cleaned = raw.replace(/[^\x20-\x7E\s]/g, ' ').replace(/\s+/g, ' ').trim();
+                if (cleaned.length > 15) return cleaned;
+            } catch (e) {}
+
+            return file.name.replace(/[^a-zA-Z0-9\s]/g, ' ');
         }
 
         btnAnalyze.addEventListener('click', async () => {
