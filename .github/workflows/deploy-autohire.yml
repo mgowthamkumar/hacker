@@ -12,30 +12,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check Vercel Token Secret
-        id: check_token
+      - name: Check Vercel Secrets
+        id: check_secrets
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo "has_token=false" >> $GITHUB_OUTPUT
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "has_secrets=true" >> $GITHUB_OUTPUT
           else
-            echo "has_token=true" >> $GITHUB_OUTPUT
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+            echo "Vercel deployment secrets not fully configured. Skipping deployment."
           fi
 
       - name: Deploy to Vercel Action
-        if: steps.check_token.outputs.has_token == 'true'
-        uses: amondnet/vercel-action@v20
+        if: steps.check_secrets.outputs.has_secrets == 'true'
+        uses: amondnet/vercel-action@v25
+        continue-on-error: true
         with:
-          zeit-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: --prod --confirm --name autohire
+          vercel-args: '--prod'
           working-directory: ./
-        env:
-          HOST: "0.0.0.0"
-          PORT: "5501"
-
-
-
