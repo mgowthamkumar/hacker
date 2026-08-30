@@ -946,34 +946,55 @@
             let extractedText = manualText;
             if (selectedFile) {
                 const fileText = await readTextFromFile(selectedFile);
-                if (fileText) extractedText = fileText + "\n" + manualText;
+                if (fileText) extractedText = (fileText + "\n" + manualText).trim();
+            }
+            if (!extractedText && selectedFile) {
+                extractedText = selectedFile.name.replace(/[^a-zA-Z0-9\s]/g, ' ');
             }
 
             const targetSkills = companySkillsInput.value.trim();
             const apiOrigin = window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800";
+            const originsToTry = [
+                `${apiOrigin}/api/rag/analyze`,
+                `${apiOrigin}/api/analyzer`,
+                "http://127.0.0.1:5503/analyzer",
+                "http://127.0.0.1:8800/api/analyzer"
+            ];
 
-            try {
-                const formData = new FormData();
-                if (selectedFile) formData.append('file', selectedFile);
-                if (extractedText) formData.append('resume_text', extractedText);
-                if (targetSkills) formData.append('company_skills', targetSkills);
+            let analyzedData = null;
 
-                const response = await fetch(`${apiOrigin}/api/rag/analyze`, {
-                    method: 'POST',
-                    body: formData
-                });
+            for (const endpoint of originsToTry) {
+                try {
+                    const formData = new FormData();
+                    if (selectedFile) formData.append('file', selectedFile);
+                    if (extractedText) formData.append('resume_text', extractedText);
+                    if (targetSkills) {
+                        formData.append('company_skills', targetSkills);
+                        formData.append('target_skills', targetSkills);
+                    }
 
-                if (response.ok) {
-                    const data = await response.json();
-                    renderAnalysisResults(data);
-                } else {
-                    runClientFallbackAnalysis(extractedText, targetSkills);
-                }
-            } catch (err) {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && (data.domain || data.predicted_domain || data.overall_score || data.total_score)) {
+                            analyzedData = data;
+                            break;
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            btnAnalyze.disabled = false;
+            btnAnalyze.innerText = "🚀 Calculate Selection Odds & Generate Study Roadmap";
+
+            if (analyzedData) {
+                renderAnalysisResults(analyzedData);
+            } else {
                 runClientFallbackAnalysis(extractedText, targetSkills);
-            } finally {
-                btnAnalyze.disabled = false;
-                btnAnalyze.innerText = "🚀 Calculate Selection Odds & Generate Study Roadmap";
             }
         });
 
@@ -1000,10 +1021,25 @@
             const overallScore = Math.round((hackathonOdds + internshipOdds) / 2);
 
             const fallbackData = {
+                predicted_domain: fieldTitle,
+                domain_icon: fieldIcon,
+                domain_description: "Field-tailored analysis & career roadmap evaluation",
                 domain: { title: fieldTitle, icon: fieldIcon, description: "Field-tailored analysis & career roadmap evaluation" },
+                hackathon_probability: hackathonOdds,
+                hackathon_badge: hackathonOdds > 75 ? "High Probability" : "Competitive",
+                hackathon_status: hackathonOdds > 75 ? "Strong technical stack for competitive hackathons." : "Good baseline. Add 1-2 key project frameworks.",
                 hackathon_odds: { score: hackathonOdds, badge: hackathonOdds > 75 ? "High Probability" : "Competitive", status: hackathonOdds > 75 ? "Strong technical stack for competitive hackathons." : "Good baseline. Add 1-2 key project frameworks." },
+                internship_probability: internshipOdds,
+                internship_badge: internshipOdds > 70 ? "Competitive" : "Building Foundation",
+                internship_status: "Profile shows active technical capabilities.",
                 internship_odds: { score: internshipOdds, badge: internshipOdds > 70 ? "Competitive" : "Building Foundation", status: "Profile shows active technical capabilities." },
+                total_score: overallScore,
+                grade: overallScore > 80 ? "Grade A" : "Grade B+",
                 overall_score: { score: overallScore, grade: overallScore > 80 ? "Grade A" : "Grade B+" },
+                action_score: 75,
+                metrics_score: 60,
+                structure_score: 85,
+                length_score: 80,
                 metrics: { action_verbs: 75, metrics_presence: 60, structure: 85, length_balance: 80 },
                 feedback: [
                     "✅ Technical skills detected: " + (foundSkills.slice(0, 5).join(', ') || 'General Engineering'),
@@ -1025,56 +1061,77 @@
         }
 
         function renderAnalysisResults(data) {
+            if (!data) return;
             resultsSection.style.display = 'flex';
             resultsSection.scrollIntoView({ behavior: 'smooth' });
 
-            if (data.domain) {
-                document.getElementById('domain-title').innerText = data.domain.title || "Engineering & Computer Science";
-                document.getElementById('domain-icon').innerText = data.domain.icon || "🎓";
-                document.getElementById('domain-desc').innerText = data.domain.description || "Field-tailored analysis";
+            if (data.warning_message || data.warning_msg) {
+                guidanceMsg.innerText = `ℹ️ ${data.warning_message || data.warning_msg}`;
+                guidanceMsg.style.display = "block";
             }
 
-            if (data.hackathon_odds) {
-                document.getElementById('hackathon-num').innerText = `${data.hackathon_odds.score}%`;
-                document.getElementById('hackathon-badge').innerText = data.hackathon_odds.badge || "Competitive";
-                document.getElementById('hackathon-status').innerText = data.hackathon_odds.status || "";
-                document.getElementById('hackathon-bar').style.width = `${data.hackathon_odds.score}%`;
-            }
+            const domainTitle = data.predicted_domain || (data.domain && data.domain.title) || "Engineering & Computer Science";
+            const domainIcon = data.domain_icon || (data.domain && data.domain.icon) || "🎓";
+            const domainDesc = data.domain_description || (data.domain && data.domain.description) || "Field-tailored analysis";
 
-            if (data.internship_odds) {
-                document.getElementById('internship-num').innerText = `${data.internship_odds.score}%`;
-                document.getElementById('internship-badge').innerText = data.internship_odds.badge || "Competitive";
-                document.getElementById('internship-status').innerText = data.internship_odds.status || "";
-                document.getElementById('internship-bar').style.width = `${data.internship_odds.score}%`;
-            }
+            document.getElementById('domain-title').innerText = domainTitle;
+            document.getElementById('domain-icon').innerText = domainIcon;
+            document.getElementById('domain-desc').innerText = domainDesc;
 
-            if (data.overall_score) {
-                document.getElementById('score-num').innerText = `${data.overall_score.score}/100`;
-                document.getElementById('grade-badge').innerText = data.overall_score.grade || "Grade B";
-                document.getElementById('overall-bar').style.width = `${data.overall_score.score}%`;
-            }
+            const hackScore = (data.hackathon_probability !== undefined) ? data.hackathon_probability : (data.hackathon_odds ? data.hackathon_odds.score : 75);
+            const hackBadge = data.hackathon_badge || (data.hackathon_odds ? data.hackathon_odds.badge : "High Probability");
+            const hackStatus = data.hackathon_status || (data.hackathon_odds ? data.hackathon_odds.status : "Strong technical stack.");
 
-            if (data.metrics) {
-                setMetricBar('action', data.metrics.action_verbs || 70);
-                setMetricBar('metrics', data.metrics.metrics_presence || 65);
-                setMetricBar('structure', data.metrics.structure || 80);
-                setMetricBar('length', data.metrics.length_balance || 75);
-            }
+            document.getElementById('hackathon-num').innerText = `${Math.round(hackScore)}%`;
+            document.getElementById('hackathon-badge').innerText = hackBadge;
+            document.getElementById('hackathon-status').innerText = hackStatus;
+            document.getElementById('hackathon-bar').style.width = `${Math.round(hackScore)}%`;
 
+            const intScore = (data.internship_probability !== undefined) ? data.internship_probability : (data.internship_odds ? data.internship_odds.score : 70);
+            const intBadge = data.internship_badge || (data.internship_odds ? data.internship_odds.badge : "Competitive");
+            const intStatus = data.internship_status || (data.internship_odds ? data.internship_odds.status : "Active technical background.");
+
+            document.getElementById('internship-num').innerText = `${Math.round(intScore)}%`;
+            document.getElementById('internship-badge').innerText = intBadge;
+            document.getElementById('internship-status').innerText = intStatus;
+            document.getElementById('internship-bar').style.width = `${Math.round(intScore)}%`;
+
+            const totalScore = (data.total_score !== undefined) ? data.total_score : (data.overall_score ? data.overall_score.score : 80);
+            const grade = data.grade || (data.overall_score ? data.overall_score.grade : "Grade B+");
+
+            document.getElementById('score-num').innerText = `${Math.round(totalScore)}/100`;
+            document.getElementById('grade-badge').innerText = grade;
+            document.getElementById('overall-bar').style.width = `${Math.round(totalScore)}%`;
+
+            const actionScore = (data.action_score !== undefined) ? data.action_score : (data.metrics ? data.metrics.action_verbs : 75);
+            const metricsScore = (data.metrics_score !== undefined) ? data.metrics_score : (data.metrics ? data.metrics.metrics_presence : 65);
+            const structScore = (data.structure_score !== undefined) ? data.structure_score : (data.metrics ? data.metrics.structure : 80);
+            const lenScore = (data.length_score !== undefined) ? data.length_score : (data.metrics ? data.metrics.length_balance : 80);
+
+            setMetricBar('action', actionScore);
+            setMetricBar('metrics', metricsScore);
+            setMetricBar('structure', structScore);
+            setMetricBar('length', lenScore);
+
+            const roadmapItems = data.study_roadmap || data.roadmap || [];
             const roadmapList = document.getElementById('study-roadmap-list');
             roadmapList.innerHTML = '';
-            (data.roadmap || []).forEach(item => {
+            roadmapItems.forEach((item, idx) => {
                 const el = document.createElement('div');
                 el.className = 'roadmap-item';
-                const topicParam = encodeURIComponent(item.title || "Custom Skill Accelerator");
+                const titleText = item.title || item.topic || `Step ${idx+1}`;
+                const categoryText = item.category || 'Skill Goal';
+                const descText = item.desc || item.description || 'Targeted study material.';
+                const impactText = item.impact || 'Boost Selection Odds';
+                const topicParam = encodeURIComponent(titleText);
                 const pdfUrl = `${window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800"}/api/study-pack/pdf?topic=${topicParam}`;
 
                 el.innerHTML = `
-                    <div style="font-size: 0.78rem; font-weight: 700; color: var(--primary); text-transform: uppercase;">${item.category || 'Skill Goal'}</div>
-                    <strong style="font-family:'Space Grotesk', sans-serif; font-size: 1.1rem; color: var(--text-main);">${item.title}</strong>
-                    <p style="font-size: 0.88rem; color: var(--text-muted);">${item.desc}</p>
+                    <div style="font-size: 0.78rem; font-weight: 700; color: var(--primary); text-transform: uppercase;">${categoryText}</div>
+                    <strong style="font-family:'Space Grotesk', sans-serif; font-size: 1.1rem; color: var(--text-main);">${titleText}</strong>
+                    <p style="font-size: 0.88rem; color: var(--text-muted);">${descText}</p>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px;">
-                      <div style="font-size:0.83rem; font-weight:700; color:var(--success);">✨ ${item.impact || 'Boost Odds'}</div>
+                      <div style="font-size:0.83rem; font-weight:700; color:var(--success);">✨ ${impactText}</div>
                       <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer" style="padding:6px 12px; font-size:0.8rem; background:rgba(56, 189, 248, 0.15); border:1px solid #38bdf8; color:#38bdf8; border-radius:8px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">📥 Download Study Pack (PDF)</a>
                     </div>
                 `;
@@ -1083,24 +1140,36 @@
 
             const feedbackList = document.getElementById('feedback-list');
             feedbackList.innerHTML = '';
-            (data.feedback || []).forEach(msg => {
+            const feedbackItems = data.feedback || [];
+            feedbackItems.forEach(item => {
                 const li = document.createElement('li');
-                li.innerText = msg;
+                const textMsg = (typeof item === 'string') ? item : (item.text || item.message || JSON.stringify(item));
+                li.innerText = textMsg;
+                if (typeof item === 'object' && item.type === 'fail') {
+                    li.style.color = '#f87171';
+                }
                 feedbackList.appendChild(li);
             });
 
+            const jobItems = data.suggested_jobs || data.job_matches || [];
             const suggestionsList = document.getElementById('job-suggestions');
             suggestionsList.innerHTML = '';
-            (data.job_matches || []).forEach(job => {
+            jobItems.forEach(job => {
                 const card = document.createElement('div');
                 card.className = 'suggestion-card';
+                const jobTitle = job.title || 'Recommended Position';
+                const matchRating = job.match_score || job.match_rating || 85;
+                const reasonText = job.reason || job.description || 'Matches your technical skill set.';
+                const matchedSkills = Array.isArray(job.matched_skills) ? job.matched_skills.join(', ') : (job.matched_skills || 'General Stack');
+                const missingSkills = Array.isArray(job.missing_skills) ? job.missing_skills.join(', ') : (job.missing_skills || 'Advanced Architecture');
+
                 card.innerHTML = `
-                    <strong style="font-family:'Space Grotesk', sans-serif; font-size:1.15rem;">${job.title}</strong>
-                    <div style="font-size: 0.88rem; color: var(--text-muted); margin-top: 4px;">Match Rating: <span style="color: var(--primary); font-weight:700;">${job.match_score}%</span></div>
-                    <p style="font-size: 0.9rem; color: #cbd5e1; margin-top: 6px;">${job.reason}</p>
+                    <strong style="font-family:'Space Grotesk', sans-serif; font-size:1.15rem;">${jobTitle}</strong>
+                    <div style="font-size: 0.88rem; color: var(--text-muted); margin-top: 4px;">Match Rating: <span style="color: var(--primary); font-weight:700;">${matchRating}%</span></div>
+                    <p style="font-size: 0.9rem; color: #cbd5e1; margin-top: 6px;">${reasonText}</p>
                     <div style="margin-top: 10px; font-size: 0.83rem;">
-                        <strong>Matched Skills:</strong> ${(job.matched_skills || []).join(', ') || 'None'}<br>
-                        <strong style="color: var(--accent-pink);">Skills to Learn:</strong> ${(job.missing_skills || []).join(', ') || 'None'}
+                        <strong>Matched Skills:</strong> ${matchedSkills}<br>
+                        <strong style="color: var(--accent-pink);">Skills to Learn:</strong> ${missingSkills}
                     </div>
                 `;
                 suggestionsList.appendChild(card);

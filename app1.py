@@ -60,6 +60,13 @@ class AnalysisResult(BaseModel):
     suggested_jobs: List[JobSuggestion]
     study_roadmap: List[StudyTopic]
     skill_gaps: List[str]
+    domain: Optional[dict] = None
+    hackathon_odds: Optional[dict] = None
+    internship_odds: Optional[dict] = None
+    overall_score: Optional[dict] = None
+    metrics: Optional[dict] = None
+    roadmap: Optional[List[dict]] = None
+    job_matches: Optional[List[dict]] = None
 
 
 def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]:
@@ -131,10 +138,10 @@ def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]
     if not any(anchor in lower_text for anchor in languages_anchors):
         missing_sections.append("Languages")
 
-    if missing_sections or word_count < 35:
-        return False, False, "this is not an complete resume", missing_sections
+    if word_count < 10:
+        return False, False, "Please provide more resume text for analysis.", missing_sections
 
-    return True, True, "", []
+    return True, True, "", missing_sections
 
 
 def predict_resume_domain(raw_text: str, detected_skills: List[str]) -> tuple[str, str, str]:
@@ -599,6 +606,9 @@ async def analyze_resume(
     if is_valid_resume and is_complete_resume:
         feedback.append({"type": "pass", "text": f"Technical Skills Analysis -> Predicted Field: {domain_icon} {domain_name}."})
 
+    roadmap_dict_list = [{"title": r.title, "category": r.category, "desc": r.description, "impact": r.impact} for r in roadmap]
+    jobs_dict_list = [{"title": j.title, "match_score": j.match_score, "reason": j.reason, "matched_skills": j.matched_skills, "missing_skills": j.missing_skills} for j in suggested_jobs]
+
     return AnalysisResult(
         is_valid_resume=is_valid_resume and is_complete_resume,
         is_complete_resume=is_complete_resume,
@@ -622,7 +632,14 @@ async def analyze_resume(
         company_skills=company_skill_list,
         suggested_jobs=suggested_jobs,
         study_roadmap=roadmap,
-        skill_gaps=skill_gaps
+        skill_gaps=skill_gaps,
+        domain={"title": domain_name, "icon": domain_icon, "description": domain_desc},
+        hackathon_odds={"score": hack_prob, "badge": "High Probability" if hack_prob > 75 else "Competitive", "status": hack_status},
+        internship_odds={"score": int_prob, "badge": "Competitive" if int_prob > 70 else "Building Foundation", "status": int_status},
+        overall_score={"score": total_score, "grade": grade},
+        metrics={"action_verbs": round(action_score), "metrics_presence": round(metrics_score), "structure": round(structure_score), "length_balance": round(length_score)},
+        roadmap=roadmap_dict_list,
+        job_matches=jobs_dict_list
     )
 
 def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
