@@ -142,6 +142,36 @@ class AnalysisResult(BaseModel):
     compiled_typeset_manual: Optional[str] = None
 
 
+def check_personal_details_section(raw_text: str) -> bool:
+    """Check if the text contains a genuine Personal Details section (Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio)."""
+    if not raw_text:
+        return False
+    lower_text = raw_text.lower()
+
+    # 1. Email check (real email regex pattern or explicit email field label)
+    has_email = bool(re.search(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", raw_text)) or any(
+        k in lower_text for k in ["email:", "e-mail:", "mail id:", "email address:"]
+    )
+
+    # 2. Phone check (valid phone number digits/pattern or explicit phone/mobile label - NO standalone 'call')
+    has_phone_pattern = bool(re.search(r"\b(?:\+?\d{1,3}[-\s]?)?\(?\d{3,5}\)?[-\s]?\d{3,5}[-\s]?\d{3,5}\b", raw_text))
+    has_phone_label = bool(re.search(r"\b(phone|mobile|cell|tel|contact\s*no|contact\s*number|phone\s*no|phone\s*number)\b", lower_text))
+    has_phone = (has_phone_pattern and len(re.findall(r"\d", raw_text)) >= 8) or has_phone_label
+
+    # 3. Personal section headers, social profile links, or explicit candidate name label
+    personal_headers = [
+        "personal details", "personal information", "contact details", "contact info",
+        "contact information", "personal profile", "candidate profile", "applicant details"
+    ]
+    has_header = any(h in lower_text for h in personal_headers)
+    has_links = any(k in lower_text for k in ["linkedin.com", "github.com", "gitlab.com", "portfolio", "location:", "address:", "pincode:"])
+    has_name_label = bool(re.search(r"\b(full\s*name|candidate\s*name|applicant\s*name)\s*[:\-]", lower_text))
+
+    has_personal_meta = has_header or has_links or has_name_label
+
+    return has_email or has_phone or has_personal_meta
+
+
 def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]:
     """
     Detect if the uploaded text is a complete resume containing all 5 required section categories:
@@ -155,24 +185,21 @@ def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]
     words = re.findall(r"\b\w+\b", raw_text)
     word_count = len(words)
 
-    # 1. Timetable / Schedule / Non-resume keywords
+    # 1. Timetable / Schedule / Record Experiment / Non-resume keywords
     timetable_keywords = [
         "timetable", "time table", "class schedule", "lecture schedule", "period 1", "period 2", "period 3",
         "period 4", "period 5", "room no", "subject code", "course code", "exam schedule", "date sheet",
         "hall ticket", "semester schedule", "lecture time", "daily routine", "invoice", "receipt", "bill",
-        "menu card", "syllabus sheet"
+        "menu card", "syllabus sheet", "record experiment", "experiment no", "aim of the experiment"
     ]
     timetable_hits = [kw for kw in timetable_keywords if kw in lower_text]
     if len(timetable_hits) >= 2 or (len(timetable_hits) >= 1 and word_count < 120):
-        return False, False, "this is not an complete resume", ["Timetable/Non-resume file detected"]
+        return False, False, "⚠️ Invalid Resume Alert: Document does not contain a Personal Details section. Please upload a valid resume!", ["Timetable/Non-resume file detected"]
 
     missing_sections = []
 
-    # Check Section 1: PERSONAL DETAILS (Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio)
-    has_email = bool(re.search(r"[\w\.-]+@[\w\.-]+\.\w+", raw_text)) or "email" in lower_text
-    has_phone = bool(re.search(r"\+?\d[\d\s-]{7,}", raw_text)) or any(k in lower_text for k in ["phone", "mobile", "contact", "call"])
-    has_personal_meta = any(k in lower_text for k in ["linkedin", "github", "portfolio", "location", "address", "city", "state", "pincode", "name"])
-    if not (has_email or has_phone or has_personal_meta):
+    # Check Section 1: PERSONAL DETAILS
+    if not check_personal_details_section(raw_text):
         missing_sections.append("Personal Details (Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio)")
 
     # Check Section 2: CAREER OBJECTIVE / TARGET ROLE
@@ -197,7 +224,8 @@ def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]
     skills_anchors = [
         "skills", "technical skills", "programming", "web technologies", "database",
         "tools", "software", "technologies", "tech stack", "python", "javascript",
-        "java", "c++", "c#", "html", "css", "sql", "react", "nodejs", "git", "aws", "excel", "power bi"
+        "java", "c++", "c#", "html", "css", "sql", "react", "nodejs", "git", "aws", "excel", "power bi",
+        "operating system", "operating systems", "os", "linux", "c", "data structures"
     ]
     if not any(anchor in lower_text for anchor in skills_anchors):
         missing_sections.append("Technical Skills (Programming, Web, Database, Tools)")
@@ -212,7 +240,7 @@ def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]
         missing_sections.append("Languages")
 
     if missing_sections:
-        warning_msg = f"⚠️ Invalid Resume Alert: Document does not contain Personal Details ({', '.join(missing_sections)}). Please upload an correct resume!"
+        warning_msg = f"⚠️ Invalid Resume Alert: Document does not contain a Personal Details section. Please upload a valid resume!"
         return False, False, warning_msg, missing_sections
 
     return True, True, "", []
@@ -730,12 +758,12 @@ def predict_resume_domain(raw_text: str, detected_skills: List[str]) -> tuple[st
         return count
 
     # 1. Engineering & Technology Keywords
-    eng_heavy = ["b.tech", "btech", "m.tech", "mtech", "b.e", "be", "computer science", "software engineer", "developer", "coding", "full stack", "backend", "frontend", "devops", "data structures", "algorithms"]
-    eng_skills = ["python", "java", "c++", "c#", "javascript", "typescript", "react", "nodejs", "sql", "git", "github", "aws", "docker", "fastapi", "django", "flask", "rest api", "machine learning", "cad", "autocad", "matlab"]
+    eng_heavy = ["b.tech", "btech", "m.tech", "mtech", "b.e", "be", "computer science", "software engineer", "developer", "coding", "full stack", "backend", "frontend", "devops", "data structures", "algorithms", "operating system", "operating systems", "os", "computer networks", "dbms", "database management", "system programming", "compiler design", "computer organization", "computer architecture", "software engineering", "process scheduling", "memory management"]
+    eng_skills = ["python", "java", "c++", "cpp", "c#", "javascript", "typescript", "react", "nodejs", "sql", "git", "github", "aws", "docker", "fastapi", "django", "flask", "rest api", "machine learning", "cad", "autocad", "matlab", "linux", "unix", "shell scripting", "semaphore", "deadlock", "concurrency", "oops"]
     
     eng_score = count_matches(eng_heavy) * 4.0 + count_matches(eng_skills) * 3.0
     for sk in detected_skills:
-        if sk.lower() in ["python", "java", "javascript", "react", "nodejs", "sql", "git", "aws", "docker", "c++", "c#", "fastapi", "django", "rest api"]:
+        if sk.lower() in ["python", "java", "javascript", "react", "nodejs", "sql", "git", "aws", "docker", "c++", "c#", "fastapi", "django", "rest api", "linux", "os", "c"]:
             eng_score += 4.0
     domain_scores["engineering"] = eng_score
 
@@ -1254,43 +1282,88 @@ def get_live_jobs(prompt: str = "", q: str = "", category: str = "all", page: in
     user_query = (prompt or q or "").lower().strip()
     cat_query = (category or "all").lower().strip()
 
-    all_jobs = [
-        { "id": "job-1", "company": "GOOGLE", "title": "Software Engineer", "type": "Job", "category": "Engineering", "location": "Bangalore / Remote", "salary": "₹18,00,000 - ₹30,00,000 / yr", "description": "Develop scalable web services and cloud algorithms.", "ribbonText": "Featured", "ribbonClass": "", "apply_link": "https://careers.google.com/", "signin_link": "https://careers.google.com/" },
-        { "id": "job-2", "company": "MICROSOFT", "title": "Fullstack Developer Intern", "type": "Internship", "category": "Engineering", "location": "Hyderabad, India", "salary": "₹16,00,000 / yr", "description": "Architect web microservices and React interfaces.", "ribbonText": "Internship", "ribbonClass": "intern", "apply_link": "https://careers.microsoft.com/", "signin_link": "https://careers.microsoft.com/" },
-        { "id": "job-3", "company": "MAJOR LEAGUE HACKING", "title": "Global Tech Hackathon 2026", "type": "Hackathon", "category": "Hackathons", "location": "Online / Worldwide", "salary": "Prizes worth $25,000", "description": "Build innovative web & AI applications with developers worldwide.", "ribbonText": "Live Hackathon", "ribbonClass": "hackathon", "apply_link": "https://mlh.io", "signin_link": "https://mlh.io" },
-        { "id": "job-4", "company": "DEVPOST", "title": "AI & Cloud Innovation Challenge", "type": "Hackathon", "category": "Hackathons", "location": "Remote", "salary": "$50,000 Prize Pool", "description": "Develop cutting-edge machine learning models.", "ribbonText": "$50k Prize Pool", "ribbonClass": "hackathon", "apply_link": "https://devpost.com", "signin_link": "https://devpost.com" },
-        { "id": "job-5", "company": "KENDRIYA VIDYALAYA / EDTECH", "title": "Computer Science Instructor", "type": "Job", "category": "Teaching", "location": "Bangalore / Remote", "salary": "₹6,00,000 - ₹12,00,000 / yr", "description": "Teach programming languages, algorithms, and CS fundamentals.", "ribbonText": "Urgent Hiring", "ribbonClass": "", "apply_link": "https://www.indeed.com", "signin_link": "https://www.indeed.com" },
-        { "id": "job-6", "company": "ADOBE & GRAPHIC STUDIOS", "title": "UI/UX & Brand Designer", "type": "Job", "category": "Arts", "location": "Remote / Mumbai", "salary": "₹8,00,000 - ₹14,00,000 / yr", "description": "Create visual design systems, logos, and UI prototypes.", "ribbonText": "Creative Role", "ribbonClass": "", "apply_link": "https://www.behance.net", "signin_link": "https://www.behance.net" },
-        { "id": "job-7", "company": "APOLLO HOSPITALS", "title": "Resident Medical Officer", "type": "Job", "category": "Medical", "location": "Chennai / Delhi", "salary": "₹12,00,000 - ₹20,00,000 / yr", "description": "Clinical patient care, diagnostic reviews, and ER support.", "ribbonText": "Medical Lead", "ribbonClass": "", "apply_link": "https://www.apollohospitals.com", "signin_link": "https://www.apollohospitals.com" }
-    ]
+    all_jobs = []
 
+    # Attempt loading from local aggregated_opportunities.json file
+    json_path = os.path.join(os.path.dirname(__file__), "aggregated_opportunities.json")
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, list) and len(loaded) > 0:
+                    for item in loaded:
+                        all_jobs.append({
+                            "id": item.get("id", str(len(all_jobs))),
+                            "company": item.get("organization") or item.get("company") or "Tech Employer",
+                            "organization": item.get("organization") or item.get("company") or "Tech Employer",
+                            "title": item.get("title") or "Opportunity",
+                            "type": item.get("type") or ("hackathon" if "hackathon" in (item.get("title","")).lower() else "job"),
+                            "category": item.get("category") or "Engineering",
+                            "location": item.get("location") or "Remote",
+                            "salary": item.get("metadata", {}).get("stipend_or_salary") or item.get("salary") or "Competitive Compensation",
+                            "description": item.get("description") or f"Exciting role at {item.get('organization') or 'top tech firm'}.",
+                            "skills_required": item.get("skills_required") or ["Python", "React", "REST APIs"],
+                            "apply_url": item.get("apply_url") or item.get("apply_link") or "https://careers.google.com/",
+                            "apply_link": item.get("apply_url") or item.get("apply_link") or "https://careers.google.com/",
+                            "deadline_or_posted": item.get("deadline_or_posted") or "Active"
+                        })
+        except Exception:
+            all_jobs = []
+
+    # Fallback curated opportunities if json is empty or missing
+    if not all_jobs:
+        all_jobs = [
+            { "id": "job-1", "company": "GOOGLE", "organization": "GOOGLE", "title": "Software Engineer", "type": "job", "category": "Engineering", "location": "Bangalore / Remote", "salary": "₹18,00,000 - ₹30,00,000 / yr", "description": "Develop scalable web services and cloud algorithms.", "skills_required": ["Python", "C++", "System Architecture", "Cloud"], "apply_url": "https://careers.google.com/" },
+            { "id": "job-2", "company": "MICROSOFT", "organization": "MICROSOFT", "title": "Fullstack Developer Intern", "type": "internship", "category": "Internships", "location": "Hyderabad, India", "salary": "₹50,000 / mo", "description": "Architect web microservices and React interfaces.", "skills_required": ["React", "TypeScript", "Azure", "Node.js"], "apply_url": "https://careers.microsoft.com/" },
+            { "id": "job-3", "company": "MAJOR LEAGUE HACKING", "organization": "MLH", "title": "Global Tech Hackathon 2026", "type": "hackathon", "category": "Hackathons", "location": "Online / Worldwide", "salary": "$25,000 Total Prizes", "description": "Build innovative web & AI applications with developers worldwide.", "skills_required": ["Python", "Generative AI", "React", "FastAPI"], "apply_url": "https://mlh.io" },
+            { "id": "job-4", "company": "DEVPOST", "organization": "DEVPOST", "title": "AI & Cloud Innovation Challenge", "type": "hackathon", "category": "Hackathons", "location": "Remote", "salary": "$50,000 Prize Pool", "description": "Develop cutting-edge machine learning models.", "skills_required": ["Python", "TensorFlow", "AWS", "PyTorch"], "apply_url": "https://devpost.com" },
+            { "id": "job-5", "company": "KENDRIYA VIDYALAYA / EDTECH", "organization": "EDTECH ACADEMY", "title": "Computer Science Instructor", "type": "job", "category": "Teaching", "location": "Bangalore / Remote", "salary": "₹6,00,000 - ₹12,00,000 / yr", "description": "Teach programming languages, algorithms, and CS fundamentals.", "skills_required": ["Python", "Java", "Data Structures", "Pedagogy"], "apply_url": "https://www.indeed.com" },
+            { "id": "job-6", "company": "ADOBE", "organization": "ADOBE", "title": "UI/UX & Brand Designer", "type": "job", "category": "Arts", "location": "Remote / Mumbai", "salary": "₹8,00,000 - ₹14,00,000 / yr", "description": "Create visual design systems, logos, and UI prototypes.", "skills_required": ["Figma", "Photoshop", "UI/UX", "Illustrator"], "apply_url": "https://www.behance.net" },
+            { "id": "job-7", "company": "APOLLO HOSPITALS", "organization": "APOLLO HOSPITALS", "title": "Resident Medical Officer", "type": "job", "category": "Medical", "location": "Chennai / Delhi", "salary": "₹12,00,000 - ₹20,00,000 / yr", "description": "Clinical patient care, diagnostic reviews, and ER support.", "skills_required": ["Clinical Medicine", "Patient Care", "Healthcare Informatics"], "apply_url": "https://www.apollohospitals.com" }
+        ]
+
+    # Category Filtering
     filtered = []
     for job in all_jobs:
-        job_cat = job["category"].lower()
-        job_type = job["type"].lower()
+        job_cat = (job.get("category") or "").lower()
+        job_type = (job.get("type") or "").lower()
 
-        cat_match = (cat_query == "all") or (cat_query == job_cat) or (cat_query in ["internships", "internship"] and job_type == "internship") or (cat_query in ["hackathons", "hackathon"] and job_type == "hackathon")
-        
-        query_match = not user_query or (
-            user_query in job["title"].lower() or
-            user_query in job["company"].lower() or
-            user_query in job["description"].lower() or
-            user_query in job["category"].lower() or
-            user_query in job["type"].lower() or
-            user_query in job["location"].lower()
+        cat_match = (
+            cat_query == "all" or
+            (cat_query in ["internships", "internship"] and (job_type == "internship" or "intern" in job_cat)) or
+            (cat_query in ["hackathons", "hackathon"] and (job_type == "hackathon" or "hack" in job_cat)) or
+            (cat_query in ["arts", "arts & design"] and ("arts" in job_cat or "design" in job_cat)) or
+            (cat_query in ["teaching"] and ("teach" in job_cat or "edtech" in job_cat)) or
+            (cat_query in ["medical"] and ("med" in job_cat or "health" in job_cat)) or
+            (cat_query in ["engineering"] and ("eng" in job_cat or job_type == "job")) or
+            cat_query in job_cat
         )
+
+        query_terms = [t for t in user_query.split() if len(t) > 1]
+        if not query_terms:
+            query_match = True
+        else:
+            full_searchable = f"{job['title']} {job['company']} {job.get('organization','')} {job['description']} {job['category']} {job['type']} {job['location']} {' '.join(job.get('skills_required', []))}".lower()
+            query_match = any(t in full_searchable for t in query_terms)
 
         if cat_match and query_match:
             filtered.append(job)
 
+    # Fallback to category list if query returned 0 items
+    if not filtered and all_jobs:
+        if cat_query != "all":
+            filtered = [j for j in all_jobs if cat_query in (j.get("category","")).lower() or cat_query in (j.get("type","")).lower()]
+        if not filtered:
+            filtered = all_jobs[:20]
+
     categories_count = {
         "All": len(all_jobs),
-        "Engineering": len([j for j in all_jobs if j["category"] == "Engineering"]),
-        "Teaching": len([j for j in all_jobs if j["category"] == "Teaching"]),
-        "Arts": len([j for j in all_jobs if j["category"] == "Arts"]),
-        "Medical": len([j for j in all_jobs if j["category"] == "Medical"]),
-        "Hackathons": len([j for j in all_jobs if j["type"] == "Hackathon"]),
-        "Internships": len([j for j in all_jobs if j["type"] == "Internship"])
+        "Engineering": len([j for j in all_jobs if "eng" in (j.get("category","")).lower() or (j.get("type","")).lower() == "job"]),
+        "Teaching": len([j for j in all_jobs if "teach" in (j.get("category","")).lower()]),
+        "Arts": len([j for j in all_jobs if "arts" in (j.get("category","")).lower() or "design" in (j.get("category","")).lower()]),
+        "Medical": len([j for j in all_jobs if "med" in (j.get("category","")).lower() or "health" in (j.get("category","")).lower()]),
+        "Hackathons": len([j for j in all_jobs if (j.get("type","")).lower() == "hackathon" or "hack" in (j.get("category","")).lower()]),
+        "Internships": len([j for j in all_jobs if (j.get("type","")).lower() == "internship" or "intern" in (j.get("category","")).lower()])
     }
 
     total = len(filtered)

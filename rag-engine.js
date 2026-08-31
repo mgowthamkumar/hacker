@@ -418,13 +418,19 @@ class RagEngine {
 
     // 1. Audit 5 Required Resume Section Categories
     const missingSections = [];
+    const hasEmailVal = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/.test(rawText) || ["email:", "e-mail:", "mail id:", "email address:"].some(k => textLower.includes(k));
+    const digitsVal = (rawText.match(/\d/g) || []).length;
+    const hasPhonePatternVal = /\b(?:\+?\d{1,3}[-\s]?)?\(?\d{3,5}\)?[-\s]?\d{3,5}[-\s]?\d{3,5}\b/.test(rawText) && digitsVal >= 8;
+    const hasPhoneLabelVal = /\b(phone|mobile|cell|tel|contact\s*no|contact\s*number|phone\s*no|phone\s*number)\b/.test(textLower);
+    const hasPhoneVal = hasPhonePatternVal || hasPhoneLabelVal;
+    const personalHeadersVal = ["personal details", "personal information", "contact details", "contact info", "contact information", "personal profile", "candidate profile", "applicant details"];
+    const hasHeaderVal = personalHeadersVal.some(h => textLower.includes(h));
+    const hasLinksVal = ["linkedin.com", "github.com", "gitlab.com", "portfolio", "location:", "address:", "pincode:"].some(k => textLower.includes(k));
+    const hasNameLabelVal = /\b(full\s*name|candidate\s*name|applicant\s*name)\s*[:\-]/.test(textLower);
 
-    // Category 1: Personal Details
-    const hasEmail = /[\w\.-]+@[\w\.-]+\.\w+/.test(rawText) || textLower.includes("email");
-    const hasPhone = /\+?\d[\d\s-]{7,}/.test(rawText) || ["phone", "mobile", "contact", "call"].some(k => textLower.includes(k));
-    const hasPersonal = ["linkedin", "github", "portfolio", "location", "address", "city", "state", "pincode", "name"].some(k => textLower.includes(k));
-    if (!(hasEmail || hasPhone || hasPersonal)) {
-      missingSections.append ? missingSections.push("Personal Details") : missingSections.push("Personal Details (Name, Phone, Email, Location, LinkedIn, GitHub)");
+    const hasPersonalVal = hasEmailVal || hasPhoneVal || hasHeaderVal || hasLinksVal || hasNameLabelVal;
+    if (!hasPersonalVal) {
+      missingSections.push("Personal Details (Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio)");
     }
 
     // Category 2: Career Objective / Target Role
@@ -440,7 +446,7 @@ class RagEngine {
     }
 
     // Category 4: Technical Skills
-    const skillsAnchors = ["skills", "technical skills", "programming", "web technologies", "database", "tools", "software", "python", "javascript", "java", "c++", "html", "css", "sql", "git", "aws"];
+    const skillsAnchors = ["skills", "technical skills", "programming", "web technologies", "database", "tools", "software", "python", "javascript", "java", "c++", "html", "css", "sql", "git", "aws", "operating system", "operating systems", "os", "linux", "c", "data structures"];
     if (!skillsAnchors.some(k => textLower.includes(k))) {
       missingSections.push("Technical Skills (Programming, Web, Database, Tools)");
     }
@@ -452,18 +458,20 @@ class RagEngine {
     }
 
     const isValidResume = missingSections.length === 0;
-    const warningMessage = isValidResume ? null : `⚠️ Invalid Resume Alert: Document does not contain Personal Details (${missingSections.join(", ")}). Please upload an correct resume!`;
+    const warningMessage = isValidResume ? null : `⚠️ Invalid Resume Alert: Document does not contain a Personal Details section. Please upload a valid resume!`;
 
     // 2. Precise Degree Subject Classification
     let domainTitle = "Engineering & Technology Student";
     let domainIcon = "💻";
     let domainDesc = "Degree background in B.Tech, M.Tech, B.E, M.E, BCA, MCA, or Computer Science.";
 
-    if (/\b(b\.com|bcom|m\.com|mcom|b\.a|ba|m\.a|ma|bba|mba|commerce|finance|accounting)\b/.test(textLower)) {
+    const isEngSubject = /\b(b\.tech|btech|m\.tech|mtech|b\.e|be|computer science|operating system|operating systems|os|c\+\+|cpp|python|java|javascript|data structures|algorithms|dbms|computer networks|software engineer|developer)\b/i.test(rawText);
+
+    if (!isEngSubject && /\b(b\.com|bcom|m\.com|mcom|b\.a|ba|m\.a|ma|bba|mba|commerce|finance|accounting)\b/.test(textLower)) {
       domainTitle = "Arts & Commerce Student";
       domainIcon = "🎨";
       domainDesc = "Degree background in Arts, Humanities, Fine Arts, Design, or Commerce.";
-    } else if (/\b(b\.sc|bsc|m\.sc|msc|physics|chemistry|biology|microbiology|biotechnology)\b/.test(textLower)) {
+    } else if (!isEngSubject && /\b(b\.sc|bsc|m\.sc|msc|physics|chemistry|biology|microbiology|biotechnology)\b/.test(textLower)) {
       domainTitle = "Science & Research Student";
       domainIcon = "🔬";
       domainDesc = "Degree background in B.Sc, M.Sc, Pure Sciences, Mathematics, or Laboratory Research.";

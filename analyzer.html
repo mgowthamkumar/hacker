@@ -987,17 +987,28 @@
                 extractedText = selectedFile.name.replace(/[^a-zA-Z0-9\s]/g, ' ');
             }
 
-            const textLower = extractedText.toLowerCase();
-            const hasEmail = /[\w\.-]+@[\w\.-]+\.\w+/.test(extractedText) || textLower.includes("email");
-            const hasPhone = /\+?\d[\d\s-]{7,}/.test(extractedText) || ["phone", "mobile", "contact", "call"].some(k => textLower.includes(k));
-            const hasPersonal = ["linkedin", "github", "portfolio", "location", "address", "city", "state", "pincode", "name"].some(k => textLower.includes(k));
+            function checkPersonalDetailsSection(text) {
+                if (!text) return false;
+                const textLower = text.toLowerCase();
+                const hasEmail = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/.test(text) || ["email:", "e-mail:", "mail id:", "email address:"].some(k => textLower.includes(k));
+                const digits = (text.match(/\d/g) || []).length;
+                const hasPhonePattern = /\b(?:\+?\d{1,3}[-\s]?)?\(?\d{3,5}\)?[-\s]?\d{3,5}[-\s]?\d{3,5}\b/.test(text) && digits >= 8;
+                const hasPhoneLabel = /\b(phone|mobile|cell|tel|contact\s*no|contact\s*number|phone\s*no|phone\s*number)\b/.test(textLower);
+                const hasPhone = hasPhonePattern || hasPhoneLabel;
+                const personalHeaders = ["personal details", "personal information", "contact details", "contact info", "contact information", "personal profile", "candidate profile", "applicant details"];
+                const hasHeader = personalHeaders.some(h => textLower.includes(h));
+                const hasLinks = ["linkedin.com", "github.com", "gitlab.com", "portfolio", "location:", "address:", "pincode:"].some(k => textLower.includes(k));
+                const hasNameLabel = /\b(full\s*name|candidate\s*name|applicant\s*name)\s*[:\-]/.test(textLower);
+                return hasEmail || hasPhone || hasHeader || hasLinks || hasNameLabel;
+            }
 
-            if (!(hasEmail || hasPhone || hasPersonal)) {
-                guidanceMsg.innerHTML = `<div style="background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; font-weight: 700; font-size: 1.05rem;">⚠️ Invalid Resume: Personal details missing. Please upload an correct resume!</div>`;
+            if (!checkPersonalDetailsSection(extractedText)) {
+                guidanceMsg.innerHTML = `<div style="background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; font-weight: 700; font-size: 1.05rem;">⚠️ Invalid Resume Alert: Document does not contain a Personal Details section. Please upload a valid resume!</div>`;
                 guidanceMsg.style.display = "block";
-                alert("Please upload an correct resume");
+                alert("⚠️ Invalid Resume: Personal details section is missing. Please upload a valid resume!");
                 btnAnalyze.disabled = false;
                 btnAnalyze.innerText = "🚀 Calculate Selection Odds & Generate Study Roadmap";
+                window.location.reload();
                 return;
             }
 
@@ -1051,16 +1062,18 @@
             const text = (resumeText || "").toLowerCase();
             const targetSkills = (targetSkillsStr || "").toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
 
-            const keywords = ['python', 'java', 'c++', 'javascript', 'react', 'node', 'sql', 'html', 'css', 'git', 'aws', 'docker', 'machine learning', 'api', 'mongodb'];
+            const keywords = ['python', 'java', 'c++', 'javascript', 'react', 'node', 'sql', 'html', 'css', 'git', 'aws', 'docker', 'machine learning', 'api', 'mongodb', 'operating system', 'os', 'linux'];
             const foundSkills = keywords.filter(k => text.includes(k));
 
             let fieldTitle = "Engineering & Technology Student";
             let fieldIcon = "💻";
 
-            if (text.includes("design") || text.includes("ui") || text.includes("ux") || text.includes("figma")) {
+            const isEng = /\b(b\.tech|btech|m\.tech|mtech|b\.e|be|computer science|operating system|operating systems|os|c\+\+|cpp|python|java|javascript|data structures|algorithms|dbms|computer networks|software engineer|developer)\b/i.test(resumeText);
+
+            if (!isEng && (text.includes("design") || text.includes("ui") || text.includes("ux") || text.includes("figma"))) {
                 fieldTitle = "Arts & Commerce Student";
                 fieldIcon = "🎨";
-            } else if (text.includes("data") || text.includes("analytics") || text.includes("pandas") || text.includes("sql")) {
+            } else if (!isEng && (text.includes("data") || text.includes("analytics") || text.includes("pandas"))) {
                 fieldTitle = "Science & Research Student";
                 fieldIcon = "🔬";
             }
@@ -1111,17 +1124,18 @@
 
         function renderAnalysisResults(data) {
             if (!data) return;
-            resultsSection.style.display = 'flex';
-            resultsSection.scrollIntoView({ behavior: 'smooth' });
 
-            if (data.warning_message || data.warning_msg || data.is_valid_resume === false) {
-                const msg = data.warning_message || data.warning_msg || "Please upload an correct resume";
+            if (data.is_valid_resume === false || (data.missing_sections && data.missing_sections.some(s => s.toLowerCase().includes("personal details"))) || (data.warning_msg && data.warning_msg.toLowerCase().includes("personal details")) || (data.warning_message && data.warning_message.toLowerCase().includes("personal details"))) {
+                const msg = data.warning_message || data.warning_msg || "⚠️ Invalid Resume: Personal details section is missing. Please upload a valid resume!";
                 guidanceMsg.innerHTML = `<div style="background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; font-weight: 700; font-size: 1.05rem;">⚠️ ${msg}</div>`;
                 guidanceMsg.style.display = "block";
-                alert("Please upload an correct resume");
-                setTimeout(() => { window.location.reload(); }, 1000);
+                alert("⚠️ Invalid Resume: Personal details section is missing. Please upload a valid resume!");
+                window.location.reload();
                 return;
             }
+
+            resultsSection.style.display = 'flex';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
 
             const domainTitle = data.predicted_domain || (data.domain && data.domain.title) || "Engineering & Technology Student";
             const domainIcon = data.domain_icon || (data.domain && data.domain.icon) || "🎓";

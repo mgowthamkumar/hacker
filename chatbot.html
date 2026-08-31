@@ -929,13 +929,15 @@
         if (responseData.categories) {
           updateFilterCounts(responseData.categories);
         }
-      } else {
+      }
+
+      if (!jobs || jobs.length === 0) {
         jobs = generateClientFallbackJobs(userQuery);
         totalPagesCount = 1;
       }
 
       allLoadedJobs = jobs;
-      agentMessage.innerHTML = `🧠 <strong>RAG AI Grounded Vector Search</strong>: Aggregated ${responseData?.total || jobs.length} vector-matched opportunities (Page ${currentPage} of ${totalPagesCount})!`;
+      agentMessage.innerHTML = `🧠 <strong>RAG AI Grounded Vector Search</strong>: Aggregated ${jobs.length} vector-matched opportunities (Page ${currentPage} of ${totalPagesCount})!`;
       categoryFilterBar.style.display = "flex";
       agentMessage.style.display = "flex";
       displayJobs(jobs);

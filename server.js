@@ -527,16 +527,11 @@ app.all("/api/opportunities/search", express.json(), async (req, res) => {
 
 app.get("/api/jobs", async (req, res) => {
     try {
-        const category = req.query.category || req.query.cat || "all";
-        const query = req.query.q || req.query.prompt || "";
-        const page = parseInt(req.query.page || 1, 10);
-        const limit = parseInt(req.query.limit || 20, 10);
-
-        const searchResult = await ragEngine.searchOpportunities(query, category, page, limit);
-        return res.json(searchResult);
-    } catch (error) {
         const aggregatedResult = await jobAggregator.getAggregatedJobs(req.query);
         return res.json(aggregatedResult);
+    } catch (error) {
+        console.error("[Jobs API Error]:", error);
+        return res.status(500).json({ success: false, error: "Failed to retrieve opportunities." });
     }
 });
 

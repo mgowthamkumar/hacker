@@ -247,6 +247,37 @@ async function fetchMultiSourceJobs() {
   return Array.from(deduplicatedMap.values());
 }
 
+// Load cached jobs from disk on startup if available
+function loadDiskCache() {
+  try {
+    const cachePath = path.join(__dirname, "aggregated_opportunities.json");
+    if (fs.existsSync(cachePath)) {
+      const raw = fs.readFileSync(cachePath, "utf8");
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        cachedJobs = parsed;
+        console.log(`[JobAggregator] Loaded ${cachedJobs.length} opportunities from aggregated_opportunities.json.`);
+      }
+    }
+  } catch (e) {
+    console.warn("[JobAggregator] Disk cache load notice:", e.message);
+  }
+
+  // Ensure curated fallback opportunities are always present
+  if (cachedJobs.length === 0) {
+    cachedJobs = [
+      ...getCuratedHackathons(),
+      ...getCuratedInternships(),
+      ...getCuratedTeachingJobs(),
+      ...getCuratedArtsJobs(),
+      ...getCuratedMedicalJobs()
+    ];
+  }
+}
+
+// Initial load
+loadDiskCache();
+
 // Main Aggregator Pipeline
 async function aggregateAllJobs() {
   if (isFetching) return cachedJobs;
@@ -255,8 +286,23 @@ async function aggregateAllJobs() {
 
   try {
     const freshJobs = await fetchMultiSourceJobs();
-    cachedJobs = freshJobs;
-    lastFetchTimestamp = Date.now();
+    if (freshJobs && freshJobs.length > 0) {
+      // Merge and deduplicate with existing cachedJobs
+      const deduplicatedMap = new Map();
+      [...freshJobs, ...cachedJobs].forEach(j => {
+        if (!deduplicatedMap.has(j.id)) {
+          deduplicatedMap.set(j.id, j);
+        }
+      });
+      cachedJobs = Array.from(deduplicatedMap.values());
+      lastFetchTimestamp = Date.now();
+
+      // Save to disk
+      try {
+        const cachePath = path.join(__dirname, "aggregated_opportunities.json");
+        fs.writeFileSync(cachePath, JSON.stringify(cachedJobs, null, 2));
+      } catch (err) {}
+    }
     console.log(`[JobAggregator] Multi-source aggregation complete! Total active opportunities: ${cachedJobs.length}. Time: ${((Date.now() - startTime) / 1000).toFixed(2)}s.`);
   } catch (err) {
     console.error("[JobAggregator] Error during aggregation:", err);
@@ -271,7 +317,8 @@ async function aggregateAllJobs() {
 async function getAggregatedJobs(params = {}) {
   const now = Date.now();
   if (cachedJobs.length === 0 || (now - lastFetchTimestamp > CACHE_TTL_MS)) {
-    await aggregateAllJobs();
+    loadDiskCache();
+    aggregateAllJobs().catch(() => {});
   }
 
   const category = (params.category || params.cat || "all").toString().toLowerCase();
@@ -284,33 +331,46 @@ async function getAggregatedJobs(params = {}) {
   // Category Filtering
   if (category !== "all") {
     filtered = filtered.filter(j => {
-      if (category === "internships" || category === "internship") return j.type === "internship" || j.category === "Internships";
-      if (category === "hackathons" || category === "hackathon") return j.type === "hackathon" || j.category === "Hackathons";
-      if (category === "arts" || category === "arts & design") return j.category === "Arts & Design" || j.category === "Arts";
-      return j.category.toLowerCase() === category;
+      const catLower = (j.category || "").toLowerCase();
+      const typeLower = (j.type || "").toLowerCase();
+
+      if (category === "internships" || category === "internship") return typeLower === "internship" || catLower === "internships";
+      if (category === "hackathons" || category === "hackathon") return typeLower === "hackathon" || catLower === "hackathons";
+      if (category === "arts" || category === "arts & design") return catLower.includes("arts") || catLower.includes("design");
+      if (category === "engineering") return catLower.includes("engineering") || typeLower === "job";
+      if (category === "teaching") return catLower.includes("teach") || catLower.includes("education");
+      if (category === "medical") return catLower.includes("medical") || catLower.includes("health");
+      return catLower === category;
     });
   }
 
   // Search Filter
   if (searchPrompt) {
-    filtered = filtered.filter(j =>
-      j.title.toLowerCase().includes(searchPrompt) ||
-      j.organization.toLowerCase().includes(searchPrompt) ||
-      j.description.toLowerCase().includes(searchPrompt) ||
-      j.category.toLowerCase().includes(searchPrompt) ||
-      j.location.toLowerCase().includes(searchPrompt)
-    );
+    const searchTerms = searchPrompt.split(/\s+/).filter(t => t.length > 1);
+    const matched = filtered.filter(j => {
+      const fullText = `${j.title} ${j.organization} ${j.description} ${j.category} ${j.type} ${j.location} ${(j.skills_required || []).join(' ')}`.toLowerCase();
+      return searchTerms.some(term => fullText.includes(term));
+    });
+
+    if (matched.length > 0) {
+      filtered = matched;
+    }
+  }
+
+  // Fallback if category or search produced 0 items
+  if (filtered.length === 0 && cachedJobs.length > 0) {
+    filtered = cachedJobs.slice(0, 20);
   }
 
   // Dynamic Real-time Category Counts
   const categoriesCount = {
     All: cachedJobs.length,
-    Engineering: cachedJobs.filter(j => j.category === "Engineering").length,
-    Teaching: cachedJobs.filter(j => j.category === "Teaching").length,
-    Arts: cachedJobs.filter(j => j.category === "Arts & Design" || j.category === "Arts").length,
-    Medical: cachedJobs.filter(j => j.category === "Medical").length,
-    Hackathons: cachedJobs.filter(j => j.type === "hackathon" || j.category === "Hackathons").length,
-    Internships: cachedJobs.filter(j => j.type === "internship" || j.category === "Internships").length
+    Engineering: cachedJobs.filter(j => (j.category || "").toLowerCase().includes("engineering")).length,
+    Teaching: cachedJobs.filter(j => (j.category || "").toLowerCase().includes("teach")).length,
+    Arts: cachedJobs.filter(j => (j.category || "").toLowerCase().includes("arts") || (j.category || "").toLowerCase().includes("design")).length,
+    Medical: cachedJobs.filter(j => (j.category || "").toLowerCase().includes("medical") || (j.category || "").toLowerCase().includes("health")).length,
+    Hackathons: cachedJobs.filter(j => (j.type || "").toLowerCase() === "hackathon" || (j.category || "").toLowerCase() === "hackathons").length,
+    Internships: cachedJobs.filter(j => (j.type || "").toLowerCase() === "internship" || (j.category || "").toLowerCase() === "internships").length
   };
 
   const total = filtered.length;
