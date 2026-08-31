@@ -932,6 +932,11 @@ class RagEngine {
       certifications: Array.from(new Set(certs)).slice(0, 5)
     };
   }
+
+  async searchOpportunities(query = "", category = "all", page = 1, limit = 20) {
+    const jobAggregator = require("./job-aggregator.js");
+    return await jobAggregator.getAggregatedJobs({ prompt: query, q: query, category, page, limit });
+  }
 }
 
 const ragEngineInstance = new RagEngine();

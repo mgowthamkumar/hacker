@@ -1008,7 +1008,10 @@
                 alert("⚠️ Invalid Resume: Personal details section is missing. Please upload a valid resume!");
                 btnAnalyze.disabled = false;
                 btnAnalyze.innerText = "🚀 Calculate Selection Odds & Generate Study Roadmap";
-                window.location.reload();
+                if (fileInput) fileInput.value = "";
+                selectedFile = null;
+                if (pastedResumeText) pastedResumeText.value = "";
+                if (dropArea) dropArea.innerHTML = `<span style="font-size:2rem;">📄</span><p>Drag & Drop your Resume PDF/TXT here, or click to browse</p>`;
                 return;
             }
 
@@ -1017,8 +1020,10 @@
             const originsToTry = [
                 `${apiOrigin}/api/rag/analyze`,
                 `${apiOrigin}/api/analyzer`,
+                "http://127.0.0.1:8800/api/rag/analyze",
+                "http://127.0.0.1:8800/api/analyzer",
                 "http://127.0.0.1:5503/analyzer",
-                "http://127.0.0.1:8800/api/analyzer"
+                "http://127.0.0.1:5503/api/rag/analyze"
             ];
 
             let analyzedData = null;

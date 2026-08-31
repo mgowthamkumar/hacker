@@ -75,13 +75,26 @@
         }
     }
 
-    // Register Service Worker if supported
+    // Register Service Worker if supported and clear old caches on load
     if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
-            navigator.serviceWorker.register("sw.js").catch((err) => {
+            navigator.serviceWorker.register("sw.js").then((reg) => {
+                reg.update();
+            }).catch((err) => {
                 console.warn("PWA Service Worker registration notice:", err);
             });
         });
+    }
+
+    // Force purge old PWA caches if cache-v1 exists
+    if ("caches" in window) {
+        caches.keys().then((keys) => {
+            keys.forEach((key) => {
+                if (key !== 'autohire-pwa-v4') {
+                    caches.delete(key);
+                }
+            });
+        }).catch(() => {});
     }
 
     // Dynamically load waitlist-system.js if not already present

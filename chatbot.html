@@ -1206,10 +1206,16 @@
       }
     }
 
-    askAgentBtn.addEventListener("click", fetchAgentJobs);
-    
+    askAgentBtn.addEventListener("click", () => fetchAgentJobs(1));
+    aiPromptInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        fetchAgentJobs(1);
+      }
+    });
+
     // Perform initial load
-    fetchAgentJobs();
+    fetchAgentJobs(1);
 
     // Header Auth Management Integration
     (function initAuthHeader() {

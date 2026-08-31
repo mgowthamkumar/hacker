@@ -1,5 +1,5 @@
 // AutoHire Service Worker: Offline Cache Engine & Web Push Notifications
-const CACHE_NAME = 'autohire-pwa-v1';
+const CACHE_NAME = 'autohire-pwa-v4';
 const STATIC_ASSETS = [
   '/',
   'index.html',
@@ -19,16 +19,17 @@ const STATIC_ASSETS = [
 
 // Install Event: Cache Core Static Resources
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS).catch((err) => {
         console.warn('PWA Asset caching notice:', err);
       });
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
-// Activate Event: Cleanup Old Caches
+// Activate Event: Cleanup Old Caches Immediately & Claim Clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -41,7 +42,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Interceptor: Cache-First for Static Assets, Network-First for API Requests
+// Fetch Interceptor: Network-First for API and HTML/CSS/JS, Fallback to Cache
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
@@ -49,7 +50,7 @@ self.addEventListener('fetch', (event) => {
   // Ignore non-GET requests
   if (request.method !== 'GET') return;
 
-  // Strategy 1: Network-First for API endpoints with Fallback Cache
+  // Strategy 1: Network-First for API endpoints
   if (url.pathname.includes('/api/')) {
     event.respondWith(
       fetch(request)
@@ -72,31 +73,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 2: Cache-First with Network Update for Static HTML/CSS/JS/Assets
+  // Strategy 2: Network-First for HTML/CSS/JS with Cache Fallback
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch background update
-        fetch(request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, networkResponse));
-          }
-        }).catch(() => {});
-        return cachedResponse;
-      }
-
-      return fetch(request).then((response) => {
-        if (response && response.status === 200 && response.type === 'basic') {
-          const copy = response.clone();
+    fetch(request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const copy = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
         }
-        return response;
-      }).catch(() => {
-        if (request.headers.get('accept').includes('text/html')) {
-          return caches.match('index.html');
-        }
-      });
-    })
+        return networkResponse;
+      })
+      .catch(() => {
+        return caches.match(request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          if (request.headers.get('accept') && request.headers.get('accept').includes('text/html')) {
+            return caches.match('index.html');
+          }
+        });
+      })
   );
 });
 

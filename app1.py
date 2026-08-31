@@ -1092,6 +1092,7 @@ def calculate_probabilities_and_roadmap(raw_text: str, detected_skills: List[str
 
 @app.post("/analyzer", response_model=AnalysisResult)
 @app.post("/api/analyzer", response_model=AnalysisResult)
+@app.post("/api/rag/analyze", response_model=AnalysisResult)
 async def analyze_resume(
     file: Optional[UploadFile] = File(None),
     resume_text: str = Form(""),
