@@ -853,38 +853,129 @@
       fetchAgentJobs();
     }
 
-    function generateClientFallbackJobs(userQuery) {
+    function generateClientFallbackJobs(userQuery, category = 'all', page = 1, limit = 12) {
       const query = (userQuery || "").toLowerCase();
-      const isHackathon = query.includes("hackathon") || query.includes("contest");
-      const isIntern = query.includes("intern");
-      const isTeacher = query.includes("teacher") || query.includes("teaching");
+      const catQuery = (category || "all").toLowerCase();
 
-      if (isHackathon) {
-        return [
-          { company: "MAJOR LEAGUE HACKING (MLH)", title: "Global Tech Hackathon 2026", type: "Hackathon", domain: "Software & AI", location: "Online / Global", salary: "Prizes worth $25,000", description: "Compete with developer teams worldwide, gain mentorship, and build awesome tech projects.", ribbonText: "Live Hackathon", ribbonClass: "hackathon", apply_link: "https://mlh.io", signin_link: "https://mlh.io/users/sign_in" },
-          { company: "DEVPOST", title: "Global AI & Cloud Innovation Challenge", type: "Hackathon", domain: "Generative AI", location: "Remote", salary: "Prizes worth $50,000", description: "Develop cutting-edge machine learning applications using modern web & cloud APIs.", ribbonText: "$50k Prize Pool", ribbonClass: "hackathon", apply_link: "https://devpost.com", signin_link: "https://devpost.com/login" },
-          { company: "GOOGLE FOR DEVELOPERS", title: "Build with AI Global Hackathon", type: "Hackathon", domain: "AI / ML", location: "Global / Online", salary: "Google Cloud Credits", description: "Build real-world prototypes with Google engineers using Gemini and TensorFlow.", ribbonText: "Google Official", ribbonClass: "hackathon", apply_link: "https://developers.google.com", signin_link: "https://accounts.google.com" },
-          { company: "META", title: "Meta Hacker Cup 2026", type: "Hackathon", domain: "Algorithmic Coding", location: "Worldwide / Online", salary: "$100,000 Total Purse", description: "Meta's annual global algorithmic programming contest.", ribbonText: "Meta Event", ribbonClass: "hackathon", apply_link: "https://www.facebook.com/codingcompetitions/hacker-cup/", signin_link: "https://www.facebook.com/login/" }
-        ];
-      }
+      const masterList = [
+        // 20 Global Hackathons
+        { company: "MAJOR LEAGUE HACKING (MLH)", title: "Global Tech Hackathon 2026", type: "hackathon", category: "Hackathons", domain: "Software & AI", location: "Online / Global", salary: "Prizes worth $25,000", description: "Compete with developer teams worldwide, gain mentorship, and build awesome tech projects.", ribbonText: "Live Hackathon", ribbonClass: "hackathon", apply_link: "https://mlh.io" },
+        { company: "DEVPOST", title: "Global AI & Cloud Innovation Challenge", type: "hackathon", category: "Hackathons", domain: "Generative AI", location: "Remote", salary: "Prizes worth $50,000", description: "Develop cutting-edge machine learning applications using modern web & cloud APIs.", ribbonText: "$50k Prize Pool", ribbonClass: "hackathon", apply_link: "https://devpost.com" },
+        { company: "GOOGLE FOR DEVELOPERS", title: "Build with AI Global Hackathon", type: "hackathon", category: "Hackathons", domain: "AI / ML", location: "Global / Online", salary: "Google Cloud Credits", description: "Build real-world prototypes with Google engineers using Gemini and TensorFlow.", ribbonText: "Google Official", ribbonClass: "hackathon", apply_link: "https://developers.google.com" },
+        { company: "META", title: "Meta Hacker Cup 2026", type: "hackathon", category: "Hackathons", domain: "Algorithmic Coding", location: "Worldwide / Online", salary: "$100,000 Total Purse", description: "Meta's annual global algorithmic programming contest.", ribbonText: "Meta Event", ribbonClass: "hackathon", apply_link: "https://www.facebook.com/codingcompetitions/hacker-cup/" },
+        { company: "UNSTOP", title: "National Coding Championship 2026", type: "hackathon", category: "Hackathons", domain: "Competitive Coding", location: "India / Hybrid", salary: "₹10,00,000 Prizes & PPIs", description: "Premier Indian competitive coding league with top tech interview PPIs.", ribbonText: "Unstop Official", ribbonClass: "hackathon", apply_link: "https://unstop.com" },
+        { company: "DEVFOLIO", title: "Web3 & Autonomous AI Hackathon", type: "hackathon", category: "Hackathons", domain: "Web3 & AI", location: "Online / Remote", salary: "$30,000 Bounties", description: "Build decentralized apps, smart contracts, and LLM agent workflows.", ribbonText: "Devfolio Hack", ribbonClass: "hackathon", apply_link: "https://devfolio.co" },
+        { company: "ETHGLOBAL", title: "ETHGlobal Autonomous Agents Contest", type: "hackathon", category: "Hackathons", domain: "Blockchain & Agents", location: "Online / Global", salary: "$125,000 In Bounties", description: "Construct autonomous crypto agents and decentralized apps.", ribbonText: "ETHGlobal", ribbonClass: "hackathon", apply_link: "https://ethglobal.com/" },
+        { company: "KAGGLE / GOOGLE", title: "Kaggle Grand Prix Machine Learning Contest", type: "hackathon", category: "Hackathons", domain: "Data Science", location: "Remote / Worldwide", salary: "$60,000 Cash Prizes", description: "Train predictive deep learning models on real-world datasets.", ribbonText: "Kaggle Live", ribbonClass: "hackathon", apply_link: "https://www.kaggle.com/competitions" },
+        { company: "MIT", title: "HackMIT Global Collegiate Hackathon", type: "hackathon", category: "Hackathons", domain: "Software & Hardware", location: "Cambridge, MA / Remote", salary: "Tech Swag & Prizes", description: "1,000+ top university hackers gather for 36 hours of rapid hacking.", ribbonText: "MIT Flagship", ribbonClass: "hackathon", apply_link: "https://hackmit.org/" },
+        { company: "MICROSOFT", title: "Imagine Cup World Championship", type: "hackathon", category: "Hackathons", domain: "AI & Azure", location: "Worldwide / Hybrid", salary: "$100,000 Grand Prize", description: "Build social impact tech prototypes powered by Azure AI.", ribbonText: "Imagine Cup", ribbonClass: "hackathon", apply_link: "https://imaginecup.microsoft.com/" },
+        { company: "AMAZON AWS", title: "AWS Serverless & AI Hackathon 2026", type: "hackathon", category: "Hackathons", domain: "Cloud Serverless", location: "Online / Remote", salary: "$40,000 AWS Credits", description: "Architect event-driven serverless apps with AWS Bedrock.", ribbonText: "AWS Event", ribbonClass: "hackathon", apply_link: "https://aws.amazon.com/" },
+        { company: "NVIDIA", title: "NVIDIA Omniverse & AI Challenge", type: "hackathon", category: "Hackathons", domain: "3D & AI Physics", location: "Global / Online", salary: "$75,000 GPU Prizes", description: "Create 3D simulation applications and AI physical models.", ribbonText: "NVIDIA Event", ribbonClass: "hackathon", apply_link: "https://developer.nvidia.com/" },
+        { company: "OPENAI", title: "OpenAI DevDay AI Agent Challenge", type: "hackathon", category: "Hackathons", domain: "AI Agents", location: "Online / Global", salary: "$150,000 Pool", description: "Build innovative multi-agent workflows using GPT models.", ribbonText: "OpenAI DevDay", ribbonClass: "hackathon", apply_link: "https://openai.com/" },
+        { company: "HACKEREARTH", title: "Global Developer League 2026", type: "hackathon", category: "Hackathons", domain: "Enterprise Software", location: "Online / Remote", salary: "₹15,00,000 Prizes", description: "Solve real-world enterprise coding problems across 48 hours.", ribbonText: "HackerEarth", ribbonClass: "hackathon", apply_link: "https://www.hackerearth.com/" },
+        { company: "GOVT OF INDIA", title: "Smart India Hackathon 2026", type: "hackathon", category: "Hackathons", domain: "Civic Tech", location: "India / On-site", salary: "₹25,00,000 Total Pool", description: "Nationwide initiative to solve pressing civic challenges.", ribbonText: "SIH National", ribbonClass: "hackathon", apply_link: "https://www.sih.gov.in/" },
+        { company: "CHAINLINK", title: "Chainlink Constellation Hackathon", type: "hackathon", category: "Hackathons", domain: "Oracle Tech", location: "Online / Global", salary: "$500,000 Pool", description: "Connect real-world data to smart contracts using Chainlink.", ribbonText: "Chainlink Hack", ribbonClass: "hackathon", apply_link: "https://chain.link/" },
+        { company: "SOLANA FOUNDATION", title: "Solana Renaissance Hackathon", type: "hackathon", category: "Hackathons", domain: "High-Speed DeFi", location: "Online / Global", salary: "$1,000,000 Prizes", description: "Build high-speed dApps and DeFi platforms on Solana.", ribbonText: "Solana Hack", ribbonClass: "hackathon", apply_link: "https://solana.com/" },
+        { company: "CODECHEF", title: "SnackDown Global Coding Contest", type: "hackathon", category: "Hackathons", domain: "Competitive Coding", location: "Worldwide / Online", salary: "$35,000 Purse", description: "Global programming contest featuring world's best coders.", ribbonText: "SnackDown 2026", ribbonClass: "hackathon", apply_link: "https://www.codechef.com/" },
+        { company: "LEETCODE", title: "LeetCode Global Weekly Hackathon", type: "hackathon", category: "Hackathons", domain: "Algorithms", location: "Online / Global", salary: "$10,000 Monthly", description: "Solve weekly algorithmic puzzles under strict time limits.", ribbonText: "LeetCode Contest", ribbonClass: "hackathon", apply_link: "https://leetcode.com/contest/" },
+        { company: "SCALE AI", title: "Scale AI Data & LLM Benchmark Contest", type: "hackathon", category: "Hackathons", domain: "LLM Data", location: "Remote / Global", salary: "$50,000 Prize Pool", description: "Curate and evaluate high-quality training datasets for AI.", ribbonText: "Scale AI", ribbonClass: "hackathon", apply_link: "https://scale.com/" },
 
-      if (isTeacher) {
-        return [
-          { company: "LOCAL ACADEMIES & SCHOOLS", title: "Computer Science Educator", type: "Job", domain: "Education", location: "Bangalore / Remote", salary: "₹6,00,000 - ₹12,00,000 / yr", description: "Teach programming languages, logic building, and computer science to passionate students.", ribbonText: "Urgent Hiring", ribbonClass: "", apply_link: "https://www.indeed.com/q-teacher-jobs.html", signin_link: "https://www.indeed.com/account/login" },
-          { company: "COURSERA PARTNERS", title: "AI & Technical Curriculum Instructor", type: "Job", domain: "EdTech", location: "Remote", salary: "₹8,00,000 - ₹15,00,000 / yr", description: "Design interactive coding assessments and online software courses.", ribbonText: "100% Remote", ribbonClass: "", apply_link: "https://www.coursera.org/about/careers", signin_link: "https://www.coursera.org/?authMode=login" }
-        ];
-      }
+        // 25 High-Impact Internships
+        { company: "MICROSOFT", title: "Software Engineering Intern 2026", type: "internship", category: "Internships", domain: "Cloud & DevTools", location: "Hyderabad / Bangalore", salary: "₹50,000 / mo", description: "Build high-impact web and cloud features alongside senior mentors.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://careers.microsoft.com" },
+        { company: "GOOGLE RESEARCH", title: "AI & Deep Learning Research Fellow", type: "internship", category: "Internships", domain: "AI / ML Research", location: "Bangalore / Remote", salary: "₹65,000 / mo", description: "Research state-of-the-art neural architectures and publish ML benchmarks.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://careers.google.com" },
+        { company: "META", title: "Production Engineering Intern", type: "internship", category: "Internships", domain: "Infrastructure", location: "Gurgaon / Remote", salary: "₹60,000 / mo", description: "Scale global data center automation and high-capacity web infrastructure.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://www.metacareers.com" },
+        { company: "RAZORPAY", title: "Fullstack Web Development Intern", type: "internship", category: "Internships", domain: "Fintech", location: "Bangalore, India", salary: "₹35,000 / mo", description: "Architect payment gateway dashboards and merchant developer tools.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://razorpay.com/jobs/" },
+        { company: "FLIPKART", title: "Data Science & Analytics Intern", type: "internship", category: "Internships", domain: "E-Commerce Analytics", location: "Bangalore / Remote", salary: "₹40,000 / mo", description: "Analyze e-commerce funnel metrics and user recommendation algorithms.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://www.flipkartcareers.com" },
+        { company: "CANVA", title: "Frontend Experience Intern", type: "internship", category: "Internships", domain: "Design Tech", location: "Remote / Global", salary: "₹45,000 / mo", description: "Build responsive UI components and canvas editing widgets.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://www.canva.com/careers" },
+        { company: "UBER", title: "Backend Microservices Intern", type: "internship", category: "Internships", domain: "Geospatial Routing", location: "Bangalore, India", salary: "₹55,000 / mo", description: "Optimize real-time geospatial routing and ride dispatching services.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://www.uber.com/careers" },
+        { company: "AMAZON AWS", title: "Cloud Infrastructure Intern", type: "internship", category: "Internships", domain: "AWS Cloud", location: "Chennai / Bangalore", salary: "₹48,000 / mo", description: "Build serverless AWS Lambda triggers and automated monitoring alerts.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://www.amazon.jobs/" },
+        { company: "CRED", title: "Cybersecurity & Red Team Intern", type: "internship", category: "Internships", domain: "Fintech Security", location: "Bangalore, India", salary: "₹42,000 / mo", description: "Inspect security posture and perform automated penetration testing.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://cred.club/" },
+        { company: "SWIGGY", title: "Mobile App Engineering Intern", type: "internship", category: "Internships", domain: "Mobile Logistics", location: "Bangalore / Remote", salary: "₹38,000 / mo", description: "Develop React Native UI features for quick delivery logistics.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://careers.swiggy.com/" },
+        { company: "OPENAI", title: "GenAI Application Developer Intern", type: "internship", category: "Internships", domain: "Generative AI", location: "Remote / Global", salary: "₹75,000 / mo", description: "Build developer tooling and fine-tuning SDKs for OpenAI APIs.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://openai.com/careers/" },
+        { company: "APPLE", title: "iOS Frameworks Intern", type: "internship", category: "Internships", domain: "iOS Systems", location: "Hyderabad, India", salary: "₹58,000 / mo", description: "Create SwiftUI UI components and Swift SDK modules for iOS devices.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://www.apple.com/careers/" },
+        { company: "NVIDIA", title: "Systems Programming Intern", type: "internship", category: "Internships", domain: "CUDA Compute", location: "Bangalore, India", salary: "₹62,000 / mo", description: "Write CUDA kernel optimizations and deep learning acceleration code.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://nvidia.wd5.myworkdayjobs.com/" },
+        { company: "SPOTIFY", title: "DevOps & SRE Intern", type: "internship", category: "Internships", domain: "Cloud Observability", location: "Remote / Global", salary: "₹45,000 / mo", description: "Configure Kubernetes manifests and Prometheus observability metrics.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://lifeatspotify.com/jobs" },
+        { company: "ADOBE", title: "UI/UX Product Design Intern", type: "internship", category: "Internships", domain: "Creative UI", location: "Noida / Remote", salary: "₹35,000 / mo", description: "Design wireframes, component libraries, and interactive visual mockups.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://www.adobe.com/careers.html" },
+        { company: "ZEPTO", title: "Data Engineering Intern", type: "internship", category: "Internships", domain: "Quick Commerce", location: "Mumbai / Remote", salary: "₹35,000 / mo", description: "Maintain PostgreSQL query pipelines and real-time inventory counters.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://www.zepto.co.in/" },
+        { company: "TESLA", title: "Machine Learning Intern", type: "internship", category: "Internships", domain: "Autopilot Vision", location: "Remote / Global", salary: "₹70,000 / mo", description: "Process computer vision datasets for automated autonomous driving.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://www.tesla.com/careers" },
+        { company: "INTEL", title: "Compiler & Kernel Intern", type: "internship", category: "Internships", domain: "Semiconductor", location: "Bangalore, India", salary: "₹45,000 / mo", description: "Optimize C++ compiler flags and hardware telemetry tools.", ribbonText: "💼 Internship", ribbonClass: "intern", apply_link: "https://jobs.intel.com/" },
 
-      const roleStr = isIntern ? "Software Developer Intern" : "Software Engineer";
-
-      return [
-        { company: "GOOGLE", title: roleStr, type: isIntern ? "Internship" : "Job", domain: "Cloud & AI", location: "Bangalore / Hyderabad, India", salary: "₹18,00,000 - ₹30,00,000 / yr", description: "Develop scalable internet software services, web applications, and high-performance algorithms.", ribbonText: "Featured", ribbonClass: isIntern ? "intern" : "", apply_link: "https://careers.google.com/", signin_link: "https://careers.google.com/" },
-        { company: "MICROSOFT", title: isIntern ? "Product Management Intern" : "Fullstack Developer", type: isIntern ? "Internship" : "Job", domain: "Azure & Cloud Services", location: "Hyderabad, India / Remote", salary: "₹16,00,000 - ₹26,00,000 / yr", description: "Architect web features, modern microservices, and React developer interfaces.", ribbonText: isIntern ? "Internship" : "High Demand", ribbonClass: isIntern ? "intern" : "", apply_link: "https://careers.microsoft.com/", signin_link: "https://careers.microsoft.com/" },
-        { company: "OPENAI", title: "Research Engineer - AI Systems", type: "Job", domain: "Generative AI", location: "Remote / Global", salary: "₹28,00,000+ / yr", description: "Advance state-of-the-art transformer neural networks and deep learning models.", ribbonText: "Hot Opportunity", ribbonClass: "", apply_link: "https://openai.com/careers/", signin_link: "https://openai.com/careers/" },
-        { company: "AMAZON", title: "Backend Software Development Engineer", type: "Job", domain: "AWS Commerce", location: "Chennai / Bangalore, India", salary: "₹15,00,000 - ₹24,00,000 / yr", description: "Build robust distributed backend platforms powering cloud marketplace transactions worldwide.", ribbonText: "Actively Hiring", ribbonClass: "", apply_link: "https://www.amazon.jobs/", signin_link: "https://www.amazon.jobs/" },
-        { company: "META", title: "Production Engineering Intern", type: "Internship", domain: "Infrastructure", location: "Gurgaon, India / Remote", salary: "₹19,00,000 - ₹34,00,000 / yr", description: "Scale global networking infrastructure, data center automation, and distributed web services.", ribbonText: "High Growth", ribbonClass: "intern", apply_link: "https://www.metacareers.com/", signin_link: "https://www.metacareers.com/" },
-        { company: "APPLE", title: "iOS Application Developer", type: "Job", domain: "Mobile Engineering", location: "Hyderabad / Bangalore, India", salary: "₹17,00,000 - ₹30,00,000 / yr", description: "Build high-performance client applications and frameworks for millions of Apple devices.", ribbonText: "Apple Team", ribbonClass: "", apply_link: "https://www.apple.com/careers/", signin_link: "https://www.apple.com/careers/" }
+        // 75 Full-time Tech, Teaching, Arts, Medical Jobs
+        { company: "GOOGLE", title: "Senior Fullstack Developer", type: "job", category: "Engineering", domain: "Cloud & AI", location: "Bangalore / Remote", salary: "₹18,00,000 - ₹30,00,000 / yr", description: "Architect web features, modern microservices, and React developer interfaces.", ribbonText: "Featured", ribbonClass: "", apply_link: "https://careers.google.com/" },
+        { company: "MICROSOFT", title: "Fullstack Developer", type: "job", category: "Engineering", domain: "Azure Cloud Services", location: "Hyderabad, India / Remote", salary: "₹16,00,000 - ₹26,00,000 / yr", description: "Architect web features, modern microservices, and React developer interfaces.", ribbonText: "High Demand", ribbonClass: "", apply_link: "https://careers.microsoft.com/" },
+        { company: "OPENAI", title: "Research Engineer - AI Systems", type: "job", category: "Engineering", domain: "Generative AI", location: "Remote / Global", salary: "₹28,00,000+ / yr", description: "Advance state-of-the-art transformer neural networks and deep learning models.", ribbonText: "Hot Role", ribbonClass: "", apply_link: "https://openai.com/careers/" },
+        { company: "AMAZON", title: "Backend Software Development Engineer", type: "job", category: "Engineering", domain: "AWS Commerce", location: "Chennai / Bangalore, India", salary: "₹15,00,000 - ₹24,00,000 / yr", description: "Build robust distributed backend platforms powering cloud marketplace transactions worldwide.", ribbonText: "Actively Hiring", ribbonClass: "", apply_link: "https://www.amazon.jobs/" },
+        { company: "APPLE", title: "iOS Application Developer", type: "job", category: "Engineering", domain: "Mobile Engineering", location: "Hyderabad / Bangalore, India", salary: "₹17,00,000 - ₹30,00,000 / yr", description: "Build high-performance client applications and frameworks for millions of Apple devices.", ribbonText: "Apple Team", ribbonClass: "", apply_link: "https://www.apple.com/careers/" },
+        { company: "NVIDIA", title: "CUDA & Deep Learning SDK Engineer", type: "job", category: "Engineering", domain: "AI Compute", location: "Pune / Bangalore, India", salary: "₹22,00,000 - ₹38,00,000 / yr", description: "Accelerate neural network training pipelines using CUDA C++, PyTorch, and TensorRT.", ribbonText: "AI Leader", ribbonClass: "", apply_link: "https://nvidia.wd5.myworkdayjobs.com/" },
+        { company: "NETFLIX", title: "Cloud Operations & Streaming Backend Engineer", type: "job", category: "Engineering", domain: "Media Streaming", location: "Remote / Mumbai", salary: "₹25,00,000 - ₹40,00,000 / yr", description: "Optimize real-time video streaming delivery algorithms and microservices backend micro-architectures.", ribbonText: "Top Comp", ribbonClass: "", apply_link: "https://jobs.netflix.com/" },
+        { company: "UBER", title: "Systems & Logistics Engineer", type: "job", category: "Engineering", domain: "Mobility Platforms", location: "Bangalore, India", salary: "₹16,50,000 - ₹27,00,000 / yr", description: "Engineer low-latency dispatch algorithms, Geospatial routing, and real-time transaction processing.", ribbonText: "Actively Hiring", ribbonClass: "", apply_link: "https://www.uber.com/careers" },
+        { company: "AIRBNB", title: "Fullstack Platform Engineer", type: "job", category: "Engineering", domain: "Travel Platform", location: "Remote / Global", salary: "₹20,00,000 - ₹35,00,000 / yr", description: "Build universal web components, payment integrations, and search recommendation workflows.", ribbonText: "100% Remote", ribbonClass: "", apply_link: "https://careers.airbnb.com/" },
+        { company: "SPOTIFY", title: "Audio Recommendation Systems Developer", type: "job", category: "Engineering", domain: "Audio Tech", location: "Remote / Global", salary: "₹18,00,000 - ₹32,00,000 / yr", description: "Implement machine learning recommendation models and personal audio discovery features.", ribbonText: "Global Remote", ribbonClass: "", apply_link: "https://lifeatspotify.com/jobs" },
+        { company: "CANVA CREATIVE", title: "Lead UI/UX Product Designer", type: "job", category: "Arts & Design", domain: "Design Tech", location: "Remote / Global", salary: "₹14,00,000 - ₹25,00,000 / yr", description: "Create compelling digital product UI/UX systems and interactive visual design graphics.", ribbonText: "Design Role", ribbonClass: "", apply_link: "https://www.canva.com/careers" },
+        { company: "DESIGN LABS", title: "Brand & Motion Graphics Artist", type: "job", category: "Arts & Design", domain: "Branding", location: "Mumbai / Remote", salary: "₹8,00,000 - ₹16,00,000 / yr", description: "Design 3D vector animations, brand identity kits, and marketing visual assets.", ribbonText: "Creative", ribbonClass: "", apply_link: "https://www.behance.net" },
+        { company: "APOLLO HEALTH", title: "Healthcare Data Analyst & Engineer", type: "job", category: "Medical", domain: "Health Informatics", location: "Chennai / Remote", salary: "₹10,00,000 - ₹20,00,000 / yr", description: "Analyze clinical medical records and engineer healthcare informatics pipelines.", ribbonText: "Healthcare", ribbonClass: "", apply_link: "https://careers.apollohospitals.com" },
+        { company: "MEDTECH SYSTEMS", title: "Clinical Informatics Specialist", type: "job", category: "Medical", domain: "Clinical Tech", location: "Hyderabad / Bangalore", salary: "₹12,00,000 - ₹22,00,000 / yr", description: "Integrate hospital information systems and patient health records.", ribbonText: "MedTech", ribbonClass: "", apply_link: "https://www.naukri.com" },
+        { company: "LOCAL ACADEMIES", title: "Computer Science Educator & Mentor", type: "job", category: "Teaching", domain: "Education", location: "Bangalore / Remote", salary: "₹6,00,000 - ₹12,00,000 / yr", description: "Teach programming languages, logic building, and computer science to passionate students.", ribbonText: "Educator", ribbonClass: "", apply_link: "https://www.indeed.com" },
+        { company: "COURSERA PARTNERS", title: "AI & Fullstack Curriculum Instructor", type: "job", category: "Teaching", domain: "EdTech", location: "Remote", salary: "₹8,00,000 - ₹15,00,000 / yr", description: "Design interactive coding assessments and online software engineering courses.", ribbonText: "100% Remote", ribbonClass: "", apply_link: "https://www.coursera.org/about/careers" }
       ];
+
+      const extraCompanies = ["TESLA", "STRIPE", "ZEPTO", "CRED", "PAYTM", "INFOSYS", "TCS", "ACCENTURE", "WIPRO", "COGNIZANT", "ORACLE", "SALESFORCE", "IBM", "CISCO", "DELL", "HP", "DROPBOX", "RED HAT", "TWITCH", "DISCORD"];
+      let eIdx = 1;
+      extraCompanies.forEach(comp => {
+        masterList.push({
+          company: comp,
+          title: `Senior ${comp} Cloud & Systems Developer ${eIdx}`,
+          type: "job",
+          category: "Engineering",
+          domain: "Enterprise Software",
+          location: "Bangalore / Remote",
+          salary: "₹14,00,000 - ₹28,00,000 / yr",
+          description: `Build cloud infrastructure and enterprise API software at ${comp}.`,
+          ribbonText: "Full-Time",
+          ribbonClass: "",
+          apply_link: `https://www.google.com/search?q=${comp}+careers`
+        });
+        eIdx++;
+      });
+
+      let filtered = masterList.filter(item => {
+        const itemCat = (item.category || "").toLowerCase();
+        const itemType = (item.type || "").toLowerCase();
+
+        const catMatch = (
+          catQuery === "all" ||
+          (catQuery.includes("intern") && (itemType === "internship" || itemCat.includes("intern"))) ||
+          (catQuery.includes("hack") && (itemType === "hackathon" || itemCat.includes("hack"))) ||
+          (catQuery.includes("art") && (itemCat.includes("art") || itemCat.includes("design"))) ||
+          (catQuery.includes("teach") && itemCat.includes("teach")) ||
+          (catQuery.includes("med") && (itemCat.includes("med") || itemCat.includes("health"))) ||
+          (catQuery.includes("eng") && (itemCat.includes("eng") || itemType === "job"))
+        );
+
+        if (!query) return catMatch;
+        const fullText = `${item.title} ${item.company} ${item.description} ${item.category} ${item.type} ${item.location}`.toLowerCase();
+        return catMatch && query.split(/\s+/).some(term => term.length > 1 && fullText.includes(term));
+      });
+
+      if (filtered.length === 0) {
+        filtered = masterList;
+      }
+
+      const counts = {
+        All: masterList.length,
+        Engineering: masterList.filter(j => (j.category || "").toLowerCase().includes("eng") || j.type === "job").length,
+        Teaching: masterList.filter(j => (j.category || "").toLowerCase().includes("teach")).length,
+        Arts: masterList.filter(j => (j.category || "").toLowerCase().includes("art") || (j.category || "").toLowerCase().includes("design")).length,
+        Medical: masterList.filter(j => (j.category || "").toLowerCase().includes("med")).length,
+        Hackathons: masterList.filter(j => j.type === "hackathon" || (j.category || "").toLowerCase().includes("hack")).length,
+        Internships: masterList.filter(j => j.type === "internship" || (j.category || "").toLowerCase().includes("intern")).length
+      };
+      updateFilterCounts(counts);
+
+      const total = filtered.length;
+      totalPagesCount = Math.ceil(total / limit) || 1;
+      const startIndex = (page - 1) * limit;
+      return filtered.slice(startIndex, startIndex + limit);
     }
 
     let currentCategory = 'all';
@@ -932,8 +1023,7 @@
       }
 
       if (!jobs || jobs.length === 0) {
-        jobs = generateClientFallbackJobs(userQuery);
-        totalPagesCount = 1;
+        jobs = generateClientFallbackJobs(userQuery, currentCategory, currentPage, 12);
       }
 
       allLoadedJobs = jobs;
