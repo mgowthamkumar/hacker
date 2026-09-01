@@ -1,4 +1,5 @@
 import os
+import json
 import re
 import tempfile
 import time
@@ -174,53 +175,77 @@ def check_personal_details_section(raw_text: str) -> bool:
 
 def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]:
     """
-    Detect if the uploaded text is a complete resume containing all 5 required section categories:
+    Detect if the uploaded text is a genuine complete resume or a non-resume document (like a Marksheet/Transcript/Timetable).
+    Required Resume Categories:
     1. Personal Details (Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio)
-    2. Career Objective / Target Role (Target Job Role, Career Objective)
-    3. Education (Degree/Course, Specialization, College, University, CGPA/Percentage, Year)
-    4. Technical Skills (Programming, Web Technologies, Database, Tools/Software, Other Technical Skills)
-    5. Languages (Languages known / Spoken languages)
+    2. Career Objective / Profile Summary / Target Role
+    3. Education (Degree/Course, College, University, Year, CGPA/GPA)
+    4. Technical / Core Skills (Programming, Web, Database, Tools, Technologies)
+    5. Work / Project Experience (Projects, Internships, Employment, Work History)
     """
     lower_text = raw_text.lower()
     words = re.findall(r"\b\w+\b", raw_text)
     word_count = len(words)
 
-    # 1. Timetable / Schedule / Record Experiment / Non-resume keywords
-    timetable_keywords = [
-        "timetable", "time table", "class schedule", "lecture schedule", "period 1", "period 2", "period 3",
-        "period 4", "period 5", "room no", "subject code", "course code", "exam schedule", "date sheet",
-        "hall ticket", "semester schedule", "lecture time", "daily routine", "invoice", "receipt", "bill",
-        "menu card", "syllabus sheet", "record experiment", "experiment no", "aim of the experiment"
+    # 1. Marksheet / Academic Transcript / Non-resume Document Detection
+    marksheet_keywords = [
+        "marksheet", "mark sheet", "grade sheet", "grade card", "statement of marks", "academic transcript",
+        "grade transcript", "semester mark", "sem 1", "sem 2", "sem 3", "sem 4", "sem 5", "sem 6", "sem 7", "sem 8",
+        "sem-1", "sem-2", "sem-3", "sem-4", "sem-5", "sem-6", "sem-7", "sem-8",
+        "semester 1", "semester 2", "semester 3", "semester 4", "semester 5", "semester 6", "semester 7", "semester 8",
+        "sgpa", "cgpa", "internal marks", "external marks", "subject code", "course code", "total marks",
+        "credits earned", "grade point", "controller of examinations", "provisional certificate",
+        "consolidated mark sheet", "examination report", "report card", "tabular mark list",
+        "result: pass", "result: fail", "end semester examination"
     ]
-    timetable_hits = [kw for kw in timetable_keywords if kw in lower_text]
-    if len(timetable_hits) >= 2 or (len(timetable_hits) >= 1 and word_count < 120):
-        return False, False, "⚠️ Invalid Resume Alert: Document does not contain a Personal Details section. Please upload a valid resume!", ["Timetable/Non-resume file detected"]
+    
+    non_resume_keywords = [
+        "timetable", "time table", "class schedule", "lecture schedule", "period 1", "period 2", "period 3",
+        "hall ticket", "admit card", "fee receipt", "tax invoice", "bill of supply", "syllabus copy",
+        "experiment no", "lab manual", "aim of the experiment"
+    ]
+
+    marksheet_hits = [kw for kw in marksheet_keywords if kw in lower_text]
+    non_resume_hits = [kw for kw in non_resume_keywords if kw in lower_text]
+
+    # Check for Work/Project Experience anchors
+    experience_anchors = [
+        "projects", "project", "experience", "work experience", "internship", "internships",
+        "work history", "employment", "key projects", "academic project", "mini project",
+        "major project", "responsibilities", "practical experience"
+    ]
+    has_experience = any(exp in lower_text for exp in experience_anchors)
+
+    # If it has 2+ marksheet keywords, or 1 marksheet/non-resume keyword without Work/Project Experience:
+    if len(marksheet_hits) >= 2 or (len(marksheet_hits) >= 1 and not has_experience) or len(non_resume_hits) >= 2:
+        msg = "⚠️ Marksheet / Non-Resume Document Detected: The uploaded document appears to be an Academic Marksheet or Grade Sheet, not a complete Resume. Please upload a complete resume containing Work/Project Experience, Technical Skills, and Profile Summary."
+        return False, False, msg, ["Document is an Academic Marksheet / Grade Sheet, not a Resume"]
 
     missing_sections = []
 
-    # Check Section 1: PERSONAL DETAILS
+    # Category 1: PERSONAL DETAILS
     if not check_personal_details_section(raw_text):
-        missing_sections.append("Personal Details (Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio)")
+        missing_sections.append("Personal Details & Contact Info (Name, Phone, Email, Location, LinkedIn/GitHub)")
 
-    # Check Section 2: CAREER OBJECTIVE / TARGET ROLE
+    # Category 2: CAREER OBJECTIVE / PROFILE SUMMARY
     objective_anchors = [
         "objective", "target role", "target job role", "career objective", "profile summary",
         "professional summary", "summary", "career goal", "about me", "seeking role", "seeking a role", "aspiring"
     ]
     if not any(anchor in lower_text for anchor in objective_anchors):
-        missing_sections.append("Career Objective / Target Role")
+        missing_sections.append("Career Objective / Profile Summary")
 
-    # Check Section 3: EDUCATION
+    # Category 3: EDUCATION
     education_anchors = [
         "education", "degree", "course", "specialization", "college", "university", "school", "academic",
         "b.tech", "btech", "m.tech", "mtech", "b.e", "be", "b.sc", "bsc", "m.sc", "msc",
         "bba", "mba", "b.com", "bcom", "bca", "mca", "diploma", "10th", "12th",
-        "cgpa", "gpa", "percentage", "year"
+        "cgpa", "gpa", "percentage", "year", "qualification"
     ]
     if not any(anchor in lower_text for anchor in education_anchors):
-        missing_sections.append("Education (Degree, Course, Specialization, College, University, CGPA, Year)")
+        missing_sections.append("Education (Degree, Course, Specialization, College, University)")
 
-    # Check Section 4: TECHNICAL SKILLS
+    # Category 4: TECHNICAL SKILLS
     skills_anchors = [
         "skills", "technical skills", "programming", "web technologies", "database",
         "tools", "software", "technologies", "tech stack", "python", "javascript",
@@ -228,19 +253,14 @@ def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]
         "operating system", "operating systems", "os", "linux", "c", "data structures"
     ]
     if not any(anchor in lower_text for anchor in skills_anchors):
-        missing_sections.append("Technical Skills (Programming, Web, Database, Tools)")
+        missing_sections.append("Technical / Core Skills")
 
-    # Check Section 5: LANGUAGES
-    languages_anchors = [
-        "languages", "language", "languages known", "mother tongue", "spoken languages",
-        "english", "hindi", "tamil", "telugu", "kannada", "malayalam", "marathi", "bengali",
-        "gujarati", "spanish", "french", "german", "japanese", "mandarin", "chinese", "russian"
-    ]
-    if not any(anchor in lower_text for anchor in languages_anchors):
-        missing_sections.append("Languages")
+    # Category 5: WORK / PROJECT EXPERIENCE
+    if not has_experience:
+        missing_sections.append("Work / Project Experience (Key Projects, Internships, Employment)")
 
     if missing_sections:
-        warning_msg = f"⚠️ Invalid Resume Alert: Document does not contain a Personal Details section. Please upload a valid resume!"
+        warning_msg = f"⚠️ Incomplete Resume Alert: Document is missing required section(s): {', '.join(missing_sections)}. Please upload a complete resume!"
         return False, False, warning_msg, missing_sections
 
     return True, True, "", []
@@ -1128,15 +1148,39 @@ async def analyze_resume(
     company_skill_list = parse_company_skills(company_skills)
 
     if not is_valid_resume or not is_complete_resume:
-        feedback.append({"type": "fail", "text": warning_msg})
-        action_score = 20.0
-        metrics_score = 15.0
-        structure_score = 20.0
-        length_score = 30.0
-        total_score = 20.0
-        grade = "F"
-    else:
-        # Technical Skill Evaluation
+        return AnalysisResult(
+            is_valid_resume=False,
+            is_complete_resume=False,
+            missing_sections=missing_sections,
+            warning_message=warning_msg,
+            predicted_domain="Invalid Document / Non-Resume File",
+            domain_icon="⚠️",
+            domain_description="The uploaded document could not be verified as a valid complete resume.",
+            action_score=0,
+            metrics_score=0,
+            structure_score=0,
+            length_score=0,
+            total_score=0.0,
+            grade="F",
+            hackathon_probability=0.0,
+            internship_probability=0.0,
+            hackathon_badge="Invalid File",
+            internship_badge="Invalid File",
+            hackathon_status="Re-upload a complete resume to calculate hackathon selection odds.",
+            internship_status="Re-upload a complete resume to calculate internship qualification.",
+            feedback=[{"type": "fail", "text": warning_msg}],
+            detected_skills=[],
+            company_skills=[],
+            suggested_jobs=[],
+            study_roadmap=[],
+            skill_gaps=[],
+            domain={"title": "Invalid Document", "icon": "⚠️", "description": warning_msg},
+            hackathon_odds={"score": 0.0, "badge": "Invalid File", "status": warning_msg},
+            internship_odds={"score": 0.0, "badge": "Invalid File", "status": warning_msg},
+            overall_score={"score": 0.0, "grade": "F"}
+        )
+
+    # Technical Skill Evaluation
         tech_skills_score = min(100.0, float(len(detected_skills) * 22.0))
         if tech_skills_score < 40.0:
             tech_skills_score = 40.0

@@ -929,6 +929,13 @@
             selectedFile = file;
             fileInfo.innerText = `📄 Selected File: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
             guidanceMsg.style.display = "none";
+
+            readTextFromFile(file).then(text => {
+                const check = validateDocumentClientSide(text, file.name);
+                if (!check.isValid) {
+                    fileInfo.innerHTML = `📄 Selected File: <span style="color:#ef4444;">${file.name}</span> (${(file.size / 1024).toFixed(1)} KB) — <strong style="color:#fca5a5;">⚠️ Marksheet / Non-Resume File Detected</strong>`;
+                }
+            });
         }
 
         async function readTextFromFile(file) {
@@ -965,6 +972,123 @@
             return file.name.replace(/[^a-zA-Z0-9\s]/g, ' ');
         }
 
+        function validateDocumentClientSide(text, filename = "") {
+            const textLower = (text || "").toLowerCase();
+            const fnLower = (filename || "").toLowerCase();
+
+            // 1. Marksheet & Non-resume document keywords
+            const marksheetKeywords = [
+                "marksheet", "mark sheet", "grade sheet", "grade card", "statement of marks", "academic transcript",
+                "grade transcript", "semester mark", "sem 1", "sem 2", "sem 3", "sem 4", "sem 5", "sem 6", "sem 7", "sem 8",
+                "sem-1", "sem-2", "sem-3", "sem-4", "sem-5", "sem-6", "sem-7", "sem-8",
+                "semester 1", "semester 2", "semester 3", "semester 4", "semester 5", "semester 6", "semester 7", "semester 8",
+                "sgpa", "cgpa", "internal marks", "external marks", "subject code", "course code", "total marks",
+                "credits earned", "grade point", "controller of examinations", "provisional certificate",
+                "consolidated mark sheet", "examination report", "report card", "tabular mark list",
+                "result: pass", "result: fail", "end semester examination"
+            ];
+            const nonResumeKeywords = [
+                "timetable", "time table", "class schedule", "lecture schedule", "period 1", "period 2", "period 3",
+                "hall ticket", "admit card", "fee receipt", "tax invoice", "bill of supply", "syllabus copy",
+                "experiment no", "lab manual", "aim of the experiment"
+            ];
+
+            const marksheetHits = marksheetKeywords.filter(kw => textLower.includes(kw) || fnLower.includes(kw));
+            const nonResumeHits = nonResumeKeywords.filter(kw => textLower.includes(kw) || fnLower.includes(kw));
+
+            // Work / Project Experience check
+            const experienceAnchors = [
+                "projects", "project", "experience", "work experience", "internship", "internships",
+                "work history", "employment", "key projects", "academic project", "mini project",
+                "major project", "responsibilities", "practical experience"
+            ];
+            const hasExperience = experienceAnchors.some(exp => textLower.includes(exp));
+
+            const isMarksheet = marksheetHits.length >= 2 || (marksheetHits.length >= 1 && !hasExperience) || nonResumeHits.length >= 2;
+
+            const missingSections = [];
+
+            // Personal Details & Contact
+            const hasEmail = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/.test(text) || ["email:", "e-mail:", "mail id:", "email address:"].some(k => textLower.includes(k));
+            const digits = (text.match(/\d/g) || []).length;
+            const hasPhonePattern = /\b(?:\+?\d{1,3}[-\s]?)?\(?\d{3,5}\)?[-\s]?\d{3,5}[-\s]?\d{3,5}\b/.test(text) && digits >= 8;
+            const hasPhoneLabel = /\b(phone|mobile|cell|tel|contact\s*no|contact\s*number|phone\s*no|phone\s*number)\b/.test(textLower);
+            const hasPhone = hasPhonePattern || hasPhoneLabel;
+            const personalHeaders = ["personal details", "personal information", "contact details", "contact info", "contact information", "personal profile", "candidate profile", "applicant details"];
+            const hasHeader = personalHeaders.some(h => textLower.includes(h));
+            const hasLinks = ["linkedin.com", "github.com", "gitlab.com", "portfolio", "location:", "address:", "pincode:"].some(k => textLower.includes(k));
+            const hasNameLabel = /\b(full\s*name|candidate\s*name|applicant\s*name)\s*[:\-]/.test(textLower);
+            if (!hasEmail && !hasPhone && !hasHeader && !hasLinks && !hasNameLabel) {
+                missingSections.push("Personal Details & Contact Info");
+            }
+
+            // Summary / Objective
+            const objectiveAnchors = ["objective", "target role", "target job role", "career objective", "profile summary", "professional summary", "summary", "career goal", "about me", "aspiring"];
+            if (!objectiveAnchors.some(k => textLower.includes(k))) {
+                missingSections.push("Career Objective / Profile Summary");
+            }
+
+            // Education
+            const educationAnchors = ["education", "degree", "course", "specialization", "college", "university", "academic", "b.tech", "btech", "m.tech", "mtech", "b.e", "be", "b.sc", "bsc", "m.sc", "msc", "bba", "mba", "b.com", "bcom", "bca", "mca", "cgpa", "percentage", "qualification"];
+            if (!educationAnchors.some(k => textLower.includes(k))) {
+                missingSections.push("Education (Degree, College, University)");
+            }
+
+            // Technical Skills
+            const skillsAnchors = ["skills", "technical skills", "programming", "web technologies", "database", "tools", "software", "python", "javascript", "java", "c++", "html", "css", "sql", "react", "nodejs", "git", "aws", "operating system", "os", "linux", "c", "data structures"];
+            if (!skillsAnchors.some(k => textLower.includes(k))) {
+                missingSections.push("Technical / Core Skills");
+            }
+
+            // Work / Project Experience
+            if (!hasExperience) {
+                missingSections.push("Work / Project Experience");
+            }
+
+            const isValid = !isMarksheet && missingSections.length === 0;
+            let message = "";
+            if (isMarksheet) {
+                message = `⚠️ Marksheet / Academic Transcript Detected: The uploaded file ('${filename || "document"}') appears to be an Academic Marksheet or Grade Sheet, not a complete Resume. Please upload a complete resume containing Work/Project Experience, Technical Skills, and Profile Summary.`;
+            } else if (missingSections.length > 0) {
+                message = `⚠️ Incomplete Resume Alert: Your document is missing mandatory resume sections: ${missingSections.join(", ")}. Please upload a complete resume!`;
+            }
+
+            return { isValid, isMarksheet, message, missingSections };
+        }
+
+        function displayValidationError(val) {
+            resultsSection.style.display = 'none';
+            const missingListHtml = (val.missingSections || []).map(s => `<li style="margin-bottom:4px;">❌ <strong>${s}</strong></li>`).join('');
+            
+            guidanceMsg.innerHTML = `
+                <div style="background: rgba(239, 68, 68, 0.15); border: 2px solid #ef4444; border-radius: 16px; padding: 24px; text-align: left; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2); backdrop-filter: blur(16px);">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                        <span style="font-size:2rem;">⚠️</span>
+                        <h3 style="font-family:'Space Grotesk', sans-serif; font-size:1.25rem; color:#fca5a5; margin:0;">
+                            ${val.isMarksheet ? "Marksheet / Academic Document Rejection Alert" : "Incomplete Resume Document Alert"}
+                        </h3>
+                    </div>
+                    <p style="color:#f8fafc; font-size:0.95rem; line-height:1.6; margin-bottom:16px;">
+                        ${val.message || "The uploaded document cannot be verified as a valid resume."}
+                    </p>
+                    ${missingListHtml ? `
+                    <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:14px 18px; margin-bottom:18px;">
+                        <div style="font-size:0.85rem; text-transform:uppercase; color:#fca5a5; font-weight:800; letter-spacing:0.05em; margin-bottom:8px;">Missing / Required Resume Sections:</div>
+                        <ul style="list-style:none; padding:0; margin:0; font-size:0.9rem; color:#cbd5e1;">${missingListHtml}</ul>
+                    </div>
+                    ` : ''}
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+                        <div style="font-size:0.85rem; color:var(--text-muted);">Please select a complete Resume file (PDF / DOCX / TXT) containing all sections above.</div>
+                        <button onclick="document.getElementById('file-input').click()" style="padding:10px 20px; border-radius:10px; background:linear-gradient(135deg, #ef4444, #dc2626); color:#ffffff; font-weight:700; font-family:'Space Grotesk', sans-serif; border:none; cursor:pointer; box-shadow:0 4px 15px rgba(239,68,68,0.4);">
+                            📂 Upload Complete Resume
+                        </button>
+                    </div>
+                </div>
+            `;
+            guidanceMsg.style.display = "block";
+            guidanceMsg.scrollIntoView({ behavior: 'smooth' });
+        }
+
         btnAnalyze.addEventListener('click', async () => {
             const manualText = pastedResumeText.value.trim();
             
@@ -976,9 +1100,10 @@
 
             guidanceMsg.style.display = "none";
             btnAnalyze.disabled = true;
-            btnAnalyze.innerText = "⚡ AI Analyzing Skills, Impact & Selection Odds...";
+            btnAnalyze.innerText = "⚡ AI Auditing Resume Structure & Authenticity...";
 
             let extractedText = manualText;
+            let fileName = selectedFile ? selectedFile.name : "";
             if (selectedFile) {
                 const fileText = await readTextFromFile(selectedFile);
                 if (fileText) extractedText = (fileText + "\n" + manualText).trim();
@@ -987,33 +1112,15 @@
                 extractedText = selectedFile.name.replace(/[^a-zA-Z0-9\s]/g, ' ');
             }
 
-            function checkPersonalDetailsSection(text) {
-                if (!text) return false;
-                const textLower = text.toLowerCase();
-                const hasEmail = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/.test(text) || ["email:", "e-mail:", "mail id:", "email address:"].some(k => textLower.includes(k));
-                const digits = (text.match(/\d/g) || []).length;
-                const hasPhonePattern = /\b(?:\+?\d{1,3}[-\s]?)?\(?\d{3,5}\)?[-\s]?\d{3,5}[-\s]?\d{3,5}\b/.test(text) && digits >= 8;
-                const hasPhoneLabel = /\b(phone|mobile|cell|tel|contact\s*no|contact\s*number|phone\s*no|phone\s*number)\b/.test(textLower);
-                const hasPhone = hasPhonePattern || hasPhoneLabel;
-                const personalHeaders = ["personal details", "personal information", "contact details", "contact info", "contact information", "personal profile", "candidate profile", "applicant details"];
-                const hasHeader = personalHeaders.some(h => textLower.includes(h));
-                const hasLinks = ["linkedin.com", "github.com", "gitlab.com", "portfolio", "location:", "address:", "pincode:"].some(k => textLower.includes(k));
-                const hasNameLabel = /\b(full\s*name|candidate\s*name|applicant\s*name)\s*[:\-]/.test(textLower);
-                return hasEmail || hasPhone || hasHeader || hasLinks || hasNameLabel;
-            }
-
-            if (!checkPersonalDetailsSection(extractedText)) {
-                guidanceMsg.innerHTML = `<div style="background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; font-weight: 700; font-size: 1.05rem;">⚠️ Invalid Resume Alert: Document does not contain a Personal Details section. Please upload a valid resume!</div>`;
-                guidanceMsg.style.display = "block";
-                alert("⚠️ Invalid Resume: Personal details section is missing. Please upload a valid resume!");
+            const clientValidation = validateDocumentClientSide(extractedText, fileName);
+            if (!clientValidation.isValid) {
+                displayValidationError(clientValidation);
                 btnAnalyze.disabled = false;
                 btnAnalyze.innerText = "🚀 Calculate Selection Odds & Generate Study Roadmap";
-                if (fileInput) fileInput.value = "";
-                selectedFile = null;
-                if (pastedResumeText) pastedResumeText.value = "";
-                if (dropArea) dropArea.innerHTML = `<span style="font-size:2rem;">📄</span><p>Drag & Drop your Resume PDF/TXT here, or click to browse</p>`;
                 return;
             }
+
+            btnAnalyze.innerText = "⚡ AI Analyzing Skills, Impact & Selection Odds...";
 
             const targetSkills = companySkillsInput.value.trim();
             const apiOrigin = window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800";
@@ -1045,7 +1152,7 @@
 
                     if (response.ok) {
                         const data = await response.json();
-                        if (data && (data.domain || data.predicted_domain || data.overall_score || data.total_score)) {
+                        if (data && (data.domain || data.predicted_domain || data.overall_score || data.total_score || data.is_valid_resume !== undefined)) {
                             analyzedData = data;
                             break;
                         }
@@ -1059,11 +1166,17 @@
             if (analyzedData) {
                 renderAnalysisResults(analyzedData);
             } else {
-                runClientFallbackAnalysis(extractedText, targetSkills);
+                runClientFallbackAnalysis(extractedText, targetSkills, fileName);
             }
         });
 
-        function runClientFallbackAnalysis(resumeText, targetSkillsStr) {
+        function runClientFallbackAnalysis(resumeText, targetSkillsStr, fileName = "") {
+            const clientVal = validateDocumentClientSide(resumeText, fileName);
+            if (!clientVal.isValid) {
+                displayValidationError(clientVal);
+                return;
+            }
+
             const text = (resumeText || "").toLowerCase();
             const targetSkills = (targetSkillsStr || "").toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
 
@@ -1088,6 +1201,8 @@
             const overallScore = Math.round((hackathonOdds + internshipOdds) / 2);
 
             const fallbackData = {
+                is_valid_resume: true,
+                is_complete_resume: true,
                 predicted_domain: fieldTitle,
                 domain_icon: fieldIcon,
                 domain_description: "Field-tailored analysis & career roadmap evaluation",
@@ -1130,12 +1245,13 @@
         function renderAnalysisResults(data) {
             if (!data) return;
 
-            if (data.is_valid_resume === false || (data.missing_sections && data.missing_sections.some(s => s.toLowerCase().includes("personal details"))) || (data.warning_msg && data.warning_msg.toLowerCase().includes("personal details")) || (data.warning_message && data.warning_message.toLowerCase().includes("personal details"))) {
-                const msg = data.warning_message || data.warning_msg || "⚠️ Invalid Resume: Personal details section is missing. Please upload a valid resume!";
-                guidanceMsg.innerHTML = `<div style="background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #fca5a5; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; font-weight: 700; font-size: 1.05rem;">⚠️ ${msg}</div>`;
-                guidanceMsg.style.display = "block";
-                alert("⚠️ Invalid Resume: Personal details section is missing. Please upload a valid resume!");
-                window.location.reload();
+            if (data.is_valid_resume === false || data.is_marksheet === true) {
+                displayValidationError({
+                    isValid: false,
+                    isMarksheet: data.is_marksheet || (data.predicted_domain && data.predicted_domain.includes("Invalid")),
+                    message: data.warning_message || data.warning_msg || "⚠️ Invalid Document: Please upload a complete resume with Work/Project Experience, Technical Skills, and Profile Summary.",
+                    missingSections: data.missing_sections || ["Work / Project Experience", "Career Objective / Profile Summary"]
+                });
                 return;
             }
 

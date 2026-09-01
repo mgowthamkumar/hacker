@@ -416,7 +416,31 @@ class RagEngine {
     const words = rawText.match(/\b\w+\b/g) || [];
     const wordCount = words.length;
 
-    // 1. Audit 5 Required Resume Section Categories
+    // 1. Audit Marksheets, Transcripts & 5 Required Resume Categories
+    const marksheetKeywords = [
+      "marksheet", "mark sheet", "grade sheet", "grade card", "statement of marks", "academic transcript",
+      "grade transcript", "semester mark", "sem 1", "sem 2", "sem 3", "sem 4", "sem 5", "sem 6", "sem 7", "sem 8",
+      "sem-1", "sem-2", "sem-3", "sem-4", "sem-5", "sem-6", "sem-7", "sem-8",
+      "semester 1", "semester 2", "semester 3", "semester 4", "semester 5", "semester 6", "semester 7", "semester 8",
+      "sgpa", "cgpa", "internal marks", "external marks", "subject code", "course code", "total marks",
+      "credits earned", "grade point", "controller of examinations", "provisional certificate",
+      "consolidated mark sheet", "examination report", "report card", "tabular mark list",
+      "result: pass", "result: fail", "end semester examination"
+    ];
+    const nonResumeKeywords = [
+      "timetable", "time table", "class schedule", "lecture schedule", "period 1", "period 2", "period 3",
+      "hall ticket", "admit card", "fee receipt", "tax invoice", "bill of supply", "syllabus copy",
+      "experiment no", "lab manual", "aim of the experiment"
+    ];
+
+    const marksheetHits = marksheetKeywords.filter(kw => textLower.includes(kw));
+    const nonResumeHits = nonResumeKeywords.filter(kw => textLower.includes(kw));
+
+    const experienceAnchors = ["projects", "project", "experience", "work experience", "internship", "internships", "work history", "employment", "key projects", "academic project", "mini project", "major project", "responsibilities", "practical experience"];
+    const hasExperienceVal = experienceAnchors.some(k => textLower.includes(k));
+
+    const isMarksheet = marksheetHits.length >= 2 || (marksheetHits.length >= 1 && !hasExperienceVal) || nonResumeHits.length >= 2;
+
     const missingSections = [];
     const hasEmailVal = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/.test(rawText) || ["email:", "e-mail:", "mail id:", "email address:"].some(k => textLower.includes(k));
     const digitsVal = (rawText.match(/\d/g) || []).length;
@@ -430,35 +454,56 @@ class RagEngine {
 
     const hasPersonalVal = hasEmailVal || hasPhoneVal || hasHeaderVal || hasLinksVal || hasNameLabelVal;
     if (!hasPersonalVal) {
-      missingSections.push("Personal Details (Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio)");
+      missingSections.push("Personal Details & Contact Info (Name, Phone, Email, Location, LinkedIn/GitHub)");
     }
 
-    // Category 2: Career Objective / Target Role
-    const objectiveAnchors = ["objective", "target role", "target job role", "career objective", "profile summary", "professional summary", "summary", "career goal", "about me", "aspiring"];
+    const objectiveAnchors = ["objective", "target role", "target job role", "career objective", "profile summary", "professional summary", "summary", "career goal", "about me", "seeking role", "aspiring"];
     if (!objectiveAnchors.some(k => textLower.includes(k))) {
-      missingSections.push("Career Objective / Target Role");
+      missingSections.push("Career Objective / Profile Summary");
     }
 
-    // Category 3: Education
-    const educationAnchors = ["education", "degree", "course", "specialization", "college", "university", "academic", "b.tech", "btech", "m.tech", "mtech", "b.e", "be", "b.sc", "bsc", "m.sc", "msc", "bba", "mba", "b.com", "bcom", "bca", "mca", "cgpa", "percentage"];
+    const educationAnchors = ["education", "degree", "course", "specialization", "college", "university", "academic", "b.tech", "btech", "m.tech", "mtech", "b.e", "be", "b.sc", "bsc", "m.sc", "msc", "bba", "mba", "b.com", "bcom", "bca", "mca", "cgpa", "percentage", "qualification"];
     if (!educationAnchors.some(k => textLower.includes(k))) {
-      missingSections.push("Education (Degree, College, University, CGPA)");
+      missingSections.push("Education (Degree, College, University)");
     }
 
-    // Category 4: Technical Skills
     const skillsAnchors = ["skills", "technical skills", "programming", "web technologies", "database", "tools", "software", "python", "javascript", "java", "c++", "html", "css", "sql", "git", "aws", "operating system", "operating systems", "os", "linux", "c", "data structures"];
     if (!skillsAnchors.some(k => textLower.includes(k))) {
-      missingSections.push("Technical Skills (Programming, Web, Database, Tools)");
+      missingSections.push("Technical / Core Skills");
     }
 
-    // Category 5: Languages
-    const languagesAnchors = ["languages", "language", "languages known", "spoken languages", "english", "hindi", "tamil", "telugu", "spanish", "french", "german"];
-    if (!languagesAnchors.some(k => textLower.includes(k))) {
-      missingSections.push("Languages");
+    if (!hasExperienceVal) {
+      missingSections.push("Work / Project Experience (Key Projects, Internships, Employment)");
     }
 
-    const isValidResume = missingSections.length === 0;
-    const warningMessage = isValidResume ? null : `⚠️ Invalid Resume Alert: Document does not contain a Personal Details section (Name, Phone, Email, Location, LinkedIn/GitHub). Please upload a valid resume!`;
+    const isValidResume = !isMarksheet && missingSections.length === 0;
+    const warningMessage = isMarksheet
+      ? `⚠️ Marksheet / Non-Resume Document Detected: The uploaded document appears to be an Academic Marksheet or Grade Sheet, not a complete Resume. Please upload a complete resume containing Work/Project Experience, Technical Skills, and Profile Summary.`
+      : (isValidResume ? null : `⚠️ Incomplete Resume Alert: Document is missing required section(s): ${missingSections.join(", ")}. Please upload a complete resume!`);
+
+    if (!isValidResume) {
+      return {
+        is_valid_resume: false,
+        is_complete_resume: false,
+        is_marksheet: isMarksheet,
+        warning_message: warningMessage,
+        missing_sections: missingSections,
+        predicted_domain: "Invalid Document / Non-Resume File",
+        domain_icon: "⚠️",
+        domain_description: "The uploaded document could not be verified as a valid complete resume.",
+        total_score: 0,
+        grade: "F",
+        hackathon_probability: 0,
+        internship_probability: 0,
+        hackathon_badge: "Invalid File",
+        internship_badge: "Invalid File",
+        hackathon_status: "Upload a complete resume to evaluate hackathon selection odds.",
+        internship_status: "Upload a complete resume to evaluate internship qualification.",
+        feedback: [{ type: "fail", text: warningMessage }],
+        study_roadmap: [],
+        suggested_jobs: []
+      };
+    }
 
     // 2. Precise Degree & Course Subject Classification
     const verbatimFacts = this.extractVerbatimFacts(rawText);

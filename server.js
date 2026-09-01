@@ -532,85 +532,57 @@ app.post(["/api/rag/analyze", "/api/analyzer", "/analyzer"], memoryUpload.single
             }
         }
 
-        const lowerText = resumeText.toLowerCase();
+        // 1. Run RAG Engine Analysis which checks marksheets and document structure
+        const ragAnalysis = await ragEngine.analyzeResumeWithRag(resumeText, companySkills);
 
-        // 1. Personal Details Section Check
-        const hasEmail = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/.test(resumeText) || ["email:", "e-mail:", "mail id:", "email address:"].some(k => lowerText.includes(k));
-        const digits = (resumeText.match(/\d/g) || []).length;
-        const hasPhonePattern = /\b(?:\+?\d{1,3}[-\s]?)?\(?\d{3,5}\)?[-\s]?\d{3,5}[-\s]?\d{3,5}\b/.test(resumeText) && digits >= 8;
-        const hasPhoneLabel = /\b(phone|mobile|cell|tel|contact\s*no|contact\s*number|phone\s*no|phone\s*number)\b/.test(lowerText);
-        const hasPhone = hasPhonePattern || hasPhoneLabel;
-        const personalHeaders = ["personal details", "personal information", "contact details", "contact info", "contact information", "personal profile", "candidate profile", "applicant details"];
-        const hasHeader = personalHeaders.some(h => lowerText.includes(h));
-        const hasLinks = ["linkedin.com", "github.com", "gitlab.com", "portfolio", "location:", "address:", "pincode:"].some(k => lowerText.includes(k));
+        if (ragAnalysis && ragAnalysis.is_valid_resume === false) {
+            return res.json(ragAnalysis);
+        }
 
-        if (!hasEmail && !hasPhone && !hasHeader && !hasLinks) {
-            return res.json({
-                is_valid_resume: false,
-                is_complete_resume: false,
-                warning_message: "⚠️ Invalid Resume Alert: Document does not contain a Personal Details section. Please upload a valid resume!",
-                missing_sections: ["Personal Details (Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio)"],
-                predicted_domain: "Invalid Document",
-                domain_icon: "⚠️",
-                total_score: 0,
-                grade: "F"
+        // 2. Try Python FastAPI Backend (app1.py on port 5503) if running
+        try {
+            const analyzerPort = process.env.ANALYZER_PORT || "5503";
+            const formData = new (require("form-data"))();
+            if (req.file) {
+                formData.append("file", req.file.buffer, req.file.originalname);
+            }
+            if (resumeText) {
+                formData.append("resume_text", resumeText);
+            }
+            if (companySkills) {
+                formData.append("company_skills", companySkills);
+            }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+            const upstream = await fetch(`http://127.0.0.1:${analyzerPort}/analyzer`, {
+                method: "POST",
+                body: formData,
+                headers: formData.getHeaders(),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
+
+            if (upstream.ok) {
+                const pyResult = await upstream.json();
+                if (pyResult && pyResult.is_valid_resume === false) {
+                    return res.json(pyResult);
+                }
+                return res.json({
+                    ...ragAnalysis,
+                    ...pyResult,
+                    domain: pyResult.domain || ragAnalysis.domain,
+                    predicted_domain: pyResult.predicted_domain || ragAnalysis.predicted_domain,
+                    hackathon_odds: pyResult.hackathon_odds || ragAnalysis.hackathon_odds,
+                    internship_odds: pyResult.internship_odds || ragAnalysis.internship_odds
+                });
+            }
+        } catch (pyErr) {
+            // Python service fallback to RAG Analysis
         }
 
-        // 2. Domain Classification (Engineering vs Arts vs Science)
-        const isEng = /\b(b\.tech|btech|m\.tech|mtech|b\.e|be|computer science|operating system|operating systems|os|c\+\+|cpp|python|java|javascript|data structures|algorithms|dbms|computer networks|software engineer|developer|linux|unix|c)\b/i.test(resumeText);
-        
-        let domainTitle = "Engineering & Technology Student";
-        let domainIcon = "💻";
-
-        if (!isEng && (lowerText.includes("fine arts") || lowerText.includes("graphic design") || lowerText.includes("figma") || lowerText.includes("ui/ux"))) {
-            domainTitle = "Arts & Commerce Student";
-            domainIcon = "🎨";
-        } else if (!isEng && (lowerText.includes("b.sc") || lowerText.includes("m.sc") || lowerText.includes("biotechnology") || lowerText.includes("microbiology"))) {
-            domainTitle = "Science & Research Student";
-            domainIcon = "🔬";
-        }
-
-        const keywords = ['python', 'java', 'c++', 'javascript', 'react', 'node', 'sql', 'html', 'css', 'git', 'aws', 'docker', 'machine learning', 'api', 'mongodb', 'operating system', 'os', 'linux'];
-        const foundSkills = keywords.filter(k => lowerText.includes(k));
-        const hackathonOdds = Math.min(95, Math.max(55, foundSkills.length * 8 + 35));
-        const internshipOdds = Math.min(92, Math.max(50, foundSkills.length * 7 + 30));
-        const overallScore = Math.round((hackathonOdds + internshipOdds) / 2);
-
-        return res.json({
-            is_valid_resume: true,
-            is_complete_resume: true,
-            predicted_domain: domainTitle,
-            domain_icon: domainIcon,
-            domain_description: "Field-tailored analysis & career roadmap evaluation",
-            domain: { title: domainTitle, icon: domainIcon, description: "Field-tailored analysis & career roadmap evaluation" },
-            action_score: 85,
-            metrics_score: 80,
-            structure_score: 90,
-            length_score: 95,
-            total_score: overallScore,
-            grade: overallScore > 80 ? "A" : "B+",
-            hackathon_probability: hackathonOdds,
-            internship_probability: internshipOdds,
-            hackathon_status: hackathonOdds > 75 ? "Strong technical stack for competitive hackathons." : "Good baseline. Add key frameworks.",
-            internship_status: "Profile shows active technical capabilities.",
-            hackathon_odds: { score: hackathonOdds, badge: hackathonOdds > 75 ? "High Probability" : "Competitive", status: "Strong technical stack for competitive hackathons." },
-            internship_odds: { score: internshipOdds, badge: internshipOdds > 70 ? "Competitive" : "Building Foundation", status: "Profile shows active technical capabilities." },
-            overall_score: { score: overallScore, grade: overallScore > 80 ? "A" : "B+" },
-            feedback: [
-                { type: "pass", text: `Technical Skills Analysis -> Predicted Field: ${domainIcon} ${domainTitle}.` },
-                { type: "pass", text: "Action impact detected across software engineering domains." }
-            ],
-            detected_skills: foundSkills.map(s => s.toUpperCase()),
-            study_roadmap: [
-                { category: "System Architecture", topic: "Operating Systems & Networking Fundamentals", description: "Master OS process scheduling, concurrency, DBMS indexing, and system protocols.", impact: "+35% Core CS Interview Rate" },
-                { category: "Fullstack Engineering", topic: "REST APIs & Modern Web Stack", description: "Build scalable microservices with FastAPI/Node.js and modern React components.", impact: "+30% Hackathon Winner Rate" }
-            ],
-            suggested_jobs: [
-                { title: "Software Engineer - AI Systems", match_score: 94, reason: "Matches operating system & software engineering background.", matched_skills: ["Python", "C++", "System Design"], missing_skills: ["Kubernetes"] },
-                { title: "Fullstack Developer Intern", match_score: 90, reason: "Matches web stack and computer science coursework.", matched_skills: ["React", "JavaScript", "SQL"], missing_skills: ["TypeScript"] }
-            ]
-        });
+        return res.json(ragAnalysis);
     } catch (err) {
         console.error("[Analyzer Error]:", err);
         return res.status(500).json({ error: "Resume processing error" });
