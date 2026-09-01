@@ -5,18 +5,26 @@
 
 const ragEngine = require("./rag-engine.js");
 
-function generateStudyPackData(topicOrGap, candidateName = "Candidate") {
+function generateStudyPackData(topicOrGap, candidateName = "Candidate", domain = "Engineering") {
   const matches = ragEngine.similaritySearch(topicOrGap, 3, "StudyGuide");
   const primaryMatch = (matches.length > 0 && matches[0].document) ? matches[0].document : null;
 
   const topicTitle = (primaryMatch && primaryMatch.metadata.title) ? primaryMatch.metadata.title : (topicOrGap || "Custom Skill Accelerator");
-  const category = (primaryMatch && primaryMatch.category) ? primaryMatch.category : "General Engineering";
+  const category = (primaryMatch && primaryMatch.category) ? primaryMatch.category : domain;
   const theoryText = (primaryMatch && primaryMatch.metadata.theory) ? primaryMatch.metadata.theory : "Comprehensive theoretical framework and core concepts for mastering this skill area.";
   const questions = (primaryMatch && primaryMatch.metadata.questions) ? primaryMatch.metadata.questions : {
     easy: "Q1. Define key terms and fundamentals for " + topicTitle + ".",
     medium: "Q2. Solve an intermediate practical challenge involving " + topicTitle + " design.",
     hard: "Q3. Architect an end-to-end production solution applying " + topicTitle + " principles."
   };
+
+  const sources = [
+    { name: "MDN Web Docs & Architecture", url: "https://developer.mozilla.org/" },
+    { name: "GeeksforGeeks Computer Science & Tech", url: "https://www.geeksforgeeks.org/" },
+    { name: "Harvard Online Learning", url: "https://online-learning.harvard.edu/" },
+    { name: "Coursera Professional Learning", url: "https://www.coursera.org/" },
+    { name: "W3Schools Developer Guides", url: "https://www.w3schools.com/" }
+  ];
 
   return {
     success: true,
@@ -30,6 +38,7 @@ function generateStudyPackData(topicOrGap, candidateName = "Candidate") {
       { level: "🟡 Medium (Application)", question: questions.medium, focus: "Problem Solving & System Architecture" },
       { level: "🔴 Hard (Production Scale)", question: questions.hard, focus: "Optimization, Edge Cases & Performance" }
     ],
+    sources: sources,
     theory: theoryText
   };
 }
@@ -53,8 +62,10 @@ function generateStudyPackHtml(data) {
     .progression-card { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
     .level-header { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
     .q-text { color: #e2e8f0; font-weight: 600; margin-bottom: 4px; }
+    .source-link { color: #38bdf8; text-decoration: none; font-weight: 700; }
+    .source-link:hover { text-decoration: underline; }
     .footer { text-align: center; margin-top: 50px; font-size: 12px; color: #64748b; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 20px; }
-    @media print { body { background: #fff; color: #000; } .title-box, .progression-card { border-color: #ccc; background: #f9f9f9; } h1, .section-title, .logo { color: #000; } }
+    @media print { body { background: #fff; color: #000; } .title-box, .progression-card { border-color: #ccc; background: #f9f9f9; } h1, .section-title, .logo { color: #000; } .source-link { color: #0284c7; } }
   </style>
 </head>
 <body>
@@ -75,6 +86,13 @@ function generateStudyPackHtml(data) {
     <p style="color: #cbd5e1; margin: 0;">${data.theory}</p>
   </div>
 
+  <div class="section-title">🌐 Recommended Knowledge Source Websites</div>
+  <div class="progression-card">
+    <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
+      ${(data.sources || []).map(s => `<li><a href="${s.url}" target="_blank" class="source-link">🔗 ${s.name}</a> - ${s.url}</li>`).join('')}
+    </ul>
+  </div>
+
   <div class="section-title">🚀 Difficulty Progression Roadmap (Practice Challenges)</div>
   ${data.progression.map(p => `
     <div class="progression-card">
@@ -87,6 +105,9 @@ function generateStudyPackHtml(data) {
   <div class="footer">
     AutoHire AI RAG Grounded Career Engine &copy; 2026. All rights reserved.
   </div>
+  <script>
+    window.onload = function() { setTimeout(function() { window.print(); }, 500); };
+  <\/script>
 </body>
 </html>`;
 }

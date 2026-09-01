@@ -1195,13 +1195,18 @@
                 const categoryText = item.category || 'Skill Goal';
                 const descText = item.desc || item.description || 'Targeted study material.';
                 const impactText = item.impact || 'Boost Selection Odds';
+                const sourceName = item.knowledge_source || 'GeeksforGeeks / MDN Learning';
+                const sourceUrl = item.source_url || 'https://www.geeksforgeeks.org/';
                 const escapedTitle = titleText.replace(/'/g, "\\'");
 
                 el.innerHTML = `
                     <div style="font-size: 0.78rem; font-weight: 700; color: var(--primary); text-transform: uppercase;">${categoryText}</div>
                     <strong style="font-family:'Space Grotesk', sans-serif; font-size: 1.1rem; color: var(--text-main);">${titleText}</strong>
                     <p style="font-size: 0.88rem; color: var(--text-muted);">${descText}</p>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px;">
+                    <div style="font-size:0.83rem; color:#38bdf8; font-weight:600; margin-top:4px;">
+                      🌐 Knowledge Source: <a href="${sourceUrl}" target="_blank" style="color:#38bdf8; text-decoration:underline;">${sourceName} ↗</a>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:8px;">
                       <div style="font-size:0.83rem; font-weight:700; color:var(--success);">✨ ${impactText}</div>
                       <button onclick="downloadStudyPackPdf('${escapedTitle}')" style="padding:8px 14px; font-size:0.83rem; background:rgba(56, 189, 248, 0.18); border:1px solid #38bdf8; color:#38bdf8; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">📥 Download Study Pack (PDF)</button>
                     </div>
@@ -1423,7 +1428,8 @@
     .section-title { font-size: 18px; color: #38bdf8; margin-top: 24px; margin-bottom: 12px; border-left: 4px solid #38bdf8; padding-left: 10px; font-weight: 700; }
     .card { background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
     .level { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
-    @media print { body { background: #fff; color: #000; } .title-box, .card { border-color: #ccc; background: #f9f9f9; } h1, .section-title, .logo { color: #000; } }
+    .source-link { color: #38bdf8; text-decoration: none; font-weight: 700; }
+    @media print { body { background: #fff; color: #000; } .title-box, .card { border-color: #ccc; background: #f9f9f9; } h1, .section-title, .logo { color: #000; } .source-link { color: #0284c7; } }
   </style>
 </head>
 <body>
@@ -1434,11 +1440,21 @@
   <div class="title-box">
     <span class="category-badge">Target Skill Roadmap</span>
     <h1>${topicTitle}</h1>
-    <p>RAG Match analysis identified "${topicTitle}" as a key recommended topic to boost your candidate odds.</p>
+    <p>RAG Match analysis identified "${topicTitle}" as a key recommended topic to boost your candidate selection odds.</p>
   </div>
   <div class="section-title">📖 Core Theoretical Fundamentals</div>
   <div class="card">
     <p style="margin:0;">Master core concepts, problem-solving patterns, and production architectural best practices for ${topicTitle}.</p>
+  </div>
+  <div class="section-title">🌐 Recommended Knowledge Source Web Links</div>
+  <div class="card">
+    <ul style="margin:0; padding-left:20px; line-height:1.8;">
+      <li><a href="https://www.geeksforgeeks.org/" target="_blank" class="source-link">🔗 GeeksforGeeks Computer Science & Learning</a></li>
+      <li><a href="https://developer.mozilla.org/" target="_blank" class="source-link">🔗 MDN Web Docs & Architecture Guide</a></li>
+      <li><a href="https://online-learning.harvard.edu/" target="_blank" class="source-link">🔗 Harvard Online Learning Courses</a></li>
+      <li><a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank" class="source-link">🔗 PubMed / NCBI Medical Library (Healthcare)</a></li>
+      <li><a href="https://help.figma.com/" target="_blank" class="source-link">🔗 Figma Learn UI/UX Design Systems</a></li>
+    </ul>
   </div>
   <div class="section-title">🚀 Difficulty Progression Roadmap</div>
   <div class="card"><div class="level">🟢 Easy (Fundamentals)</div><p style="margin:4px 0 0 0;">Q1. Explain foundational syntax, keywords, and core principles of ${topicTitle}.</p></div>

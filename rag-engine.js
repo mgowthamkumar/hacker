@@ -458,31 +458,42 @@ class RagEngine {
     }
 
     const isValidResume = missingSections.length === 0;
-    const warningMessage = isValidResume ? null : `⚠️ Invalid Resume Alert: Document does not contain a Personal Details section. Please upload a valid resume!`;
+    const warningMessage = isValidResume ? null : `⚠️ Invalid Resume Alert: Document does not contain a Personal Details section (Name, Phone, Email, Location, LinkedIn/GitHub). Please upload a valid resume!`;
 
-    // 2. Precise Degree Subject Classification
-    let domainTitle = "Engineering & Technology Student";
+    // 2. Precise Degree & Course Subject Classification
+    const verbatimFacts = this.extractVerbatimFacts(rawText);
+    const taxonomyAnalysis = this.classifyTaxonomy(verbatimFacts, rawText);
+    const competencyAudit = this.auditCompetencyGaps(verbatimFacts, taxonomyAnalysis, rawText);
+
+    let domainTitle = "Engineering & Technology Candidate";
     let domainIcon = "💻";
     let domainDesc = "Degree background in B.Tech, M.Tech, B.E, M.E, BCA, MCA, or Computer Science.";
 
-    const isEngSubject = /\b(b\.tech|btech|m\.tech|mtech|b\.e|be|computer science|operating system|operating systems|os|c\+\+|cpp|python|java|javascript|data structures|algorithms|dbms|computer networks|software engineer|developer)\b/i.test(rawText);
-
-    if (!isEngSubject && /\b(b\.com|bcom|m\.com|mcom|b\.a|ba|m\.a|ma|bba|mba|commerce|finance|accounting)\b/.test(textLower)) {
-      domainTitle = "Arts & Commerce Student";
-      domainIcon = "🎨";
-      domainDesc = "Degree background in Arts, Humanities, Fine Arts, Design, or Commerce.";
-    } else if (!isEngSubject && /\b(b\.sc|bsc|m\.sc|msc|physics|chemistry|biology|microbiology|biotechnology)\b/.test(textLower)) {
-      domainTitle = "Science & Research Student";
-      domainIcon = "🔬";
-      domainDesc = "Degree background in B.Sc, M.Sc, Pure Sciences, Mathematics, or Laboratory Research.";
-    } else if (/\b(mbbs|bds|b\.pharma|m\.pharma|nursing|doctor|clinical|medical)\b/.test(textLower)) {
-      domainTitle = "Medical & Healthcare Student";
+    const discipline = taxonomyAnalysis.discipline;
+    if (discipline === "Medicine & Healthcare") {
+      domainTitle = "Medical & Healthcare Candidate";
       domainIcon = "🩺";
-      domainDesc = "Degree background in Medical Sciences, MBBS, Pharmacy, Nursing, or Clinical Healthcare.";
-    } else if (/\b(b\.ed|m\.ed|teaching|pedagogy|lecturer|instructor)\b/.test(textLower)) {
-      domainTitle = "Teaching & Education Student";
+      domainDesc = "Degree background in Medical Sciences, MBBS, BDS, Pharmacy, Nursing, or Clinical Healthcare.";
+    } else if (discipline === "Arts & Humanities") {
+      domainTitle = "Arts, Design & Humanities Candidate";
+      domainIcon = "🎨";
+      domainDesc = "Degree background in Arts, Fine Arts, UI/UX Design, Literature, Journalism, or Visual Media.";
+    } else if (discipline === "Business & Finance") {
+      domainTitle = "Business, Commerce & Finance Candidate";
+      domainIcon = "📊";
+      domainDesc = "Degree background in Commerce, B.Com, M.Com, BBA, MBA, Corporate Finance, or Business Analytics.";
+    } else if (discipline === "Pure & Applied Sciences") {
+      domainTitle = "Pure & Applied Sciences Candidate";
+      domainIcon = "🔬";
+      domainDesc = "Degree background in B.Sc, M.Sc, Physics, Chemistry, Mathematics, Statistics, or Lab Research.";
+    } else if (discipline === "Education & Teaching") {
+      domainTitle = "Teaching & Education Candidate";
       domainIcon = "📚";
-      domainDesc = "Degree background in Pedagogy, Curriculum & Educational instruction.";
+      domainDesc = "Degree background in Pedagogy, B.Ed, M.Ed, STEM Instruction, or Educational Curriculum Design.";
+    } else if (discipline === "Law") {
+      domainTitle = "Law & Legal Studies Candidate";
+      domainIcon = "⚖️";
+      domainDesc = "Degree background in LL.B, LL.M, Corporate Law, or Legal Advisory.";
     }
 
     // 3. ATS Action Verbs & Metrics Analysis
@@ -492,44 +503,85 @@ class RagEngine {
 
     const actionScore = Math.min(100, Math.max(30, foundVerbs.length * 20));
     const metricsScore = Math.min(100, Math.max(25, numbersFound.length * 30));
-    const structureScore = isValidResume ? 90 : 50;
-    const lengthScore = wordCount >= 100 && wordCount <= 600 ? 95 : 65;
+    const structureScore = isValidResume ? 90 : 40;
+    const lengthScore = wordCount >= 120 && wordCount <= 650 ? 95 : (wordCount < 60 ? 30 : 65);
 
-    // 4. Vector Grounding Search
+    // 4. Vector Grounding Search & Knowledge Source Links
     const combinedQuery = `${rawText} ${targetSkills}`;
     const topMatches = this.similaritySearch(combinedQuery, 8);
     const studyMatches = this.vectorStore.searchTopK(combinedQuery, 4, "StudyGuide");
     const jobMatches = this.vectorStore.searchTopK(combinedQuery, 3, "Job");
 
-    const hackathonOdds = Math.min(96, Math.max(55, Math.round((actionScore + structureScore) / 2)));
-    const internshipOdds = Math.min(94, Math.max(50, Math.round((metricsScore + lengthScore) / 2)));
+    const hackathonOdds = Math.min(96, Math.max(45, Math.round((actionScore * 0.4) + (structureScore * 0.3) + (competencyAudit.ats_score * 0.3))));
+    const internshipOdds = Math.min(94, Math.max(40, Math.round((metricsScore * 0.4) + (lengthScore * 0.3) + (competencyAudit.ats_score * 0.3))));
     const overallScore = Math.round((hackathonOdds + internshipOdds) / 2);
-    const grade = overallScore >= 85 ? "Grade A" : (overallScore >= 75 ? "Grade B+" : "Grade B");
+    const grade = overallScore >= 85 ? "Grade A" : (overallScore >= 75 ? "Grade B+" : (overallScore >= 60 ? "Grade B" : "Grade C"));
 
     const feedbackList = [];
     if (!isValidResume) {
-      feedbackList.push(`⚠️ Section Alert: Missing required resume sections (${missingSections.join(", ")}).`);
+      feedbackList.push(`⚠️ Section Alert: Missing required resume sections (${missingSections.join(", ")}). Please add contact details!`);
     } else {
-      feedbackList.push("✅ Resume Structure Audit: All 5 required section categories detected.");
+      feedbackList.push("✅ Resume Structure Audit: All required section categories detected.");
     }
-    feedbackList.push(`🎓 Qualification Classification: ${domainIcon} ${domainTitle}.`);
+    feedbackList.push(`🎓 Qualification Classification: ${domainIcon} ${domainTitle} (${taxonomyAnalysis.specialization}).`);
     feedbackList.push(`⚡ Action Verbs Audit: Detected ${foundVerbs.length} accomplishment action verbs.`);
     feedbackList.push(`📊 Quantifiable Metrics: Found ${numbersFound.length} numerical data points.`);
-    feedbackList.push(`🧠 Vector Grounding: Matched ${topMatches.length} industry skill vectors.`);
+    feedbackList.push(`🏷️ Audited ATS Competency Score: ${competencyAudit.ats_score}/100.`);
 
-    const roadmap = studyMatches.map((m, idx) => ({
-      title: `${idx + 1}. ${m.document.metadata.title}`,
-      category: m.document.category || "Skill Goal",
-      desc: m.document.metadata.text || m.document.text,
-      impact: `+${15 + idx * 5}% Vector Boost (Match: ${Math.round(m.similarityScore * 100)}%)`
-    }));
+    // Knowledge source URL dictionary
+    const knowledgeSourceMap = {
+      "Medicine & Healthcare": [
+        { name: "PubMed / NCBI Medical Library", url: "https://pubmed.ncbi.nlm.nih.gov/" },
+        { name: "WHO Clinical Guidelines", url: "https://www.who.int/publications" },
+        { name: "Coursera Medical & Clinical Research", url: "https://www.coursera.org/browse/health" }
+      ],
+      "Arts & Humanities": [
+        { name: "Figma Design Systems Learn", url: "https://help.figma.com/" },
+        { name: "Web.dev UI Accessibility (a11y)", url: "https://web.dev/learn/accessibility/" },
+        { name: "Adobe Creative Cloud Tutorials", url: "https://helpx.adobe.com/" }
+      ],
+      "Business & Finance": [
+        { name: "Corporate Finance Institute (CFI)", url: "https://corporatefinanceinstitute.com/" },
+        { name: "Microsoft Power BI Documentation", url: "https://learn.microsoft.com/power-bi/" },
+        { name: "Harvard Business Online", url: "https://online-learning.harvard.edu/subject/business" }
+      ],
+      "Pure & Applied Sciences": [
+        { name: "Kaggle Learn Data Science & Python", url: "https://www.kaggle.com/learn" },
+        { name: "SciPy & NumPy Official Docs", url: "https://scipy.org/" },
+        { name: "ScienceDirect Academic Research", url: "https://www.sciencedirect.com/" }
+      ],
+      "Education & Teaching": [
+        { name: "EdX Educational Pedagogy", url: "https://www.edx.org/learn/education" },
+        { name: "Google for Education STEM", url: "https://edu.google.com/" }
+      ],
+      "Engineering": [
+        { name: "GeeksforGeeks Computer Science", url: "https://www.geeksforgeeks.org/" },
+        { name: "MDN Web Docs Architecture", url: "https://developer.mozilla.org/" },
+        { name: "LeetCode Algorithmic Problem Solving", url: "https://leetcode.com/" },
+        { name: "AWS Cloud Training", url: "https://aws.amazon.com/training/" }
+      ]
+    };
+
+    const sourcesForDomain = knowledgeSourceMap[discipline] || knowledgeSourceMap["Engineering"];
+
+    const roadmap = studyMatches.map((m, idx) => {
+      const src = sourcesForDomain[idx % sourcesForDomain.length];
+      return {
+        title: `${idx + 1}. ${m.document.metadata.title}`,
+        category: m.document.category || taxonomyAnalysis.specialization || "Skill Goal",
+        desc: m.document.metadata.text || m.document.text,
+        impact: `+${15 + idx * 5}% Selection Odds Boost`,
+        knowledge_source: src.name,
+        source_url: src.url
+      };
+    });
 
     const suggestedJobs = jobMatches.map(j => ({
-      title: j.document.metadata.title || "Matched Industry Position",
+      title: j.document.metadata.title || `Matched ${taxonomyAnalysis.target_role}`,
       match_score: Math.min(98, Math.round(j.similarityScore * 100) + 20),
       reason: `Vector similarity match (${Math.round(j.similarityScore * 100)}%) with ${j.document.metadata.company || 'Industry Partner'}.`,
-      matched_skills: ["Python", "JavaScript", "SQL"],
-      missing_skills: ["System Architecture"]
+      matched_skills: competencyAudit.verified_strengths.slice(0, 3),
+      missing_skills: competencyAudit.verified_gaps.slice(0, 2).map(g => g.competency_name)
     }));
 
     return {
@@ -545,12 +597,12 @@ class RagEngine {
       domain: { title: domainTitle, icon: domainIcon, description: domainDesc },
       hackathon_probability: hackathonOdds,
       hackathon_badge: hackathonOdds > 75 ? "High Probability" : "Competitive",
-      hackathon_status: hackathonOdds > 75 ? "Strong technical stack for competitive hackathons." : "Good baseline.",
-      hackathon_odds: { score: hackathonOdds, badge: hackathonOdds > 75 ? "High Probability" : "Competitive", status: hackathonOdds > 75 ? "Strong technical stack for competitive hackathons." : "Good baseline." },
+      hackathon_status: hackathonOdds > 75 ? "Strong background for competitive hackathons." : "Good baseline.",
+      hackathon_odds: { score: hackathonOdds, badge: hackathonOdds > 75 ? "High Probability" : "Competitive", status: hackathonOdds > 75 ? "Strong background for competitive hackathons." : "Good baseline." },
       internship_probability: internshipOdds,
       internship_badge: internshipOdds > 70 ? "Competitive" : "Building Foundation",
-      internship_status: "Profile shows active technical capabilities.",
-      internship_odds: { score: internshipOdds, badge: internshipOdds > 70 ? "Competitive" : "Building Foundation", status: "Profile shows active technical capabilities." },
+      internship_status: "Profile shows active qualification capabilities.",
+      internship_odds: { score: internshipOdds, badge: internshipOdds > 70 ? "Competitive" : "Building Foundation", status: "Profile shows active qualification capabilities." },
       total_score: overallScore,
       grade: grade,
       overall_score: { score: overallScore, grade: grade },
@@ -558,25 +610,27 @@ class RagEngine {
       metrics_score: metricsScore,
       structure_score: structureScore,
       length_score: lengthScore,
-      metrics: { action_verbs: actionScore, metrics_presence: metricsScore, structure: structureScore, length_balance: lengthScore },
+      ats_score: competencyAudit.ats_score,
+      metrics: { action_verbs: actionScore, metrics_presence: metricsScore, structure: structureScore, length_balance: lengthScore, ats_match: competencyAudit.ats_score },
       feedback: feedbackList,
       study_roadmap: roadmap,
       roadmap: roadmap,
+      knowledge_sources: sourcesForDomain,
       suggested_jobs: suggestedJobs,
       job_matches: suggestedJobs,
-      verbatim_facts: this.extractVerbatimFacts(rawText),
-      taxonomy_analysis: this.classifyTaxonomy(this.extractVerbatimFacts(rawText), rawText),
-      competency_audit: this.auditCompetencyGaps(this.extractVerbatimFacts(rawText), this.classifyTaxonomy(this.extractVerbatimFacts(rawText), rawText), rawText),
+      verbatim_facts: verbatimFacts,
+      taxonomy_analysis: taxonomyAnalysis,
+      competency_audit: competencyAudit,
       precision_study_manual: this.generatePrecisionStudyManual(
-        this.classifyTaxonomy(this.extractVerbatimFacts(rawText), rawText),
-        this.auditCompetencyGaps(this.extractVerbatimFacts(rawText), this.classifyTaxonomy(this.extractVerbatimFacts(rawText), rawText), rawText)
+        taxonomyAnalysis,
+        competencyAudit
       ),
       compiled_typeset_manual: this.compileTypesetStudyManual(
-        this.classifyTaxonomy(this.extractVerbatimFacts(rawText), rawText),
-        this.auditCompetencyGaps(this.extractVerbatimFacts(rawText), this.classifyTaxonomy(this.extractVerbatimFacts(rawText), rawText), rawText),
+        taxonomyAnalysis,
+        competencyAudit,
         this.generatePrecisionStudyManual(
-          this.classifyTaxonomy(this.extractVerbatimFacts(rawText), rawText),
-          this.auditCompetencyGaps(this.extractVerbatimFacts(rawText), this.classifyTaxonomy(this.extractVerbatimFacts(rawText), rawText), rawText)
+          taxonomyAnalysis,
+          competencyAudit
         )
       )
     };

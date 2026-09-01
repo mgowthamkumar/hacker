@@ -511,6 +511,196 @@ def real_generate_cover_letter(payload: RealCoverLetterRequest):
     return {"success": True, "cover_letter": letter}
 
 
+from fastapi import UploadFile, File, Form
+
+@app.post("/analyzer")
+@app.post("/api/analyzer")
+@app.post("/api/rag/analyze")
+async def backendreal_analyze_resume(
+    file: Optional[UploadFile] = File(None),
+    resume_text: Optional[str] = Form(""),
+    company_skills: Optional[str] = Form(""),
+    target_skills: Optional[str] = Form("")
+):
+    import re
+    text = (resume_text or "").strip()
+    if file:
+        try:
+            content_bytes = await file.read()
+            ext = (file.filename.split(".")[-1] or "").lower()
+            if ext == "txt":
+                text = (content_bytes.decode("utf-8", errors="ignore") + "\n" + text).strip()
+            elif ext == "pdf":
+                try:
+                    from pypdf import PdfReader
+                    import io
+                    reader = PdfReader(io.BytesIO(content_bytes))
+                    extracted = "\n".join([page.extract_text() or "" for page in reader.pages])
+                    if extracted.strip():
+                        text = (extracted + "\n" + text).strip()
+                except Exception:
+                    clean = re.sub(r"[^\x20-\x7E\n\r\t]", " ", content_bytes.decode("latin1", errors="ignore"))
+                    if len(clean) > 30:
+                        text = (clean + "\n" + text).strip()
+        except Exception as e:
+            print("File extraction error:", e)
+
+    if not text:
+        text = "Sample Candidate Resume"
+
+    text_lower = text.lower()
+    words = re.findall(r"\b\w+\b", text)
+    word_count = len(words)
+
+    # 1. Personal Details & Resume Validity Check
+    has_email = bool(re.search(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", text)) or any(k in text_lower for k in ["email:", "e-mail:", "mail id:"])
+    digits = len(re.findall(r"\d", text))
+    has_phone = bool(re.search(r"\b(?:\+?\d{1,3}[-\s]?)?\(?\d{3,5}\)?[-\s]?\d{3,5}[-\s]?\d{3,5}\b", text)) and digits >= 8
+    has_header = any(h in text_lower for h in ["personal details", "contact details", "candidate profile", "personal information"])
+    has_links = any(k in text_lower for k in ["linkedin.com", "github.com", "portfolio", "location:"])
+    
+    is_valid_resume = has_email or has_phone or has_header or has_links
+    missing_sections = []
+    if not is_valid_resume:
+        missing_sections.append("Personal Details (Name, Phone, Email, Location, LinkedIn/GitHub)")
+
+    warning_msg = None if is_valid_resume else "⚠️ Invalid Resume Alert: Document does not contain a Personal Details section. Please upload a valid resume!"
+
+    # 2. Accurate Course & Domain Detection
+    domain_name = "Engineering & Technology Candidate"
+    domain_icon = "💻"
+    domain_desc = "Degree background in B.Tech, M.Tech, B.E, M.E, BCA, MCA, or Computer Science."
+    discipline = "Engineering"
+
+    if any(k in text_lower for k in ["mbbs", "bds", "b.pharma", "m.pharma", "nursing", "doctor", "clinical", "hospital", "patient", "bls", "acls"]):
+        domain_name = "Medical & Healthcare Candidate"
+        domain_icon = "🩺"
+        domain_desc = "Degree background in Medical Sciences, MBBS, Pharmacy, Nursing, or Clinical Healthcare."
+        discipline = "Medical & Healthcare"
+    elif any(k in text_lower for k in ["figma", "ui/ux", "illustrator", "photoshop", "fine arts", "b.a", "m.a", "graphic design", "journalism"]):
+        domain_name = "Arts, Design & Humanities Candidate"
+        domain_icon = "🎨"
+        domain_desc = "Degree background in Arts, Fine Arts, UI/UX Design, Literature, Journalism, or Visual Media."
+        discipline = "Arts & Humanities"
+    elif any(k in text_lower for k in ["b.com", "m.com", "bba", "mba", "finance", "accounting", "power bi", "tableau", "corporate finance"]):
+        domain_name = "Business, Commerce & Finance Candidate"
+        domain_icon = "📊"
+        domain_desc = "Degree background in Commerce, B.Com, M.Com, BBA, MBA, Corporate Finance, or Business Analytics."
+        discipline = "Business & Finance"
+    elif any(k in text_lower for k in ["b.sc", "m.sc", "physics", "chemistry", "biology", "microbiology", "spss", "statistics"]):
+        domain_name = "Pure & Applied Sciences Candidate"
+        domain_icon = "🔬"
+        domain_desc = "Degree background in B.Sc, M.Sc, Physics, Chemistry, Mathematics, Statistics, or Lab Research."
+        discipline = "Pure & Applied Sciences"
+    elif any(k in text_lower for k in ["b.ed", "m.ed", "pedagogy", "teaching", "instructor"]):
+        domain_name = "Teaching & Education Candidate"
+        domain_icon = "📚"
+        domain_desc = "Degree background in Pedagogy, B.Ed, M.Ed, STEM Instruction, or Educational Curriculum Design."
+        discipline = "Education & Teaching"
+
+    # 3. Multi-Point Score Metrics
+    action_verbs = ["achieved", "developed", "managed", "created", "led", "increased", "reduced", "designed", "implemented", "engineered", "launched", "automated", "optimized", "built"]
+    found_verbs = list(set([v for v in action_verbs if v in text_lower]))
+    numbers = re.findall(r"\b\d+(?:%|\b)", text)
+
+    action_score = min(100, max(30, len(found_verbs) * 20))
+    metrics_score = min(100, max(25, len(numbers) * 30))
+    structure_score = 90 if is_valid_resume else 40
+    length_score = 95 if (120 <= word_count <= 650) else (30 if word_count < 60 else 65)
+    ats_score = min(100, max(35, round((action_score * 0.4) + (metrics_score * 0.3) + (structure_score * 0.3))))
+
+    hackathon_prob = min(96, max(45, round((action_score * 0.4) + (structure_score * 0.3) + (ats_score * 0.3))))
+    intern_prob = min(94, max(40, round((metrics_score * 0.4) + (length_score * 0.3) + (ats_score * 0.3))))
+    total_score = round((hackathon_prob + intern_prob) / 2)
+    grade = "Grade A" if total_score >= 85 else ("Grade B+" if total_score >= 75 else ("Grade B" if total_score >= 60 else "Grade C"))
+
+    # 4. Field-Tailored Roadmaps & Knowledge Source Links
+    knowledge_sources = {
+        "Engineering": [
+            {"name": "GeeksforGeeks Computer Science", "url": "https://www.geeksforgeeks.org/"},
+            {"name": "MDN Web Docs Architecture", "url": "https://developer.mozilla.org/"},
+            {"name": "LeetCode Algorithmic Practice", "url": "https://leetcode.com/"}
+        ],
+        "Medical & Healthcare": [
+            {"name": "PubMed / NCBI Medical Library", "url": "https://pubmed.ncbi.nlm.nih.gov/"},
+            {"name": "WHO Clinical Guidelines", "url": "https://www.who.int/publications"}
+        ],
+        "Arts & Humanities": [
+            {"name": "Figma Design Systems Learn", "url": "https://help.figma.com/"},
+            {"name": "Web.dev UI Accessibility", "url": "https://web.dev/learn/accessibility/"}
+        ],
+        "Business & Finance": [
+            {"name": "Corporate Finance Institute (CFI)", "url": "https://corporatefinanceinstitute.com/"},
+            {"name": "Microsoft Power BI Documentation", "url": "https://learn.microsoft.com/power-bi/"}
+        ],
+        "Pure & Applied Sciences": [
+            {"name": "Kaggle Learn Python & Science", "url": "https://www.kaggle.com/learn"},
+            {"name": "SciPy & NumPy Official Docs", "url": "https://scipy.org/"}
+        ]
+    }.get(discipline, [
+        {"name": "GeeksforGeeks Tech Guides", "url": "https://www.geeksforgeeks.org/"},
+        {"name": "MDN Web Docs", "url": "https://developer.mozilla.org/"}
+    ])
+
+    roadmap = [
+        {"title": f"1. Advanced {discipline} Core Mastery", "category": "Core Specialization", "desc": f"Master fundamental concepts, problem solving patterns, and production principles in {discipline}.", "impact": "+20% Selection Boost", "knowledge_source": knowledge_sources[0]["name"], "source_url": knowledge_sources[0]["url"]},
+        {"title": "2. Production & Industry Workflow", "category": "Practical Implementation", "desc": "Build an end-to-end practical solution with full documentation and deployment.", "impact": "+15% Interview Odds", "knowledge_source": knowledge_sources[min(1, len(knowledge_sources)-1)]["name"], "source_url": knowledge_sources[min(1, len(knowledge_sources)-1)]["url"]},
+        {"title": "3. Verified Capstone Portfolio Project", "category": "Portfolio Showcase", "desc": "Publish a verified portfolio repository showcasing measurable impact.", "impact": "High Profile Visibility", "knowledge_source": knowledge_sources[0]["name"], "source_url": knowledge_sources[0]["url"]}
+    ]
+
+    suggested_jobs = [
+        {"title": f"Junior {discipline} Specialist", "match_score": min(96, total_score + 5), "reason": f"Matches detected candidate profile in {discipline}.", "matched_skills": ["Core Fundamentals", "Problem Solving"], "missing_skills": ["Advanced Architecture"]},
+        {"title": f"Associate {discipline} Intern", "match_score": min(92, total_score + 2), "reason": "Aligns with candidate's educational background.", "matched_skills": ["Technical Writing", "Analysis"], "missing_skills": ["Cloud Infrastructure"]}
+    ]
+
+    feedback = []
+    if not is_valid_resume:
+        feedback.append(warning_msg)
+    else:
+        feedback.append("✅ Resume Structure Audit: Personal Details and essential sections detected.")
+    feedback.append(f"🎓 Candidate Course Classification: {domain_icon} {domain_name}.")
+    feedback.append(f"⚡ Action Impact Audit: Found {len(found_verbs)} accomplishment action verbs.")
+    feedback.append(f"📊 Quantifiable Metrics: Found {len(numbers)} numerical data points.")
+    feedback.append(f"🏷️ Audited ATS Match Score: {ats_score}/100.")
+
+    return {
+        "success": True,
+        "is_valid_resume": is_valid_resume,
+        "is_complete_resume": is_valid_resume,
+        "missing_sections": missing_sections if not is_valid_resume else [],
+        "warning_message": warning_msg,
+        "warning_msg": warning_msg,
+        "predicted_domain": domain_name,
+        "domain_icon": domain_icon,
+        "domain_description": domain_desc,
+        "domain": {"title": domain_name, "icon": domain_icon, "description": domain_desc},
+        "hackathon_probability": hackathon_prob,
+        "hackathon_badge": "High Probability" if hackathon_prob > 75 else "Competitive",
+        "hackathon_status": "Strong background for competitive hackathons." if hackathon_prob > 75 else "Good baseline.",
+        "hackathon_odds": {"score": hackathon_prob, "badge": "High Probability" if hackathon_prob > 75 else "Competitive", "status": "Strong background for competitive hackathons." if hackathon_prob > 75 else "Good baseline."},
+        "internship_probability": intern_prob,
+        "internship_badge": "Competitive" if intern_prob > 70 else "Building Foundation",
+        "internship_status": "Profile shows active qualification capabilities.",
+        "internship_odds": {"score": intern_prob, "badge": "Competitive" if intern_prob > 70 else "Building Foundation", "status": "Profile shows active qualification capabilities."},
+        "total_score": total_score,
+        "grade": grade,
+        "overall_score": {"score": total_score, "grade": grade},
+        "action_score": action_score,
+        "metrics_score": metrics_score,
+        "structure_score": structure_score,
+        "length_score": length_score,
+        "ats_score": ats_score,
+        "metrics": {"action_verbs": action_score, "metrics_presence": metrics_score, "structure": structure_score, "length_balance": length_score, "ats_match": ats_score},
+        "feedback": feedback,
+        "study_roadmap": roadmap,
+        "roadmap": roadmap,
+        "knowledge_sources": knowledge_sources,
+        "suggested_jobs": suggested_jobs,
+        "job_matches": suggested_jobs,
+        "precision_study_manual": f"# {domain_name} Precision Manual\n\n- Candidate Field: {discipline}\n- ATS Readiness: {ats_score}/100\n- Primary Goal: Master core theoretical background and practical implementation in {discipline}."
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
 
