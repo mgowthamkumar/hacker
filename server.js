@@ -58,7 +58,7 @@ const jobsHost = process.env.JOBS_BACKEND_HOST || "127.0.0.1";
 const jobsBackendPort = process.env.JOBS_BACKEND_PORT || "5501";
 
 function startJobsBackend() {
-    const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === "win32" ? "py" : "python3");
+    const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === "win32" ? "python" : "python3");
     jobsProcess = spawn(pythonCommand, ["-m", "uvicorn", "backendreal:app", "--host", jobsHost, "--port", "5501"], {
         cwd: __dirname,
         env: { ...process.env, PORT: "5501" },
