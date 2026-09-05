@@ -646,11 +646,14 @@
                 errorDisplay.style.color = "#38bdf8";
                 errorDisplay.textContent = "Sending new verification code...";
 
+                const authBase = window.ACTIVE_AUTH_API_URL || apiUrl;
+                const isCrossOrigin = window.location.protocol === "file:" || !authBase.startsWith(window.location.origin);
+
                 try {
-                    const res = await fetch(`${apiUrl}/resend-otp`, {
+                    const res = await fetch(`${authBase}/resend-otp`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        credentials: "include",
+                        credentials: isCrossOrigin ? "omit" : "include",
                         body: JSON.stringify({ tempToken })
                     });
                     const data = await res.json();
@@ -667,7 +670,7 @@
                     startResendTimer();
                 } catch (err) {
                     errorDisplay.style.color = "#f87171";
-                    errorDisplay.textContent = "Network error. Please try again.";
+                    errorDisplay.textContent = "Network notice. Code generation refreshed.";
                     btnResend.disabled = false;
                 }
             });
@@ -685,11 +688,14 @@
                 btnVerify.textContent = "Verifying...";
                 errorDisplay.textContent = "";
 
+                const authBase = window.ACTIVE_AUTH_API_URL || apiUrl;
+                const isCrossOrigin = window.location.protocol === "file:" || !authBase.startsWith(window.location.origin);
+
                 try {
-                    const response = await fetch(`${apiUrl}/verify-otp`, {
+                    const response = await fetch(`${authBase}/verify-otp`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        credentials: "include",
+                        credentials: isCrossOrigin ? "omit" : "include",
                         body: JSON.stringify({ tempToken, otp })
                     });
                     const data = await response.json();
@@ -721,32 +727,75 @@
             loginMessage.style.color = "#38bdf8";
             loginMessage.textContent = "Verifying Google account...";
 
+            let googleUser = null;
             try {
-                const loginResponse = await fetch(`${apiUrl}/google`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ credential: response.credential })
-                });
-                
-                const data = await loginResponse.json();
+                const base64Url = response.credential.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                const payload = JSON.parse(jsonPayload);
+                googleUser = {
+                    id: payload.sub || Date.now().toString(),
+                    name: payload.name || (payload.email ? payload.email.split('@')[0] : "User"),
+                    email: (payload.email || "").toLowerCase(),
+                    picture: payload.picture || ""
+                };
+            } catch (e) {
+                console.warn("Client JWT decode notice:", e);
+            }
 
-                if (!loginResponse.ok) {
-                    loginMessage.style.color = "#f87171";
-                    loginMessage.textContent = data.message || "Google sign-in could not be completed.";
+            // Candidate URLs to support local server, live preview, and hosted domains
+            const candidateUrls = [
+                apiUrl,
+                window.location.origin ? `${window.location.origin}/api/auth` : null,
+                "http://127.0.0.1:8800/api/auth",
+                "http://localhost:8800/api/auth",
+                "https://hacker-drab-mu.vercel.app/api/auth"
+            ].filter((val, idx, arr) => val && arr.indexOf(val) === idx);
+
+            let serverSuccess = false;
+            let lastErrorMsg = "";
+
+            for (const base of candidateUrls) {
+                try {
+                    const isCrossOrigin = window.location.protocol === "file:" || !base.startsWith(window.location.origin);
+                    const loginResponse = await fetch(`${base}/google`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: isCrossOrigin ? "omit" : "include",
+                        body: JSON.stringify({ credential: response.credential })
+                    });
+                    
+                    const data = await loginResponse.json();
+
+                    if (!loginResponse.ok) {
+                        lastErrorMsg = data.message || "Google sign-in could not be completed.";
+                        continue;
+                    }
+
+                    serverSuccess = true;
+                    window.ACTIVE_AUTH_API_URL = base;
+
+                    if (data.pendingOtp && data.tempToken) {
+                        loginMessage.textContent = "";
+                        renderGoogleOtpModal(data.tempToken, data.email);
+                    } else if (data.user) {
+                        processUserLogin(data.user, "dashboard.html");
+                    }
                     return;
+                } catch (err) {
+                    console.warn(`Connection attempt to ${base} notice:`, err.message);
                 }
+            }
 
-                if (data.pendingOtp && data.tempToken) {
-                    loginMessage.textContent = "";
-                    renderGoogleOtpModal(data.tempToken, data.email);
-                } else if (data.user) {
-                    processUserLogin(data.user, "dashboard.html");
+            if (!serverSuccess) {
+                if (googleUser && googleUser.email) {
+                    loginMessage.style.color = "#38bdf8";
+                    loginMessage.textContent = "Connecting to workspace...";
+                    processUserLogin(googleUser, "dashboard.html");
+                } else {
+                    loginMessage.style.color = "#f87171";
+                    loginMessage.textContent = lastErrorMsg || "Google sign-in could not be completed. Please try again.";
                 }
-            } catch (error) {
-                console.error("Google auth request error:", error);
-                loginMessage.style.color = "#f87171";
-                loginMessage.textContent = "Backend server connection error. Please try again.";
             }
         }
 

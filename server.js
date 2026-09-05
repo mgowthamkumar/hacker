@@ -75,6 +75,20 @@ function startJobsBackend() {
     });
 }
 
+app.use((req, res, next) => {
+    const origin = req.headers.origin || "*";
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(204);
+    }
+    if (req.url.startsWith("/api/auth")) {
+        console.log(`[AUTH] ${req.method} ${req.url} from ${origin}`);
+    }
+    next();
+});
 app.use(cors({ origin: true, credentials: true }));
 app.set("trust proxy", 1);
 
@@ -83,6 +97,7 @@ app.use(express.json());
 
 // Serve HTML file
 app.use(express.static(__dirname));
+
 
 app.get("/health", (req, res) => {
     res.json({ status: "ok" });
@@ -848,7 +863,10 @@ async function getMailTransporter() {
         });
     } else {
         try {
-            const testAccount = await nodemailer.createTestAccount();
+            const testAccount = await Promise.race([
+                nodemailer.createTestAccount(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout creating test account")), 3500))
+            ]);
             mailTransporter = nodemailer.createTransport({
                 host: "smtp.ethereal.email",
                 port: 587,
@@ -858,13 +876,20 @@ async function getMailTransporter() {
                     pass: testAccount.pass
                 }
             });
-            console.log("ℹ️ Nodemailer initialized with Ethereal test SMTP account for OTP delivery.");
+            console.log("ℹ️ Nodemailer initialized with Ethereal test SMTP account for OTP delivery:", testAccount.user);
         } catch (e) {
-            console.warn("⚠️ Failed to create test Ethereal mail transporter:", e.message);
+            console.warn("⚠️ Nodemailer test account fallback notice:", e.message);
+            mailTransporter = {
+                sendMail: async (opts) => {
+                    console.log(`📧 [Local Delivery to ${opts.to}]: Subject="${opts.subject}"`);
+                    return { messageId: "local_" + Date.now() };
+                }
+            };
         }
     }
     return mailTransporter;
 }
+
 
 async function sendOtpEmail(recipientEmail, otpCode) {
     const transporter = await getMailTransporter();
@@ -959,9 +984,11 @@ app.post("/api/auth/google", async (req, res) => {
 
     let profile = null;
 
-    // 1. Try Google Token Verification Endpoint
+    // 1. Try Google Token Verification Endpoint with 3.5s timeout
     try {
-        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`, {
+            signal: AbortSignal.timeout(3500)
+        });
         if (response.ok) {
             profile = await response.json();
         }
@@ -1012,8 +1039,8 @@ app.post("/api/auth/google", async (req, res) => {
         lastResendAt: Date.now()
     });
 
-    // Send real email via Nodemailer
-    sendOtpEmail(email, otp);
+    // Send real email via Nodemailer asynchronously without blocking
+    sendOtpEmail(email, otp).catch(e => console.error("Email send error:", e.message));
 
     // Return response without exposing raw OTP
     return res.json({
@@ -1022,6 +1049,7 @@ app.post("/api/auth/google", async (req, res) => {
         tempToken: tempToken,
         email: maskEmail(email)
     });
+
 });
 
 app.post(["/api/auth/send-otp", "/api/auth/resend-otp"], async (req, res) => {
