@@ -923,8 +923,7 @@ app.post("/api/auth/login", (req, res) => {
 // --- Real Email OTP & Google OAuth Security Service ---
 let mailTransporter = null;
 let activeMailerMode = "none"; // 'gmail', 'smtp', 'unconfigured'
-let lastLoadedPass = "";
-let lastLoadedUser = "";
+let lastLoadedKey = "";
 
 async function getMailTransporter() {
     // Reload .env so edits to SMTP credentials take effect immediately without server restart
@@ -934,51 +933,29 @@ async function getMailTransporter() {
 
     const smtpUser = (process.env.SMTP_USER || process.env.SMTP_USERNAME || process.env.EMAIL_USER || "").trim();
     const smtpPass = (process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || "").replace(/\s+/g, "");
-    const smtpHost = (process.env.SMTP_HOST || "").trim();
-    const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
-    const smtpService = (process.env.SMTP_SERVICE || "").trim().toLowerCase();
+    const smtpHost = (process.env.SMTP_HOST || "smtp.gmail.com").trim();
+    const smtpPort = parseInt(process.env.SMTP_PORT || "587", 10);
+    const isPort465 = smtpPort === 465;
 
-    // Invalidate cached transporter if credentials changed
-    if (smtpPass !== lastLoadedPass || smtpUser !== lastLoadedUser) {
+    // Invalidate cached transporter if credentials or connection settings changed
+    const connectionKey = `${smtpUser}:${smtpPass}:${smtpHost}:${smtpPort}`;
+    if (connectionKey !== lastLoadedKey) {
         mailTransporter = null;
-        lastLoadedPass = smtpPass;
-        lastLoadedUser = smtpUser;
+        lastLoadedKey = connectionKey;
     }
 
     if (mailTransporter) {
         return { transporter: mailTransporter, mode: activeMailerMode };
     }
 
-    // 1. Direct Gmail Configuration using Port 465 SSL (Highest reliability, sub-200ms latency)
-    if (smtpUser && smtpPass && (smtpService === "gmail" || smtpUser.endsWith("@gmail.com") || smtpHost.includes("gmail") || (!smtpHost && smtpService !== "custom"))) {
-        try {
-            mailTransporter = nodemailer.createTransport({
-                host: "smtp.gmail.com",
-                port: 465,
-                secure: true,
-                auth: {
-                    user: smtpUser,
-                    pass: smtpPass
-                },
-                connectionTimeout: 10000,
-                greetingTimeout: 10000,
-                socketTimeout: 15000
-            });
-            activeMailerMode = "gmail";
-            console.log(`[AUTH] ✅ Real Gmail SMTP transporter initialized (Port 465 SSL) for: ${smtpUser}`);
-            return { transporter: mailTransporter, mode: activeMailerMode };
-        } catch (e) {
-            console.error("[AUTH] ⚠️ Gmail SMTP transport initialization error:", e.message);
-        }
-    }
-
-    // 2. Custom SMTP Host Configuration (Brevo, SendGrid, Mailgun, AWS SES, or custom SMTP)
-    if (smtpHost && smtpUser && smtpPass) {
+    // Real SMTP Transporter Configuration (compatible with Gmail port 587 STARTTLS & port 465 SSL, plus custom SMTP)
+    if (smtpUser && smtpPass) {
         try {
             mailTransporter = nodemailer.createTransport({
                 host: smtpHost,
                 port: smtpPort,
-                secure: smtpPort === 465 || process.env.SMTP_SECURE === "true",
+                secure: isPort465,
+                requireTLS: !isPort465,
                 auth: {
                     user: smtpUser,
                     pass: smtpPass
@@ -990,15 +967,15 @@ async function getMailTransporter() {
                     rejectUnauthorized: false
                 }
             });
-            activeMailerMode = "smtp";
-            console.log(`[AUTH] ✅ Real Custom SMTP transporter initialized: ${smtpHost}:${smtpPort} (${smtpUser})`);
+            activeMailerMode = (smtpHost.includes("gmail") || smtpUser.endsWith("@gmail.com")) ? "gmail" : "smtp";
+            console.log(`[AUTH] ✅ Real SMTP transporter initialized (${smtpHost}:${smtpPort}, secure=${isPort465}) for: ${smtpUser}`);
             return { transporter: mailTransporter, mode: activeMailerMode };
         } catch (e) {
-            console.error("[AUTH] ⚠️ Custom SMTP transport initialization error:", e.message);
+            console.error("[AUTH] ⚠️ SMTP transport initialization error:", e.message);
         }
     }
 
-    // 3. Unconfigured: No mock, fake, or Ethereal sandbox allowed
+    // Unconfigured: No mock, fake, or Ethereal sandbox allowed
     mailTransporter = null;
     activeMailerMode = "unconfigured";
     return {
