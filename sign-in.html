@@ -671,7 +671,7 @@
                     const data = await res.json();
                     if (!res.ok) {
                         errorDisplay.style.color = "#f87171";
-                        errorDisplay.textContent = data.message || "Failed to resend verification code.";
+                        errorDisplay.textContent = data.message || "Unable to send verification code. Please try again.";
                         btnResend.disabled = false;
                         return;
                     }
@@ -683,7 +683,7 @@
                     startResendTimer();
                 } catch (err) {
                     errorDisplay.style.color = "#f87171";
-                    errorDisplay.textContent = "Network notice. Code generation refreshed.";
+                    errorDisplay.textContent = "Unable to send verification code. Please try again.";
                     btnResend.disabled = false;
                 }
             });

@@ -1,8 +1,8 @@
 @echo off
-REM AutoHire Python FastAPI Server Launcher
+REM AutoHire Server Launcher
 cd /d "%~dp0"
-echo Starting AutoHire Python FastAPI Web & Auth Server...
-start "" python run_server.py
+echo Starting AutoHire Node.js Web & Auth Server...
+start "" node server.js
 echo AutoHire Backend is now running!
 echo - Web & Auth Server: http://127.0.0.1:8800
 echo - Sign in page: http://127.0.0.1:8800/sign-in.html

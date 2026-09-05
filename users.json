@@ -187,5 +187,13 @@
       "emailAddress": "pytest_1788636049@autohire.ai",
       "picture": ""
     }
+  },
+  {
+    "id": "verified-test-uuid-1788637386674",
+    "name": "Verified AutoHire Candidate",
+    "email": "verified_test_account@autohire.ai",
+    "isVerified": true,
+    "emailVerified": true,
+    "verifiedAt": "2026-09-05T19:43:06.674Z"
   }
 ]

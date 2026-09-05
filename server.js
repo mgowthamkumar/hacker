@@ -922,30 +922,35 @@ app.post("/api/auth/login", (req, res) => {
 
 // --- Real Email OTP & Google OAuth Security Service ---
 let mailTransporter = null;
-let activeMailerMode = "none"; // 'gmail', 'smtp', 'ethereal', 'console'
+let activeMailerMode = "none"; // 'gmail', 'smtp', 'unconfigured'
 let lastLoadedPass = "";
+let lastLoadedUser = "";
 
 async function getMailTransporter() {
-    // Always reload .env so edits to SMTP credentials take effect immediately without server restart
+    // Reload .env so edits to SMTP credentials take effect immediately without server restart
     try {
         require("dotenv").config({ override: true });
     } catch (e) {}
 
-    const smtpUser = (process.env.SMTP_USER || process.env.EMAIL_USER || "").trim();
-    const smtpPass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "").replace(/\s+/g, "");
+    const smtpUser = (process.env.SMTP_USER || process.env.SMTP_USERNAME || process.env.EMAIL_USER || "").trim();
+    const smtpPass = (process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || "").replace(/\s+/g, "");
     const smtpHost = (process.env.SMTP_HOST || "").trim();
+    const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
     const smtpService = (process.env.SMTP_SERVICE || "").trim().toLowerCase();
 
-    // If password was added or changed, discard any previous cached transporter
-    if (smtpPass !== lastLoadedPass) {
+    // Invalidate cached transporter if credentials changed
+    if (smtpPass !== lastLoadedPass || smtpUser !== lastLoadedUser) {
         mailTransporter = null;
         lastLoadedPass = smtpPass;
+        lastLoadedUser = smtpUser;
     }
 
-    if (mailTransporter) return { transporter: mailTransporter, mode: activeMailerMode };
+    if (mailTransporter) {
+        return { transporter: mailTransporter, mode: activeMailerMode };
+    }
 
-    // 1. Direct Gmail Configuration using Port 465 SSL (Highest reliability and fastest delivery)
-    if (smtpUser && smtpPass && (smtpService === "gmail" || smtpUser.endsWith("@gmail.com") || smtpHost.includes("gmail"))) {
+    // 1. Direct Gmail Configuration using Port 465 SSL (Highest reliability, sub-200ms latency)
+    if (smtpUser && smtpPass && (smtpService === "gmail" || smtpUser.endsWith("@gmail.com") || smtpHost.includes("gmail") || (!smtpHost && smtpService !== "custom"))) {
         try {
             mailTransporter = nodemailer.createTransport({
                 host: "smtp.gmail.com",
@@ -963,74 +968,64 @@ async function getMailTransporter() {
             console.log(`[AUTH] ✅ Real Gmail SMTP transporter initialized (Port 465 SSL) for: ${smtpUser}`);
             return { transporter: mailTransporter, mode: activeMailerMode };
         } catch (e) {
-            console.error("[AUTH] ⚠️ Gmail SMTP transport initialization notice:", e.message);
+            console.error("[AUTH] ⚠️ Gmail SMTP transport initialization error:", e.message);
         }
     }
 
-    // 2. Custom SMTP Host Configuration (SendGrid, Mailgun, Brevo, AWS SES, or custom SMTP)
+    // 2. Custom SMTP Host Configuration (Brevo, SendGrid, Mailgun, AWS SES, or custom SMTP)
     if (smtpHost && smtpUser && smtpPass) {
         try {
-            const port = parseInt(process.env.SMTP_PORT || "587", 10);
             mailTransporter = nodemailer.createTransport({
                 host: smtpHost,
-                port: port,
-                secure: port === 465 || process.env.SMTP_SECURE === "true",
+                port: smtpPort,
+                secure: smtpPort === 465 || process.env.SMTP_SECURE === "true",
                 auth: {
                     user: smtpUser,
                     pass: smtpPass
                 },
+                connectionTimeout: 10000,
+                greetingTimeout: 10000,
+                socketTimeout: 15000,
                 tls: {
                     rejectUnauthorized: false
                 }
             });
             activeMailerMode = "smtp";
-            console.log(`[AUTH] ✅ Real Custom SMTP transporter initialized: ${smtpHost}:${port} (${smtpUser})`);
+            console.log(`[AUTH] ✅ Real Custom SMTP transporter initialized: ${smtpHost}:${smtpPort} (${smtpUser})`);
             return { transporter: mailTransporter, mode: activeMailerMode };
         } catch (e) {
-            console.error("[AUTH] ⚠️ Custom SMTP transport initialization notice:", e.message);
+            console.error("[AUTH] ⚠️ Custom SMTP transport initialization error:", e.message);
         }
     }
 
-    // 3. Fallback to Ethereal Test Sandbox if real SMTP credentials are not yet configured in .env
-    try {
-        console.log("[AUTH] ℹ️ Real SMTP credentials not configured in .env. Initializing test sandbox...");
-        const testAccount = await Promise.race([
-            nodemailer.createTestAccount(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout creating test account")), 4000))
-        ]);
-        mailTransporter = nodemailer.createTransport({
-            host: "smtp.ethereal.email",
-            port: 587,
-            secure: false,
-            auth: {
-                user: testAccount.user,
-                pass: testAccount.pass
-            }
-        });
-        activeMailerMode = "ethereal";
-        console.log(`[AUTH] ℹ️ Ethereal sandbox initialized: ${testAccount.user}`);
-        return { transporter: mailTransporter, mode: activeMailerMode };
-    } catch (e) {
-        console.warn("[AUTH] ⚠️ Ethereal account creation notice:", e.message);
-        mailTransporter = {
-            sendMail: async (opts) => {
-                console.log(`[AUTH] 📧 [Local Dev Delivery to ${opts.to}]: Subject="${opts.subject}"`);
-                return { messageId: "dev_" + Date.now() };
-            }
-        };
-        activeMailerMode = "console";
-        return { transporter: mailTransporter, mode: activeMailerMode };
-    }
+    // 3. Unconfigured: No mock, fake, or Ethereal sandbox allowed
+    mailTransporter = null;
+    activeMailerMode = "unconfigured";
+    return {
+        transporter: null,
+        mode: "unconfigured",
+        error: "SMTP credentials (SMTP_USER / SMTP_PASS) are not configured in .env."
+    };
 }
 
 async function sendOtpEmail(recipientEmail, otpCode) {
-    const { transporter, mode } = await getMailTransporter();
-    const fromUser = process.env.SMTP_USER || process.env.EMAIL_USER || "security@autohire.ai";
-    const fromAddress = process.env.SMTP_FROM || `"AutoHire AI Security" <${fromUser}>`;
+    const { transporter, mode, error } = await getMailTransporter();
     
+    if (!transporter) {
+        console.error(`[AUTH] ❌ Cannot send OTP to ${recipientEmail}: ${error || "SMTP not configured"}`);
+        return {
+            success: false,
+            error: error || "SMTP credentials not configured in .env.",
+            isRealDelivery: false
+        };
+    }
+
+    const fromUser = process.env.SMTP_USER || process.env.SMTP_USERNAME || process.env.EMAIL_USER || "security@autohire.ai";
+    const fromAddress = process.env.SMTP_FROM || process.env.EMAIL_FROM || `"AutoHire AI Security" <${fromUser}>`;
+
     console.log(`\n======================================================`);
-    console.log(`🛡️  [AUTOHIRE AI OTP] Code for ${recipientEmail}: [ ${otpCode} ]`);
-    console.log(`📡 Delivery Mode: ${mode.toUpperCase()} | Time: ${new Date().toISOString()}`);
+    console.log(`🛡️  [AUTOHIRE AI OTP] Dispatching 6-digit code to: ${recipientEmail}`);
+    console.log(`📡 Provider: ${mode.toUpperCase()} | Host: ${transporter.options.host}:${transporter.options.port}`);
     console.log(`======================================================\n`);
 
     const htmlBody = `
@@ -1055,7 +1050,7 @@ async function sendOtpEmail(recipientEmail, otpCode) {
 
                 <hr style="border:none; border-top:1px solid rgba(255,255,255,0.1); margin:28px 0 20px;">
                 <p style="font-size:12px; color:#64748b; margin:0; line-height:1.5;">
-                    If you did not request this code, you can ignore this email. Someone may have entered your email address by mistake.
+                    If you did not request this code, you can safely ignore this email. Someone may have entered your email address by mistake.
                 </p>
             </div>
             <div style="padding:16px 32px; background:rgba(15,23,42,0.8); border-top:1px solid rgba(255,255,255,0.05); text-align:center; font-size:12px; color:#64748b;">
@@ -1068,33 +1063,41 @@ async function sendOtpEmail(recipientEmail, otpCode) {
         const info = await transporter.sendMail({
             from: fromAddress,
             to: recipientEmail,
-            subject: `AutoHire AI Security - Your Verification Code is ${otpCode}`,
-            text: `Your AutoHire AI verification code is ${otpCode}. Valid for 5 minutes.`,
-            html: htmlBody
+            subject: `AutoHire AI Verification Code: ${otpCode}`,
+            text: `Your AutoHire AI verification code is ${otpCode}. This code is valid for 5 minutes.`,
+            html: htmlBody,
+            headers: {
+                "X-Priority": "1",
+                "Importance": "high"
+            }
         });
 
-        let previewUrl = "";
-        if (mode === "ethereal" && nodemailer.getTestMessageUrl && info) {
-            previewUrl = nodemailer.getTestMessageUrl(info) || "";
-            if (previewUrl) console.log("📧 Ethereal Email Preview URL:", previewUrl);
+        // Verify that the email provider actually accepted the message
+        const wasAccepted = info && Array.isArray(info.accepted) && info.accepted.length > 0;
+        const wasRejected = info && Array.isArray(info.rejected) && info.rejected.includes(recipientEmail);
+
+        if (!wasAccepted || wasRejected) {
+            console.error(`[AUTH] ❌ Email provider did not accept recipient ${recipientEmail}:`, info);
+            return {
+                success: false,
+                error: "Mail server rejected or did not accept the recipient address.",
+                isRealDelivery: false
+            };
         }
 
-        const isReal = (mode === "gmail" || mode === "smtp");
+        console.log(`[AUTH] ✅ Email provider ACCEPTED delivery to ${recipientEmail}. Response: ${info.response || info.messageId}`);
         return {
             success: true,
-            isRealDelivery: isReal,
-            mode: mode,
-            previewUrl: previewUrl,
-            messageId: info.messageId || ""
+            isRealDelivery: true,
+            messageId: info.messageId || "",
+            response: info.response || ""
         };
     } catch (e) {
-        console.error(`⚠️ [AUTH] Failed to deliver OTP email via ${mode}:`, e.message);
+        console.error(`[AUTH] ❌ Failed to deliver OTP email via ${mode}:`, e.message);
         return {
             success: false,
-            isRealDelivery: false,
-            mode: mode,
-            previewUrl: "",
-            error: e.message
+            error: e.message,
+            isRealDelivery: false
         };
     }
 }
@@ -1102,7 +1105,7 @@ async function sendOtpEmail(recipientEmail, otpCode) {
 // In-Memory Pending OTP Store (tempToken => record)
 const pendingOtps = new Map();
 
-// Periodic cleanup of expired OTPs
+// Periodic cleanup of expired OTPs every 2 minutes
 setInterval(() => {
     const now = Date.now();
     for (const [token, data] of pendingOtps.entries()) {
@@ -1129,9 +1132,9 @@ function hashOtp(otp, salt) {
     return crypto.createHash("sha256").update(otp + salt).digest("hex");
 }
 
-app.post("/api/auth/google", async (req, res) => {
+app.post(["/api/auth/google", "/auth/google"], async (req, res) => {
     const credential = String(req.body.credential || "");
-    if (!credential) return res.status(400).json({ message: "Google credential is required." });
+    if (!credential) return res.status(400).json({ success: false, message: "Google credential is required." });
 
     let profile = null;
 
@@ -1155,13 +1158,13 @@ app.post("/api/auth/google", async (req, res) => {
             const jsonPayload = decodeURIComponent(Buffer.from(base64, "base64").toString("utf8").split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
             profile = JSON.parse(jsonPayload);
         } catch (e) {
-            return res.status(401).json({ message: "Google sign-in could not be verified." });
+            return res.status(401).json({ success: false, message: "Google sign-in could not be verified." });
         }
     }
 
     const email = String(profile.email || "").trim().toLowerCase();
     if (!email) {
-        return res.status(401).json({ message: "Google account email not found." });
+        return res.status(401).json({ success: false, message: "Google account email not found." });
     }
 
     const users = readUsers();
@@ -1188,11 +1191,23 @@ app.post("/api/auth/google", async (req, res) => {
         });
     }
 
-    // First-Time Sign-In: Generate secure 6-digit OTP
+    // First-Time Sign-In: Generate cryptographically secure 6-digit OTP
     const otp = generateSecureOtp();
     const salt = crypto.randomBytes(16).toString("hex");
     const hashedOtp = hashOtp(otp, salt);
     const tempToken = crypto.randomUUID();
+
+    // Deliver OTP to the authenticated Google email using real SMTP
+    const mailResult = await sendOtpEmail(email, otp);
+
+    // If real email delivery failed, REJECT and DO NOT show OTP modal
+    if (!mailResult.success) {
+        console.error(`[AUTH] ❌ Refusing to create pending OTP session because email delivery failed: ${mailResult.error}`);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to send verification code. Please try again."
+        });
+    }
 
     const googleUser = {
         id: profile.sub || crypto.randomUUID(),
@@ -1201,7 +1216,7 @@ app.post("/api/auth/google", async (req, res) => {
         picture: profile.picture || ""
     };
 
-    // Store in pendingOtps Map with 5-minute TTL
+    // Store in pendingOtps Map with 5-minute TTL, single-use, max 5 attempts
     pendingOtps.set(tempToken, {
         hashedOtp,
         salt,
@@ -1214,31 +1229,31 @@ app.post("/api/auth/google", async (req, res) => {
         lastResendAt: Date.now()
     });
 
-    // Send email via Nodemailer
-    await sendOtpEmail(email, otp);
-
     // Return clean response for first-time OTP verification
     return res.json({
         success: true,
+        message: "Verification code sent",
         pendingOtp: true,
         tempToken: tempToken,
         email: maskEmail(email)
     });
 });
 
-app.post(["/api/auth/send-otp", "/api/auth/resend-otp"], async (req, res) => {
+app.post(["/api/auth/send-otp", "/api/auth/resend-otp", "/auth/resend-otp"], async (req, res) => {
     const tempToken = String(req.body.tempToken || "");
     if (!tempToken || !pendingOtps.has(tempToken)) {
-        return res.status(400).json({ message: "This verification session has expired. Please sign in again." });
+        return res.status(400).json({ success: false, message: "This verification session has expired. Please sign in again." });
     }
 
     const record = pendingOtps.get(tempToken);
     const now = Date.now();
 
-    // Rate limiting: minimum 30 seconds between resend requests
-    if (now - record.lastResendAt < 30 * 1000) {
-        const secondsRemaining = Math.ceil((30 * 1000 - (now - record.lastResendAt)) / 1000);
+    // Rate limiting: 45 seconds cooldown between resend requests
+    const cooldownMs = 45 * 1000;
+    if (now - record.lastResendAt < cooldownMs) {
+        const secondsRemaining = Math.ceil((cooldownMs - (now - record.lastResendAt)) / 1000);
         return res.status(429).json({
+            success: false,
             message: `Please wait ${secondsRemaining} second(s) before requesting another verification code.`
         });
     }
@@ -1246,6 +1261,19 @@ app.post(["/api/auth/send-otp", "/api/auth/resend-otp"], async (req, res) => {
     // Generate new secure 6-digit OTP
     const otp = generateSecureOtp();
     const salt = crypto.randomBytes(16).toString("hex");
+
+    // Send new OTP email via real email provider
+    const mailResult = await sendOtpEmail(record.email, otp);
+
+    if (!mailResult.success) {
+        console.error(`[AUTH] ❌ Failed to resend verification code: ${mailResult.error}`);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to send verification code. Please try again."
+        });
+    }
+
+    // Invalidate previous OTP and store new one
     record.hashedOtp = hashOtp(otp, salt);
     record.salt = salt;
     record.createdAt = now;
@@ -1253,36 +1281,34 @@ app.post(["/api/auth/send-otp", "/api/auth/resend-otp"], async (req, res) => {
     record.attempts = 0;
     record.lastResendAt = now;
 
-    await sendOtpEmail(record.email, otp);
-
     return res.json({
         success: true,
-        message: "A new 6-digit verification code has been dispatched to your email.",
+        message: "Verification code sent",
         email: maskEmail(record.email)
     });
 });
 
-app.post("/api/auth/verify-otp", (req, res) => {
+app.post(["/api/auth/verify-otp", "/auth/verify-otp"], (req, res) => {
     const tempToken = String(req.body.tempToken || "");
     const enteredOtp = String(req.body.otp || "").trim();
 
     if (!tempToken || !pendingOtps.has(tempToken)) {
-        return res.status(400).json({ message: "This verification code has expired. Please request a new code." });
+        return res.status(400).json({ success: false, message: "This verification code has expired. Please request a new code." });
     }
 
     const record = pendingOtps.get(tempToken);
     const now = Date.now();
 
-    // 1. Check expiration
+    // 1. Check expiration (5 minutes)
     if (now > record.expiresAt) {
         pendingOtps.delete(tempToken);
-        return res.status(400).json({ message: "This verification code has expired. Please request a new code." });
+        return res.status(400).json({ success: false, message: "This verification code has expired. Please request a new code." });
     }
 
     // 2. Check maximum attempts
     if (record.attempts >= record.maxAttempts) {
         pendingOtps.delete(tempToken);
-        return res.status(429).json({ message: "Maximum verification attempts exceeded. Please request a new code." });
+        return res.status(429).json({ success: false, message: "Maximum verification attempts exceeded. Please request a new code." });
     }
 
     // 3. Hash entered OTP and verify against stored hashedOtp
@@ -1291,12 +1317,12 @@ app.post("/api/auth/verify-otp", (req, res) => {
         record.attempts++;
         if (record.attempts >= record.maxAttempts) {
             pendingOtps.delete(tempToken);
-            return res.status(400).json({ message: "Maximum verification attempts exceeded. Please request a new code." });
+            return res.status(400).json({ success: false, message: "Maximum verification attempts exceeded. Please request a new code." });
         }
-        return res.status(400).json({ message: "Invalid verification code. Please try again." });
+        return res.status(400).json({ success: false, message: "Invalid verification code. Please check the code and try again." });
     }
 
-    // 4. Correct OTP -> Complete Auth, invalidate tempToken (prevent reuse)
+    // 4. Correct OTP -> Invalidate tempToken immediately (single use)
     pendingOtps.delete(tempToken);
 
     const googleUser = record.googleUser;
@@ -1354,12 +1380,12 @@ app.get("/api/auth/smtp-status", (req, res) => {
     try {
         require("dotenv").config({ override: true });
     } catch (e) {}
-    const smtpUser = (process.env.SMTP_USER || "").trim();
-    const smtpPass = (process.env.SMTP_PASS || "").replace(/\s+/g, "");
+    const smtpUser = (process.env.SMTP_USER || process.env.SMTP_USERNAME || process.env.EMAIL_USER || "").trim();
+    const smtpPass = (process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || "").replace(/\s+/g, "");
     return res.json({
         configured: Boolean(smtpUser && smtpPass),
         smtpUser: smtpUser || "mgowthamkumar472008@gmail.com",
-        mode: Boolean(smtpUser && smtpPass) ? "gmail_ssl" : "ethereal_sandbox"
+        mode: Boolean(smtpUser && smtpPass) ? "gmail_ssl" : "unconfigured"
     });
 });
 
