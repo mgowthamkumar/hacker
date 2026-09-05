@@ -208,16 +208,13 @@
                 <p style="color:#94a3b8; font-size:0.92rem; line-height:1.5; margin-bottom:20px;">
                     We detected a login attempt from a new device:<br>
                     <strong style="color:#38bdf8;">${this.deviceName}</strong><br><br>
-                    Please enter the 6-digit OTP code sent to your email / device to complete login.
+                    Please enter the 6-digit verification code sent to your registered Gmail address to complete login.
                 </p>
-
-                <div style="background:rgba(56,189,248,0.12); border:1px dashed rgba(56,189,248,0.4); border-radius:12px; padding:12px; margin-bottom:20px; color:#38bdf8; font-weight:700; font-size:0.9rem;">
-                    🔑 DEMO OTP Code: <span id="demoOtpDisplay" style="font-size:1.2rem; letter-spacing:0.1em; color:#fff; background:rgba(0,0,0,0.3); padding:2px 8px; border-radius:6px;">${otpResult.code}</span>
-                </div>
 
                 <div style="display:flex; justify-content:center; gap:8px; margin-bottom:20px;">
                     <input type="text" maxlength="6" id="otpInputCode" placeholder="••••••" style="width:100%; text-align:center; font-family:'Space Grotesk',sans-serif; font-size:1.8rem; font-weight:800; letter-spacing:0.3em; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,0.2); background:rgba(15,23,42,0.8); color:#38bdf8; outline:none;" autocomplete="off">
                 </div>
+
 
                 <div id="otpTimerDisplay" style="font-size:0.83rem; color:#eab308; font-weight:700; margin-bottom:20px;">⏱️ Code expires in: 05:00</div>
 

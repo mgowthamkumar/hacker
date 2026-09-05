@@ -277,6 +277,107 @@
         @media (max-width: 480px) {
             .shell { padding: 28px 20px; }
         }
+
+        /* OTP 6-Digit Modal Styles */
+        .otp-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(7, 11, 20, 0.88);
+            backdrop-filter: blur(24px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.3s var(--ease-out);
+        }
+
+        .otp-modal-card {
+            width: min(460px, 100%);
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 36px 30px;
+            box-shadow: var(--shadow-3d);
+            backdrop-filter: blur(24px);
+            color: var(--text-main);
+            text-align: center;
+            position: relative;
+        }
+
+        .otp-icon-badge {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(168, 85, 247, 0.2));
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 0 25px var(--primary-glow);
+        }
+
+        .otp-boxes-wrapper {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 28px 0 20px;
+        }
+
+        .otp-box {
+            width: 48px;
+            height: 58px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--card-border);
+            background: rgba(15, 23, 42, 0.85);
+            color: var(--primary);
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 1.6rem;
+            font-weight: 800;
+            text-align: center;
+            outline: none;
+            transition: all 0.2s var(--ease-out);
+            caret-color: var(--primary);
+        }
+
+        .otp-box:focus {
+            border-color: var(--primary);
+            background: rgba(15, 23, 42, 0.95);
+            box-shadow: 0 0 20px var(--primary-glow);
+            transform: translateY(-2px);
+        }
+
+        .otp-timer {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #eab308;
+            margin-bottom: 20px;
+        }
+
+        .otp-resend-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: underline;
+            transition: opacity 0.2s;
+        }
+
+        .otp-resend-btn:disabled {
+            color: var(--text-muted);
+            cursor: not-allowed;
+            text-decoration: none;
+            opacity: 0.6;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
     </style>
 </head>
 
@@ -410,46 +511,215 @@
         const apiUrl = window.AUTOHIRE_API_URL;
         const loginMessage = document.getElementById("loginMessage");
 
-        function processUserLogin(userObj) {
+        function processUserLogin(userObj, redirectUrl = "dashboard.html") {
             if (!userObj) return;
-            const userId = userObj.id || userObj.email;
-            const isTrusted = window.AutoHireDeviceAuth ? window.AutoHireDeviceAuth.isDeviceTrusted(userId) : true;
+            if (window.AutoHireAuth) window.AutoHireAuth.saveUser(userObj);
+            window.location.href = redirectUrl;
+        }
 
-            if (isTrusted) {
-                if (window.AutoHireAuth) window.AutoHireAuth.saveUser(userObj);
-                window.location.href = "index.html";
-            } else {
-                if (window.AutoHireDeviceAuth) {
-                    window.AutoHireDeviceAuth.renderOtpModal(userObj, () => {
-                        if (window.AutoHireAuth) window.AutoHireAuth.saveUser(userObj);
-                        window.location.href = "index.html";
+        function renderGoogleOtpModal(tempToken, maskedEmail) {
+            const existing = document.getElementById("autohire-otp-modal");
+            if (existing) existing.remove();
+
+            const modalOverlay = document.createElement("div");
+            modalOverlay.id = "autohire-otp-modal";
+            modalOverlay.className = "otp-modal-overlay";
+
+            modalOverlay.innerHTML = `
+                <div class="otp-modal-card">
+                    <div class="otp-icon-badge">📧</div>
+                    <h2 style="font-family:'Space Grotesk',sans-serif; font-size:1.7rem; margin-bottom:8px;">Verify your email</h2>
+                    <p style="color:var(--text-muted); font-size:0.92rem; line-height:1.5;">
+                        We've sent a 6-digit verification code to<br>
+                        <strong style="color:var(--primary); font-size:0.95rem;">${maskedEmail}</strong>
+                    </p>
+
+                    <div class="otp-boxes-wrapper" id="otpBoxesContainer">
+                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="otp-box" data-index="0" autocomplete="one-time-code" autofocus>
+                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="otp-box" data-index="1" autocomplete="off">
+                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="otp-box" data-index="2" autocomplete="off">
+                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="otp-box" data-index="3" autocomplete="off">
+                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="otp-box" data-index="4" autocomplete="off">
+                        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="otp-box" data-index="5" autocomplete="off">
+                    </div>
+
+                    <div class="otp-timer" id="otpTimerText">⏱️ Resend code in 30 seconds</div>
+                    <div class="message" id="otpModalError" style="margin-bottom:18px;"></div>
+
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <button type="button" id="btnVerifyOtpSubmit" style="width:100%; padding:15px; border:none; border-radius:var(--radius-md); background:linear-gradient(135deg, #0284c7 0%, #a855f7 100%); color:#fff; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1rem; cursor:pointer; box-shadow:0 4px 20px rgba(168,85,247,0.35); transition:all 0.3s var(--ease-out);">Verify & Complete Login</button>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                            <button type="button" id="btnCancelOtpModal" style="background:none; border:none; color:var(--text-muted); font-size:0.85rem; cursor:pointer;">Cancel</button>
+                            <button type="button" id="btnResendOtpSubmit" class="otp-resend-btn" disabled>Resend Code</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modalOverlay);
+
+            const boxesContainer = document.getElementById("otpBoxesContainer");
+            const inputs = Array.from(boxesContainer.querySelectorAll(".otp-box"));
+            const btnVerify = document.getElementById("btnVerifyOtpSubmit");
+            const btnResend = document.getElementById("btnResendOtpSubmit");
+            const btnCancel = document.getElementById("btnCancelOtpModal");
+            const timerText = document.getElementById("otpTimerText");
+            const errorDisplay = document.getElementById("otpModalError");
+
+            inputs[0].focus();
+
+            // Auto-focus movement and keyboard navigation
+            inputs.forEach((input, index) => {
+                input.addEventListener("input", (e) => {
+                    const val = e.target.value.replace(/\D/g, "");
+                    e.target.value = val;
+                    if (val && index < 5) {
+                        inputs[index + 1].focus();
+                    }
+                    if (inputs.every(inp => inp.value.length === 1)) {
+                        errorDisplay.textContent = "";
+                    }
+                });
+
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Backspace") {
+                        if (!input.value && index > 0) {
+                            inputs[index - 1].focus();
+                            inputs[index - 1].value = "";
+                        }
+                    } else if (e.key === "ArrowLeft" && index > 0) {
+                        inputs[index - 1].focus();
+                    } else if (e.key === "ArrowRight" && index < 5) {
+                        inputs[index + 1].focus();
+                    }
+                });
+            });
+
+            // Paste Handler for 6-digit OTP
+            boxesContainer.addEventListener("paste", (e) => {
+                e.preventDefault();
+                const pasteData = (e.clipboardData || window.clipboardData).getData("text");
+                const digits = pasteData.replace(/\D/g, "").slice(0, 6);
+                if (digits) {
+                    digits.split("").forEach((digit, idx) => {
+                        if (inputs[idx]) inputs[idx].value = digit;
                     });
-                } else {
-                    if (window.AutoHireAuth) window.AutoHireAuth.saveUser(userObj);
-                    window.location.href = "index.html";
+                    const lastIndex = Math.min(digits.length, 5);
+                    inputs[lastIndex].focus();
                 }
+            });
+
+            // 30-Second Resend Countdown Timer
+            let countdown = 30;
+            let timerInterval = null;
+
+            function startResendTimer() {
+                countdown = 30;
+                btnResend.disabled = true;
+                timerText.style.color = "#eab308";
+                timerText.textContent = `⏱️ Resend code in ${countdown} seconds`;
+
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    countdown--;
+                    if (countdown <= 0) {
+                        clearInterval(timerInterval);
+                        timerText.textContent = "⏱️ You can now request a new code.";
+                        btnResend.disabled = false;
+                    } else {
+                        timerText.textContent = `⏱️ Resend code in ${countdown} seconds`;
+                    }
+                }, 1000);
             }
+
+            startResendTimer();
+
+            btnCancel.addEventListener("click", () => {
+                if (timerInterval) clearInterval(timerInterval);
+                modalOverlay.remove();
+            });
+
+            // Resend OTP Action
+            btnResend.addEventListener("click", async () => {
+                if (btnResend.disabled) return;
+                btnResend.disabled = true;
+                errorDisplay.style.color = "#38bdf8";
+                errorDisplay.textContent = "Sending new verification code...";
+
+                try {
+                    const res = await fetch(`${apiUrl}/resend-otp`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ tempToken })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        errorDisplay.style.color = "#f87171";
+                        errorDisplay.textContent = data.message || "Failed to resend verification code.";
+                        btnResend.disabled = false;
+                        return;
+                    }
+                    errorDisplay.style.color = "#4ade80";
+                    errorDisplay.textContent = data.message || "A new 6-digit code has been sent to your Gmail.";
+                    inputs.forEach(inp => inp.value = "");
+                    inputs[0].focus();
+                    startResendTimer();
+                } catch (err) {
+                    errorDisplay.style.color = "#f87171";
+                    errorDisplay.textContent = "Network error. Please try again.";
+                    btnResend.disabled = false;
+                }
+            });
+
+            // Verify OTP Submit Action
+            btnVerify.addEventListener("click", async () => {
+                const otp = inputs.map(inp => inp.value).join("");
+                if (otp.length < 6) {
+                    errorDisplay.style.color = "#f87171";
+                    errorDisplay.textContent = "Please enter the complete 6-digit verification code.";
+                    return;
+                }
+
+                btnVerify.disabled = true;
+                btnVerify.textContent = "Verifying...";
+                errorDisplay.textContent = "";
+
+                try {
+                    const response = await fetch(`${apiUrl}/verify-otp`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ tempToken, otp })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        errorDisplay.style.color = "#f87171";
+                        errorDisplay.textContent = data.message || "Invalid verification code. Please try again.";
+                        btnVerify.disabled = false;
+                        btnVerify.textContent = "Verify & Complete Login";
+                        return;
+                    }
+
+                    errorDisplay.style.color = "#4ade80";
+                    errorDisplay.textContent = "✅ Email verified! Redirecting to workspace...";
+                    if (timerInterval) clearInterval(timerInterval);
+
+                    setTimeout(() => {
+                        processUserLogin(data.user, data.redirect || "dashboard.html");
+                    }, 800);
+                } catch (error) {
+                    errorDisplay.style.color = "#f87171";
+                    errorDisplay.textContent = "Connection error while verifying OTP.";
+                    btnVerify.disabled = false;
+                    btnVerify.textContent = "Verify & Complete Login";
+                }
+            });
         }
 
         async function handleCredentialResponse(response) {
-            let googleUser = null;
-            try {
-                const base64Url = response.credential.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                const payload = JSON.parse(jsonPayload);
-
-                googleUser = {
-                    id: payload.sub || Date.now().toString(),
-                    name: payload.name || payload.email.split('@')[0],
-                    email: (payload.email || "").toLowerCase(),
-                    picture: payload.picture || ""
-                };
-            } catch (e) {
-                console.error("JWT token decode error:", e);
-            }
+            loginMessage.style.color = "#38bdf8";
+            loginMessage.textContent = "Verifying Google account...";
 
             try {
                 const loginResponse = await fetch(`${apiUrl}/google`, {
@@ -458,20 +728,25 @@
                     credentials: "include",
                     body: JSON.stringify({ credential: response.credential })
                 });
-                if (loginResponse.ok) {
-                    const data = await loginResponse.json();
-                    if (data.user) {
-                        googleUser = data.user;
-                    }
+                
+                const data = await loginResponse.json();
+
+                if (!loginResponse.ok) {
+                    loginMessage.style.color = "#f87171";
+                    loginMessage.textContent = data.message || "Google sign-in could not be completed.";
+                    return;
+                }
+
+                if (data.pendingOtp && data.tempToken) {
+                    loginMessage.textContent = "";
+                    renderGoogleOtpModal(data.tempToken, data.email);
+                } else if (data.user) {
+                    processUserLogin(data.user, "dashboard.html");
                 }
             } catch (error) {
-                console.warn("Backend server connection notice: using client session.");
-            }
-
-            if (googleUser && googleUser.email) {
-                processUserLogin(googleUser);
-            } else {
-                loginMessage.textContent = "Google sign-in could not be completed.";
+                console.error("Google auth request error:", error);
+                loginMessage.style.color = "#f87171";
+                loginMessage.textContent = "Backend server connection error. Please try again.";
             }
         }
 
@@ -498,7 +773,7 @@
                     return;
                 }
                 if (data.user) {
-                    processUserLogin(data.user);
+                    processUserLogin(data.user, "dashboard.html");
                 }
             } catch (error) {
                 const email = document.getElementById("emailInput").value.trim().toLowerCase();
@@ -509,7 +784,7 @@
                     loginMessage.textContent = "Invalid email or password.";
                     return;
                 }
-                processUserLogin(user);
+                processUserLogin(user, "dashboard.html");
             } finally {
                 loginButton.disabled = false;
                 loginButton.textContent = "Sign in to Workspace";
@@ -528,7 +803,7 @@
                 const currentUser = window.AutoHireAuth ? window.AutoHireAuth.getUser() : null;
                 if (currentUser) {
                     fetch(`${apiUrl}/me`, { credentials: "include" }).then(async (response) => {
-                        if (response.ok) window.location.href = "index.html";
+                        if (response.ok) window.location.href = "dashboard.html";
                     }).catch(() => { });
                 }
             }

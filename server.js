@@ -5,6 +5,8 @@ const fs = require("fs");
 const cors = require("cors");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
+const nodemailer = require("nodemailer");
+
 
 const app = express();
 const jobAggregator = require("./job-aggregator.js");
@@ -812,6 +814,128 @@ app.post("/api/auth/login", (req, res) => {
     return res.json({ user: publicUser(user) });
 });
 
+
+// --- Real Email OTP & Google OAuth Security Service ---
+let mailTransporter = null;
+async function getMailTransporter() {
+    if (mailTransporter) return mailTransporter;
+    if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+        mailTransporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || "587", 10),
+            secure: process.env.SMTP_SECURE === "true",
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            }
+        });
+    } else {
+        try {
+            const testAccount = await nodemailer.createTestAccount();
+            mailTransporter = nodemailer.createTransport({
+                host: "smtp.ethereal.email",
+                port: 587,
+                secure: false,
+                auth: {
+                    user: testAccount.user,
+                    pass: testAccount.pass
+                }
+            });
+            console.log("ℹ️ Nodemailer initialized with Ethereal test SMTP account for OTP delivery.");
+        } catch (e) {
+            console.warn("⚠️ Failed to create test Ethereal mail transporter:", e.message);
+        }
+    }
+    return mailTransporter;
+}
+
+async function sendOtpEmail(recipientEmail, otpCode) {
+    const transporter = await getMailTransporter();
+    const fromAddress = process.env.SMTP_FROM || '"AutoHire AI Security" <no-reply@autohire.ai>';
+    
+    const htmlBody = `
+        <div style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width:540px; margin:0 auto; background:#070b14; color:#f8fafc; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); box-shadow:0 20px 40px rgba(0,0,0,0.5);">
+            <div style="padding:32px 32px 24px; background:linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(168,85,247,0.15) 100%); border-bottom:1px solid rgba(255,255,255,0.1);">
+                <div style="font-size:24px; font-weight:800; color:#ffffff; letter-spacing:-0.03em;">🤖 Auto<span style="color:#38bdf8;">Hire AI</span></div>
+                <div style="font-size:14px; color:#94a3b8; margin-top:4px;">Security & Account Verification</div>
+            </div>
+            <div style="padding:32px;">
+                <h2 style="font-size:20px; font-weight:700; color:#f8fafc; margin-top:0;">Verify your email address</h2>
+                <p style="color:#cbd5e1; font-size:15px; line-height:1.6;">You are attempting to log into your AutoHire AI workspace via Google authentication. Please use the 6-digit verification code below to complete your login:</p>
+                
+                <div style="margin:28px 0; text-align:center;">
+                    <div style="display:inline-block; padding:16px 32px; background:rgba(30,41,59,0.8); border:1px solid #38bdf8; border-radius:12px; font-size:32px; font-weight:800; letter-spacing:8px; color:#38bdf8; text-shadow:0 0 12px rgba(56,189,248,0.4);">
+                        ${otpCode}
+                    </div>
+                </div>
+
+                <div style="background:rgba(234,179,8,0.1); border-left:4px solid #eab308; padding:12px 16px; border-radius:4px; font-size:13px; color:#fef08a; line-height:1.5;">
+                    ⏱️ <strong>This code is valid for 5 minutes.</strong> Do not share this code with anyone.
+                </div>
+
+                <hr style="border:none; border-top:1px solid rgba(255,255,255,0.1); margin:28px 0 20px;">
+                <p style="font-size:12px; color:#64748b; margin:0; line-height:1.5;">
+                    If you did not request this code, you can ignore this email. Someone may have entered your email address by mistake.
+                </p>
+            </div>
+            <div style="padding:16px 32px; background:rgba(15,23,42,0.8); border-top:1px solid rgba(255,255,255,0.05); text-align:center; font-size:12px; color:#64748b;">
+                © AutoHire AI Security Engine · All rights reserved.
+            </div>
+        </div>
+    `;
+
+    if (transporter) {
+        try {
+            const info = await transporter.sendMail({
+                from: fromAddress,
+                to: recipientEmail,
+                subject: `AutoHire AI Security - Your Verification Code is ${otpCode}`,
+                text: `Your AutoHire AI verification code is ${otpCode}. Valid for 5 minutes.`,
+                html: htmlBody
+            });
+            if (nodemailer.getTestMessageUrl && info) {
+                const previewUrl = nodemailer.getTestMessageUrl(info);
+                if (previewUrl) console.log("📧 Ethereal Email Preview URL:", previewUrl);
+            }
+            return true;
+        } catch (e) {
+            console.error("⚠️ Failed to deliver OTP email:", e.message);
+            return false;
+        }
+    }
+    return false;
+}
+
+// In-Memory Pending OTP Store (tempToken => record)
+const pendingOtps = new Map();
+
+// Periodic cleanup of expired OTPs
+setInterval(() => {
+    const now = Date.now();
+    for (const [token, data] of pendingOtps.entries()) {
+        if (now > data.expiresAt) {
+            pendingOtps.delete(token);
+        }
+    }
+}, 2 * 60 * 1000);
+
+function maskEmail(email) {
+    if (!email || !email.includes("@")) return "***@***.com";
+    const [user, domain] = email.split("@");
+    if (user.length <= 2) {
+        return `${user[0] || "*"}***@${domain}`;
+    }
+    return `${user[0]}***${user[user.length - 1]}@${domain}`;
+}
+
+function generateSecureOtp() {
+    return crypto.randomInt(100000, 1000000).toString();
+}
+
+function hashOtp(otp, salt) {
+    return crypto.createHash("sha256").update(otp + salt).digest("hex");
+}
+
 app.post("/api/auth/google", async (req, res) => {
     const credential = String(req.body.credential || "");
     if (!credential) return res.status(400).json({ message: "Google credential is required." });
@@ -845,19 +969,133 @@ app.post("/api/auth/google", async (req, res) => {
         return res.status(401).json({ message: "Google account email not found." });
     }
 
+    // Generate secure 6-digit OTP
+    const otp = generateSecureOtp();
+    const salt = crypto.randomBytes(16).toString("hex");
+    const hashedOtp = hashOtp(otp, salt);
+    const tempToken = crypto.randomUUID();
+
+    const googleUser = {
+        id: profile.sub || crypto.randomUUID(),
+        name: profile.name || email.split("@")[0],
+        email: email,
+        picture: profile.picture || ""
+    };
+
+    // Store in pendingOtps Map with 5-minute TTL
+    pendingOtps.set(tempToken, {
+        hashedOtp,
+        salt,
+        email,
+        googleUser,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        attempts: 0,
+        maxAttempts: 5,
+        lastResendAt: Date.now()
+    });
+
+    // Send real email via Nodemailer
+    sendOtpEmail(email, otp);
+
+    // Return response without exposing raw OTP
+    return res.json({
+        success: true,
+        pendingOtp: true,
+        tempToken: tempToken,
+        email: maskEmail(email)
+    });
+});
+
+app.post(["/api/auth/send-otp", "/api/auth/resend-otp"], async (req, res) => {
+    const tempToken = String(req.body.tempToken || "");
+    if (!tempToken || !pendingOtps.has(tempToken)) {
+        return res.status(400).json({ message: "This verification session has expired. Please sign in again." });
+    }
+
+    const record = pendingOtps.get(tempToken);
+    const now = Date.now();
+
+    // Rate limiting: minimum 30 seconds between resend requests
+    if (now - record.lastResendAt < 30 * 1000) {
+        const secondsRemaining = Math.ceil((30 * 1000 - (now - record.lastResendAt)) / 1000);
+        return res.status(429).json({
+            message: `Please wait ${secondsRemaining} second(s) before requesting another verification code.`
+        });
+    }
+
+    // Generate new secure 6-digit OTP
+    const otp = generateSecureOtp();
+    const salt = crypto.randomBytes(16).toString("hex");
+    record.hashedOtp = hashOtp(otp, salt);
+    record.salt = salt;
+    record.createdAt = now;
+    record.expiresAt = now + 5 * 60 * 1000;
+    record.attempts = 0;
+    record.lastResendAt = now;
+
+    sendOtpEmail(record.email, otp);
+
+    return res.json({
+        success: true,
+        message: "A new 6-digit verification code has been sent to your email.",
+        email: maskEmail(record.email)
+    });
+});
+
+app.post("/api/auth/verify-otp", (req, res) => {
+    const tempToken = String(req.body.tempToken || "");
+    const enteredOtp = String(req.body.otp || "").trim();
+
+    if (!tempToken || !pendingOtps.has(tempToken)) {
+        return res.status(400).json({ message: "This verification code has expired. Please request a new code." });
+    }
+
+    const record = pendingOtps.get(tempToken);
+    const now = Date.now();
+
+    // 1. Check expiration
+    if (now > record.expiresAt) {
+        pendingOtps.delete(tempToken);
+        return res.status(400).json({ message: "This verification code has expired. Please request a new code." });
+    }
+
+    // 2. Check maximum attempts
+    if (record.attempts >= record.maxAttempts) {
+        pendingOtps.delete(tempToken);
+        return res.status(429).json({ message: "Maximum verification attempts exceeded. Please request a new code." });
+    }
+
+    // 3. Hash entered OTP and verify against stored hashedOtp
+    const computedHash = hashOtp(enteredOtp, record.salt);
+    if (computedHash !== record.hashedOtp) {
+        record.attempts++;
+        if (record.attempts >= record.maxAttempts) {
+            pendingOtps.delete(tempToken);
+            return res.status(400).json({ message: "Maximum verification attempts exceeded. Please request a new code." });
+        }
+        return res.status(400).json({ message: "Invalid verification code. Please try again." });
+    }
+
+    // 4. Correct OTP -> Complete Auth, invalidate tempToken (prevent reuse)
+    pendingOtps.delete(tempToken);
+
+    const googleUser = record.googleUser;
+    const email = record.email;
+
     const users = readUsers();
     let user = users.find(candidate => candidate.email === email);
     if (!user) {
         user = {
-            id: crypto.randomUUID(),
-            name: profile.name || email.split("@")[0],
+            id: googleUser.id || crypto.randomUUID(),
+            name: googleUser.name || email.split("@")[0],
             email: email,
             passwordSalt: "",
             passwordHash: "",
             profile: {
-                fullName: profile.name || email.split("@")[0],
+                fullName: googleUser.name || email.split("@")[0],
                 emailAddress: email,
-                picture: profile.picture || ""
+                picture: googleUser.picture || ""
             }
         };
         users.push(user);
@@ -866,14 +1104,20 @@ app.post("/api/auth/google", async (req, res) => {
         user.profile = {
             fullName: user.name || email.split("@")[0],
             emailAddress: email,
-            picture: profile.picture || ""
+            picture: googleUser.picture || ""
         };
         writeUsers(users);
     }
 
     createSession(req, res, user);
-    return res.json({ user: publicUser(user) });
+    return res.json({
+        success: true,
+        message: "Authentication successful.",
+        redirect: "dashboard.html",
+        user: publicUser(user)
+    });
 });
+
 
 app.get("/api/auth/me", (req, res) => {
     const user = getSessionUser(req);
