@@ -9,10 +9,27 @@ const nodemailer = require("nodemailer");
 
 
 const app = express();
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Resume Upload Storage
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, "uploads/");
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + "-" + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
 const jobAggregator = require("./job-aggregator.js");
 const ragEngine = require("./rag-engine.js");
 const studyPackGenerator = require("./study-pack-generator.js");
 jobAggregator.startDailyScheduler();
+
 
 let analyzerProcess;
 let jobsProcess;
@@ -1169,20 +1186,6 @@ app.post("/api/auth/logout", (req, res) => {
     return res.json({ message: "Logged out successfully." });
 });
 
-// Resume Upload Storage
-const storage = multer.diskStorage({
-
-    destination: (req, file, cb) => {
-        cb(null, "uploads/");
-    },
-
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + "-" + file.originalname);
-    }
-
-});
-
-const upload = multer({ storage: storage });
 
 function extractIdentityFromText(text) {
     const nameMatch = text.match(/name\s*[:\-]\s*([A-Za-z .'-]+)/i) || text.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)$/m);
