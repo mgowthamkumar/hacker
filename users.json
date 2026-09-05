@@ -7,6 +7,7 @@
     "passwordHash": "",
     "isVerified": false,
     "emailVerified": false,
+    "verifiedAt": null,
     "profile": {
       "fullName": "Gowtham Kumar",
       "emailAddress": "mgowthamkumar472008@gmail.com",
@@ -27,56 +28,120 @@
     "name": "Dashboard Test",
     "email": "dashboardc3c44d122d004d028a8ea94b15fc62c0@example.com",
     "passwordSalt": "6a0768f6de5ecc93cbbdc39171233b94",
-    "passwordHash": "37e3c32bcf1660152eb51c20e9ccf6c7436a2561ae5c48ecb510fe4b24deb478f7fab9a84faccf6fa802c177d1efe8eff88d81a4b623f45da5c5bb588810f259"
+    "passwordHash": "37e3c32bcf1660152eb51c20e9ccf6c7436a2561ae5c48ecb510fe4b24deb478f7fab9a84faccf6fa802c177d1efe8eff88d81a4b623f45da5c5bb588810f259",
+    "isVerified": false,
+    "emailVerified": false,
+    "verifiedAt": null,
+    "profile": {
+      "fullName": "Dashboard Test",
+      "emailAddress": "dashboardc3c44d122d004d028a8ea94b15fc62c0@example.com",
+      "picture": ""
+    }
   },
   {
     "id": "ebb6c1e4-3556-40ef-a4a9-b26c9db06c2c",
     "name": "gowtham",
     "email": "mgowthamkkumar472008@gmail.com",
     "passwordSalt": "",
-    "passwordHash": ""
+    "passwordHash": "",
+    "isVerified": false,
+    "emailVerified": false,
+    "verifiedAt": null,
+    "profile": {
+      "fullName": "gowtham",
+      "emailAddress": "mgowthamkkumar472008@gmail.com",
+      "picture": ""
+    }
   },
   {
     "id": "52e2a7e0-58a9-4868-942e-d0ea903c4ca6",
     "name": "Isanth",
     "email": "isanth521@gmail.com",
     "passwordSalt": "",
-    "passwordHash": ""
+    "passwordHash": "",
+    "isVerified": false,
+    "emailVerified": false,
+    "verifiedAt": null,
+    "profile": {
+      "fullName": "Isanth",
+      "emailAddress": "isanth521@gmail.com",
+      "picture": ""
+    }
   },
   {
     "id": "b41f1038-c308-401b-9ce0-e38bd84c0bc2",
     "name": "Lokes",
     "email": "mlokeswaran24032004@gmail.com",
     "passwordSalt": "ff0fa83a9131545d7dff624672b99757",
-    "passwordHash": "05a4871697f5648171170757bdf13bffdbf3b0bb545effa0e5a5a6dd0805d93785716d3698c59eb651791d3b1873e3e9474c0ce9cd8234d2ee03f7685314ee26"
+    "passwordHash": "05a4871697f5648171170757bdf13bffdbf3b0bb545effa0e5a5a6dd0805d93785716d3698c59eb651791d3b1873e3e9474c0ce9cd8234d2ee03f7685314ee26",
+    "isVerified": false,
+    "emailVerified": false,
+    "verifiedAt": null,
+    "profile": {
+      "fullName": "Lokes",
+      "emailAddress": "mlokeswaran24032004@gmail.com",
+      "picture": ""
+    }
   },
   {
     "id": "1d693ba4-2a90-411a-af33-58c013b0510a",
     "name": "dilip",
     "email": "dilip@gmail.com",
     "passwordSalt": "14a4e3f8867d84fce44ae41e3079c74d",
-    "passwordHash": "93bdf4292d62a4b45744f518836b3e8c7ba5e5322e080654564605b3d08e0931bb290eb5764348897e8db06ff1a35f534284a3c27c712768649bb34cf1ce064c"
+    "passwordHash": "93bdf4292d62a4b45744f518836b3e8c7ba5e5322e080654564605b3d08e0931bb290eb5764348897e8db06ff1a35f534284a3c27c712768649bb34cf1ce064c",
+    "isVerified": false,
+    "emailVerified": false,
+    "verifiedAt": null,
+    "profile": {
+      "fullName": "dilip",
+      "emailAddress": "dilip@gmail.com",
+      "picture": ""
+    }
   },
   {
     "id": "1f8c730e-a404-4b01-9ba7-ce820052590f",
     "name": "dhanush",
     "email": "dhanush@gmail.com",
     "passwordSalt": "8ecc62b022a6603365cf464c375edd29",
-    "passwordHash": "99fa5760bf9138e1785c4124a1a697726569b00c95aa76ab71cc2934a762041e79e1a47d63e2deeb6ce643f2dcc75e54d373d46d320e43fc7137bee29af34da0"
+    "passwordHash": "99fa5760bf9138e1785c4124a1a697726569b00c95aa76ab71cc2934a762041e79e1a47d63e2deeb6ce643f2dcc75e54d373d46d320e43fc7137bee29af34da0",
+    "isVerified": false,
+    "emailVerified": false,
+    "verifiedAt": null,
+    "profile": {
+      "fullName": "dhanush",
+      "emailAddress": "dhanush@gmail.com",
+      "picture": ""
+    }
   },
   {
     "id": "ab82adb0-b36a-4e31-961b-7616f587da8f",
     "name": "kisanth",
     "email": "kishanth@gmail.com",
     "passwordSalt": "10e3ee63ae439813e59524c60f78b759",
-    "passwordHash": "0169bca7d035991d6805360f671d12eac1c8a297591c47db38346a9a6ebc5df098da5a70393ba3a6e8bd95461a0098a0ab9a9dbe393a35848140ce33ecc82b70"
+    "passwordHash": "0169bca7d035991d6805360f671d12eac1c8a297591c47db38346a9a6ebc5df098da5a70393ba3a6e8bd95461a0098a0ab9a9dbe393a35848140ce33ecc82b70",
+    "isVerified": false,
+    "emailVerified": false,
+    "verifiedAt": null,
+    "profile": {
+      "fullName": "kisanth",
+      "emailAddress": "kishanth@gmail.com",
+      "picture": ""
+    }
   },
   {
     "id": "45cd0419-df47-4dda-b745-f84c7a64ce98",
     "name": "jaga",
     "email": "jaga@gmail.com",
     "passwordSalt": "3d5eda161506f369e5b0afb340582568",
-    "passwordHash": "0e5321a5f45b2b7dc24f62ec0dcfd0704687fef8caadec4bd93fbb3f5dd23f6f64729813462d730ecbc1fa94bb979f4c024de462b1803823190392d1eef13155"
+    "passwordHash": "0e5321a5f45b2b7dc24f62ec0dcfd0704687fef8caadec4bd93fbb3f5dd23f6f64729813462d730ecbc1fa94bb979f4c024de462b1803823190392d1eef13155",
+    "isVerified": false,
+    "emailVerified": false,
+    "verifiedAt": null,
+    "profile": {
+      "fullName": "jaga",
+      "emailAddress": "jaga@gmail.com",
+      "picture": ""
+    }
   },
   {
     "id": "user_1788632277188",
@@ -86,10 +151,40 @@
     "passwordHash": "",
     "isVerified": true,
     "emailVerified": true,
-    "verifiedAt": "2026-09-05T18:22:48.972Z",
+    "verifiedAt": null,
     "profile": {
       "fullName": "New Test User",
       "emailAddress": "newtestuser_1788632277188@gmail.com",
+      "picture": ""
+    }
+  },
+  {
+    "id": "usr_1788636023",
+    "name": "Auto Test User",
+    "email": "pytest_1788636023@autohire.ai",
+    "passwordSalt": "",
+    "passwordHash": "",
+    "isVerified": true,
+    "emailVerified": true,
+    "verifiedAt": "2026-09-05T19:20:23.687861",
+    "profile": {
+      "fullName": "Auto Test User",
+      "emailAddress": "pytest_1788636023@autohire.ai",
+      "picture": ""
+    }
+  },
+  {
+    "id": "usr_1788636049",
+    "name": "Auto Test User",
+    "email": "pytest_1788636049@autohire.ai",
+    "passwordSalt": "",
+    "passwordHash": "",
+    "isVerified": true,
+    "emailVerified": true,
+    "verifiedAt": "2026-09-05T19:20:49.384873",
+    "profile": {
+      "fullName": "Auto Test User",
+      "emailAddress": "pytest_1788636049@autohire.ai",
       "picture": ""
     }
   }

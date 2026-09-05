@@ -548,14 +548,19 @@
                         <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="otp-box" data-index="5" autocomplete="off">
                     </div>
 
-                    <div class="otp-timer" id="otpTimerText">⏱️ Resend code in 30 seconds</div>
-                    <div class="message" id="otpModalError" style="margin-bottom:18px;"></div>
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 14px; margin-bottom:14px; text-align:center;">
+                        <div style="font-size:0.82rem; color:#94a3b8; margin-bottom:4px;">Didn't receive the code?</div>
+                        <div style="font-size:0.78rem; color:#64748b;">Check your <strong>Inbox</strong>, <strong>Spam/Junk</strong>, and <strong>Promotions</strong> folders.</div>
+                    </div>
+
+                    <div class="otp-timer" id="otpTimerText" style="margin-bottom:12px;">⏱️ Resend code in 45 seconds</div>
+                    <div class="message" id="otpModalError" style="margin-bottom:16px;"></div>
 
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <button type="button" id="btnVerifyOtpSubmit" style="width:100%; padding:15px; border:none; border-radius:var(--radius-md); background:linear-gradient(135deg, #0284c7 0%, #a855f7 100%); color:#fff; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1rem; cursor:pointer; box-shadow:0 4px 20px rgba(168,85,247,0.35); transition:all 0.3s var(--ease-out);">Verify & Complete Login</button>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
                             <button type="button" id="btnCancelOtpModal" style="background:none; border:none; color:var(--text-muted); font-size:0.85rem; cursor:pointer;">Cancel</button>
-                            <button type="button" id="btnResendOtpSubmit" class="otp-resend-btn" disabled>Resend Code</button>
+                            <button type="button" id="btnResendOtpSubmit" class="otp-resend-btn" disabled>Resend OTP</button>
                         </div>
                     </div>
                 </div>
@@ -614,13 +619,14 @@
                 }
             });
 
-            // 30-Second Resend Countdown Timer
-            let countdown = 30;
+            // 45-Second Resend Countdown Timer (Requirement 8)
+            let countdown = 45;
             let timerInterval = null;
 
             function startResendTimer() {
-                countdown = 30;
+                countdown = 45;
                 btnResend.disabled = true;
+                btnResend.textContent = "Resend OTP";
                 timerText.style.color = "#eab308";
                 timerText.textContent = `⏱️ Resend code in ${countdown} seconds`;
 
@@ -629,6 +635,7 @@
                     countdown--;
                     if (countdown <= 0) {
                         clearInterval(timerInterval);
+                        timerText.style.color = "#4ade80";
                         timerText.textContent = "⏱️ You can now request a new code.";
                         btnResend.disabled = false;
                     } else {
@@ -793,7 +800,9 @@
                     const data = await loginResponse.json();
 
                     if (!loginResponse.ok) {
-                        lastErrorMsg = data.message || "Google sign-in could not be completed.";
+                        lastErrorMsg = data.detail || data.message || "Unable to send verification code. Please try again.";
+                        loginMessage.style.color = "#f87171";
+                        loginMessage.textContent = lastErrorMsg;
                         continue;
                     }
 
@@ -821,14 +830,8 @@
             }
 
             if (!serverSuccess) {
-                if (googleUser && googleUser.email) {
-                    loginMessage.style.color = "#38bdf8";
-                    loginMessage.textContent = "Connecting to workspace...";
-                    processUserLogin(googleUser, "dashboard.html");
-                } else {
-                    loginMessage.style.color = "#f87171";
-                    loginMessage.textContent = lastErrorMsg || "Google sign-in could not be completed. Please try again.";
-                }
+                loginMessage.style.color = "#f87171";
+                loginMessage.textContent = lastErrorMsg || "Unable to send verification code. Please try again.";
             }
         }
 
