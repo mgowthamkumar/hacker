@@ -1147,7 +1147,32 @@ app.post("/api/auth/google", async (req, res) => {
         return res.status(401).json({ message: "Google account email not found." });
     }
 
-    // Generate secure 6-digit OTP
+    const users = readUsers();
+    let existingUser = users.find(candidate => candidate.email === email);
+    const isDeviceVerified = Boolean(req.body.deviceVerified);
+
+    // ⚡ Subsequent Login Check: If user was previously verified or signed in, SKIP OTP COMPLETELY!
+    if (existingUser && (existingUser.isVerified === true || existingUser.emailVerified === true || isDeviceVerified)) {
+        console.log(`[AUTH] ⚡ Recognized verified account: ${email}. Logging in directly without OTP.`);
+        existingUser.isVerified = true;
+        existingUser.emailVerified = true;
+        if (profile.picture && existingUser.profile) {
+            existingUser.profile.picture = profile.picture;
+        }
+        writeUsers(users);
+
+        createSession(req, res, existingUser);
+        return res.json({
+            success: true,
+            pendingOtp: false,
+            alreadyVerified: true,
+            message: "Welcome back! Account verified.",
+            redirect: "dashboard.html",
+            user: publicUser(existingUser)
+        });
+    }
+
+    // First-Time Sign-In: Generate secure 6-digit OTP
     const otp = generateSecureOtp();
     const salt = crypto.randomBytes(16).toString("hex");
     const hashedOtp = hashOtp(otp, salt);
@@ -1174,22 +1199,15 @@ app.post("/api/auth/google", async (req, res) => {
     });
 
     // Send email via Nodemailer
-    const deliveryResult = await sendOtpEmail(email, otp);
+    await sendOtpEmail(email, otp);
 
-    // Return response with delivery status
+    // Return clean response for first-time OTP verification
     return res.json({
         success: true,
         pendingOtp: true,
         tempToken: tempToken,
-        email: maskEmail(email),
-        delivery: {
-            isRealDelivery: deliveryResult.isRealDelivery,
-            mode: deliveryResult.mode,
-            previewUrl: deliveryResult.previewUrl || "",
-            devCode: deliveryResult.isRealDelivery ? null : otp
-        }
+        email: maskEmail(email)
     });
-
 });
 
 app.post(["/api/auth/send-otp", "/api/auth/resend-otp"], async (req, res) => {
@@ -1219,20 +1237,12 @@ app.post(["/api/auth/send-otp", "/api/auth/resend-otp"], async (req, res) => {
     record.attempts = 0;
     record.lastResendAt = now;
 
-    const deliveryResult = await sendOtpEmail(record.email, otp);
+    await sendOtpEmail(record.email, otp);
 
     return res.json({
         success: true,
-        message: deliveryResult.isRealDelivery 
-            ? "A new 6-digit verification code has been dispatched to your Gmail inbox."
-            : "A new verification code was generated (Sandbox Mode).",
-        email: maskEmail(record.email),
-        delivery: {
-            isRealDelivery: deliveryResult.isRealDelivery,
-            mode: deliveryResult.mode,
-            previewUrl: deliveryResult.previewUrl || "",
-            devCode: deliveryResult.isRealDelivery ? null : otp
-        }
+        message: "A new 6-digit verification code has been dispatched to your email.",
+        email: maskEmail(record.email)
     });
 });
 
@@ -1285,6 +1295,9 @@ app.post("/api/auth/verify-otp", (req, res) => {
             email: email,
             passwordSalt: "",
             passwordHash: "",
+            isVerified: true,
+            emailVerified: true,
+            verifiedAt: new Date().toISOString(),
             profile: {
                 fullName: googleUser.name || email.split("@")[0],
                 emailAddress: email,
@@ -1292,15 +1305,19 @@ app.post("/api/auth/verify-otp", (req, res) => {
             }
         };
         users.push(user);
-        writeUsers(users);
-    } else if (!user.profile) {
-        user.profile = {
-            fullName: user.name || email.split("@")[0],
-            emailAddress: email,
-            picture: googleUser.picture || ""
-        };
-        writeUsers(users);
+    } else {
+        user.isVerified = true;
+        user.emailVerified = true;
+        user.verifiedAt = new Date().toISOString();
+        if (!user.profile) {
+            user.profile = {
+                fullName: user.name || googleUser.name || email.split("@")[0],
+                emailAddress: email,
+                picture: googleUser.picture || ""
+            };
+        }
     }
+    writeUsers(users);
 
     createSession(req, res, user);
     return res.json({

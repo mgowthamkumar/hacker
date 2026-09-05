@@ -517,7 +517,7 @@
             window.location.href = redirectUrl;
         }
 
-        function renderGoogleOtpModal(tempToken, maskedEmail, delivery = {}) {
+        function renderGoogleOtpModal(tempToken, maskedEmail) {
             const existing = document.getElementById("autohire-otp-modal");
             if (existing) existing.remove();
 
@@ -525,46 +525,19 @@
             modalOverlay.id = "autohire-otp-modal";
             modalOverlay.className = "otp-modal-overlay";
 
-            const isReal = delivery && delivery.isRealDelivery;
-            const deliveryBannerHtml = isReal ? `
-                <div id="otpDeliveryStatus" style="background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:10px 14px; margin:14px 0 16px; font-size:0.85rem; color:#86efac; display:flex; align-items:center; gap:10px; text-align:left;">
-                    <span style="font-size:1.2rem;">🟢</span>
-                    <div>
-                        <strong style="color:#4ade80;">Dispatched to Gmail Inbox</strong><br>
-                        <span style="font-size:0.78rem; color:#bbf7d0;">Check your Primary, Spam, or Promotions tab.</span>
-                    </div>
-                </div>
-            ` : `
-                <div id="otpDeliveryStatus" style="background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.3); border-radius:10px; padding:12px 14px; margin:14px 0 16px; font-size:0.85rem; color:#fef08a; text-align:left;">
-                    <div style="display:flex; align-items:center; gap:6px; font-weight:700; color:#fde047; margin-bottom:4px;">
-                        <span>📬</span> Sandbox Test Mode Active
-                    </div>
-                    <p style="font-size:0.78rem; color:#fef9c3; margin:0 0 10px; line-height:1.4;">
-                        Gmail SMTP password is not saved in <code>.env</code> yet. The 6-digit code was generated securely:
-                    </p>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                        ${delivery && delivery.previewUrl ? `
-                        <a href="${delivery.previewUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:5px; background:#eab308; color:#0f172a; font-weight:700; font-size:0.8rem; padding:6px 12px; border-radius:6px; text-decoration:none;">
-                            👁️ View Sent Email ↗
-                        </a>` : ""}
-                        ${delivery && delivery.devCode ? `
-                        <button type="button" id="btnAutoFillDevOtp" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:#fff; font-size:0.8rem; font-weight:600; padding:6px 12px; border-radius:6px; cursor:pointer;">
-                            ⚡ Fill Code (${delivery.devCode})
-                        </button>` : ""}
-                    </div>
-                </div>
-            `;
-
             modalOverlay.innerHTML = `
                 <div class="otp-modal-card">
                     <div class="otp-icon-badge">📧</div>
-                    <h2 style="font-family:'Space Grotesk',sans-serif; font-size:1.7rem; margin-bottom:8px;">Verify your email</h2>
-                    <p style="color:var(--text-muted); font-size:0.92rem; line-height:1.5;">
+                    <h2 style="font-family:'Space Grotesk',sans-serif; font-size:1.7rem; margin-bottom:8px; color:#fff;">Verify your email</h2>
+                    <p style="color:var(--text-muted); font-size:0.92rem; line-height:1.5; margin-bottom:12px;">
                         We've sent a 6-digit verification code to<br>
-                        <strong style="color:var(--primary); font-size:0.95rem;">${maskedEmail}</strong>
+                        <strong style="color:var(--primary); font-size:0.98rem; letter-spacing:0.02em;">${maskedEmail}</strong>
                     </p>
 
-                    ${deliveryBannerHtml}
+                    <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin:0 auto 22px; color:#94a3b8; font-size:0.85rem;">
+                        <span>🔒</span>
+                        <span>Enter the 6-digit security code to complete sign-in</span>
+                    </div>
 
                     <div class="otp-boxes-wrapper" id="otpBoxesContainer">
                         <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="otp-box" data-index="0" autocomplete="one-time-code" autofocus>
@@ -597,19 +570,6 @@
             const btnCancel = document.getElementById("btnCancelOtpModal");
             const timerText = document.getElementById("otpTimerText");
             const errorDisplay = document.getElementById("otpModalError");
-
-            // Wire dev auto-fill if present in sandbox mode
-            const btnAutoFill = modalOverlay.querySelector("#btnAutoFillDevOtp");
-            if (btnAutoFill && delivery && delivery.devCode) {
-                btnAutoFill.addEventListener("click", () => {
-                    const codeStr = String(delivery.devCode);
-                    codeStr.split("").forEach((digit, idx) => {
-                        if (inputs[idx]) inputs[idx].value = digit;
-                    });
-                    if (inputs[5]) inputs[5].focus();
-                    errorDisplay.textContent = "";
-                });
-            }
 
             inputs[0].focus();
 
@@ -709,38 +669,7 @@
                         return;
                     }
                     errorDisplay.style.color = "#4ade80";
-                    errorDisplay.textContent = data.message || "A new 6-digit code has been dispatched.";
-                    
-                    // Update status banner if sandbox link returned
-                    if (data.delivery && data.delivery.previewUrl) {
-                        const statusBox = modalOverlay.querySelector("#otpDeliveryStatus");
-                        if (statusBox) {
-                            statusBox.innerHTML = `
-                                <div style="display:flex; align-items:center; gap:6px; font-weight:700; color:#fde047; margin-bottom:4px;">
-                                    <span>📬</span> New Code Sent (Sandbox Mode)
-                                </div>
-                                <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-                                    <a href="${data.delivery.previewUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:5px; background:#eab308; color:#0f172a; font-weight:700; font-size:0.8rem; padding:6px 12px; border-radius:6px; text-decoration:none;">
-                                        👁️ View Sent Email ↗
-                                    </a>
-                                    ${data.delivery.devCode ? `
-                                    <button type="button" id="btnAutoFillDevOtp2" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:#fff; font-size:0.8rem; font-weight:600; padding:6px 12px; border-radius:6px; cursor:pointer;">
-                                        ⚡ Fill Code (${data.delivery.devCode})
-                                    </button>` : ""}
-                                </div>
-                            `;
-                            const btnAutoFill2 = statusBox.querySelector("#btnAutoFillDevOtp2");
-                            if (btnAutoFill2 && data.delivery.devCode) {
-                                btnAutoFill2.addEventListener("click", () => {
-                                    String(data.delivery.devCode).split("").forEach((digit, idx) => {
-                                        if (inputs[idx]) inputs[idx].value = digit;
-                                    });
-                                    if (inputs[5]) inputs[5].focus();
-                                    errorDisplay.textContent = "";
-                                });
-                            }
-                        }
-                    }
+                    errorDisplay.textContent = data.message || "A new 6-digit code has been dispatched to your email.";
 
                     inputs.forEach(inp => inp.value = "");
                     inputs[0].focus();
@@ -788,9 +717,19 @@
                     errorDisplay.textContent = "✅ Email verified! Redirecting to workspace...";
                     if (timerInterval) clearInterval(timerInterval);
 
+                    // Remember verified email on this device so subsequent logins skip OTP
+                    try {
+                        const verifiedList = JSON.parse(localStorage.getItem("autohire_verified_accounts") || "[]");
+                        const userEmail = (data.user && data.user.email) ? data.user.email.toLowerCase() : "";
+                        if (userEmail && !verifiedList.includes(userEmail)) {
+                            verifiedList.push(userEmail);
+                            localStorage.setItem("autohire_verified_accounts", JSON.stringify(verifiedList));
+                        }
+                    } catch (e) {}
+
                     setTimeout(() => {
                         processUserLogin(data.user, data.redirect || "dashboard.html");
-                    }, 800);
+                    }, 600);
                 } catch (error) {
                     errorDisplay.style.color = "#f87171";
                     errorDisplay.textContent = "Connection error while verifying OTP.";
@@ -820,6 +759,12 @@
                 console.warn("Client JWT decode notice:", e);
             }
 
+            // Check if this account was previously verified on this device
+            const verifiedAccounts = (() => {
+                try { return JSON.parse(localStorage.getItem("autohire_verified_accounts") || "[]"); } catch(e) { return []; }
+            })();
+            const isDeviceVerified = Boolean(googleUser && googleUser.email && verifiedAccounts.includes(googleUser.email.toLowerCase()));
+
             // Candidate URLs to support local server, live preview, and hosted domains
             const candidateUrls = [
                 apiUrl,
@@ -839,7 +784,10 @@
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         credentials: isCrossOrigin ? "omit" : "include",
-                        body: JSON.stringify({ credential: response.credential })
+                        body: JSON.stringify({ 
+                            credential: response.credential,
+                            deviceVerified: isDeviceVerified
+                        })
                     });
                     
                     const data = await loginResponse.json();
@@ -852,11 +800,19 @@
                     serverSuccess = true;
                     window.ACTIVE_AUTH_API_URL = base;
 
+                    // If user requires OTP (first-time sign-in):
                     if (data.pendingOtp && data.tempToken) {
                         loginMessage.textContent = "";
-                        renderGoogleOtpModal(data.tempToken, data.email, data.delivery);
+                        renderGoogleOtpModal(data.tempToken, data.email);
                     } else if (data.user) {
-                        processUserLogin(data.user, "dashboard.html");
+                        // Account already verified! Remember on device and redirect immediately
+                        if (googleUser && googleUser.email && !verifiedAccounts.includes(googleUser.email.toLowerCase())) {
+                            verifiedAccounts.push(googleUser.email.toLowerCase());
+                            localStorage.setItem("autohire_verified_accounts", JSON.stringify(verifiedAccounts));
+                        }
+                        loginMessage.style.color = "#4ade80";
+                        loginMessage.textContent = "Welcome back! Connecting...";
+                        processUserLogin(data.user, data.redirect || "dashboard.html");
                     }
                     return;
                 } catch (err) {

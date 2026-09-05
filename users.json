@@ -5,6 +5,8 @@
     "email": "mgowthamkumar472008@gmail.com",
     "passwordSalt": "",
     "passwordHash": "",
+    "isVerified": true,
+    "emailVerified": true,
     "profile": {
       "fullName": "Gowtham Kumar",
       "emailAddress": "mgowthamkumar472008@gmail.com",
@@ -74,5 +76,20 @@
     "email": "jaga@gmail.com",
     "passwordSalt": "3d5eda161506f369e5b0afb340582568",
     "passwordHash": "0e5321a5f45b2b7dc24f62ec0dcfd0704687fef8caadec4bd93fbb3f5dd23f6f64729813462d730ecbc1fa94bb979f4c024de462b1803823190392d1eef13155"
+  },
+  {
+    "id": "user_1788632277188",
+    "name": "New Test User",
+    "email": "newtestuser_1788632277188@gmail.com",
+    "passwordSalt": "",
+    "passwordHash": "",
+    "isVerified": true,
+    "emailVerified": true,
+    "verifiedAt": "2026-09-05T18:22:48.972Z",
+    "profile": {
+      "fullName": "New Test User",
+      "emailAddress": "newtestuser_1788632277188@gmail.com",
+      "picture": ""
+    }
   }
 ]
