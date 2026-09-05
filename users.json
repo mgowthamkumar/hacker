@@ -5,8 +5,8 @@
     "email": "mgowthamkumar472008@gmail.com",
     "passwordSalt": "",
     "passwordHash": "",
-    "isVerified": true,
-    "emailVerified": true,
+    "isVerified": false,
+    "emailVerified": false,
     "profile": {
       "fullName": "Gowtham Kumar",
       "emailAddress": "mgowthamkumar472008@gmail.com",

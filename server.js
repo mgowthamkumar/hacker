@@ -923,27 +923,44 @@ app.post("/api/auth/login", (req, res) => {
 // --- Real Email OTP & Google OAuth Security Service ---
 let mailTransporter = null;
 let activeMailerMode = "none"; // 'gmail', 'smtp', 'ethereal', 'console'
+let lastLoadedPass = "";
 
 async function getMailTransporter() {
-    if (mailTransporter) return { transporter: mailTransporter, mode: activeMailerMode };
+    // Always reload .env so edits to SMTP credentials take effect immediately without server restart
+    try {
+        require("dotenv").config({ override: true });
+    } catch (e) {}
 
     const smtpUser = (process.env.SMTP_USER || process.env.EMAIL_USER || "").trim();
     const smtpPass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "").replace(/\s+/g, "");
     const smtpHost = (process.env.SMTP_HOST || "").trim();
     const smtpService = (process.env.SMTP_SERVICE || "").trim().toLowerCase();
 
-    // 1. Direct Gmail Configuration (Preferred for Gmail accounts with App Passwords)
+    // If password was added or changed, discard any previous cached transporter
+    if (smtpPass !== lastLoadedPass) {
+        mailTransporter = null;
+        lastLoadedPass = smtpPass;
+    }
+
+    if (mailTransporter) return { transporter: mailTransporter, mode: activeMailerMode };
+
+    // 1. Direct Gmail Configuration using Port 465 SSL (Highest reliability and fastest delivery)
     if (smtpUser && smtpPass && (smtpService === "gmail" || smtpUser.endsWith("@gmail.com") || smtpHost.includes("gmail"))) {
         try {
             mailTransporter = nodemailer.createTransport({
-                service: "gmail",
+                host: "smtp.gmail.com",
+                port: 465,
+                secure: true,
                 auth: {
                     user: smtpUser,
                     pass: smtpPass
-                }
+                },
+                connectionTimeout: 10000,
+                greetingTimeout: 10000,
+                socketTimeout: 15000
             });
             activeMailerMode = "gmail";
-            console.log(`[AUTH] ✅ Real Gmail SMTP transporter initialized for: ${smtpUser}`);
+            console.log(`[AUTH] ✅ Real Gmail SMTP transporter initialized (Port 465 SSL) for: ${smtpUser}`);
             return { transporter: mailTransporter, mode: activeMailerMode };
         } catch (e) {
             console.error("[AUTH] ⚠️ Gmail SMTP transport initialization notice:", e.message);
@@ -1149,10 +1166,9 @@ app.post("/api/auth/google", async (req, res) => {
 
     const users = readUsers();
     let existingUser = users.find(candidate => candidate.email === email);
-    const isDeviceVerified = Boolean(req.body.deviceVerified);
-
-    // ⚡ Subsequent Login Check: If user was previously verified or signed in, SKIP OTP COMPLETELY!
-    if (existingUser && (existingUser.isVerified === true || existingUser.emailVerified === true || isDeviceVerified)) {
+    // ⚡ Subsequent Login Check: If account was verified via OTP, SKIP OTP COMPLETELY!
+    const isAccountVerified = Boolean(existingUser && (existingUser.isVerified === true || existingUser.emailVerified === true));
+    if (isAccountVerified) {
         console.log(`[AUTH] ⚡ Recognized verified account: ${email}. Logging in directly without OTP.`);
         existingUser.isVerified = true;
         existingUser.emailVerified = true;
@@ -1332,6 +1348,77 @@ app.post("/api/auth/verify-otp", (req, res) => {
 app.get("/api/auth/me", (req, res) => {
     const user = getSessionUser(req);
     return user ? res.json({ user: publicUser(user) }) : res.status(401).json({ message: "Not authenticated." });
+});
+
+app.get("/api/auth/smtp-status", (req, res) => {
+    try {
+        require("dotenv").config({ override: true });
+    } catch (e) {}
+    const smtpUser = (process.env.SMTP_USER || "").trim();
+    const smtpPass = (process.env.SMTP_PASS || "").replace(/\s+/g, "");
+    return res.json({
+        configured: Boolean(smtpUser && smtpPass),
+        smtpUser: smtpUser || "mgowthamkumar472008@gmail.com",
+        mode: Boolean(smtpUser && smtpPass) ? "gmail_ssl" : "ethereal_sandbox"
+    });
+});
+
+app.post("/api/auth/configure-smtp", async (req, res) => {
+    const appPassword = String(req.body.appPassword || req.body.password || "").replace(/\s+/g, "");
+    const smtpUser = String(req.body.email || process.env.SMTP_USER || "mgowthamkumar472008@gmail.com").trim();
+
+    if (!appPassword || appPassword.length < 8) {
+        return res.status(400).json({ success: false, message: "Please provide a valid 16-character Google App Password." });
+    }
+
+    try {
+        const testTransporter = nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 465,
+            secure: true,
+            auth: {
+                user: smtpUser,
+                pass: appPassword
+            },
+            connectionTimeout: 10000
+        });
+
+        await testTransporter.verify();
+
+        // Update .env file
+        const envPath = path.join(__dirname, ".env");
+        let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
+        
+        if (envContent.includes("SMTP_PASS=")) {
+            envContent = envContent.replace(/SMTP_PASS=.*/g, `SMTP_PASS=${appPassword}`);
+        } else {
+            envContent += `\nSMTP_PASS=${appPassword}\n`;
+        }
+
+        if (envContent.includes("SMTP_USER=")) {
+            envContent = envContent.replace(/SMTP_USER=.*/g, `SMTP_USER=${smtpUser}`);
+        } else {
+            envContent += `\nSMTP_USER=${smtpUser}\n`;
+        }
+
+        fs.writeFileSync(envPath, envContent, "utf8");
+        process.env.SMTP_PASS = appPassword;
+        process.env.SMTP_USER = smtpUser;
+        mailTransporter = null; // reset cached transporter
+
+        console.log(`[AUTH] 🎉 Real Gmail App Password configured & verified for ${smtpUser}!`);
+
+        return res.json({
+            success: true,
+            message: `Google authenticated successfully! Real Gmail OTP delivery is now active for ${smtpUser}.`
+        });
+    } catch (err) {
+        console.error("[AUTH] ⚠️ Gmail verification failed:", err.message);
+        return res.status(400).json({
+            success: false,
+            message: `Google rejected this App Password: ${err.message}. Please ensure 2-Step Verification is ON and generate an App Password at myaccount.google.com/apppasswords.`
+        });
+    }
 });
 
 app.get("/api/profile", (req, res) => {
