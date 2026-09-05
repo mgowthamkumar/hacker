@@ -5,9 +5,9 @@
     "email": "mgowthamkumar472008@gmail.com",
     "passwordSalt": "",
     "passwordHash": "",
-    "isVerified": false,
-    "emailVerified": false,
-    "verifiedAt": null,
+    "isVerified": true,
+    "emailVerified": true,
+    "verifiedAt": "2026-09-05T20:13:08.001Z",
     "profile": {
       "fullName": "Gowtham Kumar",
       "emailAddress": "mgowthamkumar472008@gmail.com",
@@ -195,5 +195,20 @@
     "isVerified": true,
     "emailVerified": true,
     "verifiedAt": "2026-09-05T19:43:06.674Z"
+  },
+  {
+    "id": "104388419829453798372",
+    "name": "GOWTHAM KUMAR M",
+    "email": "gowthamkumarm25ml@srishakthi.ac.in",
+    "passwordSalt": "",
+    "passwordHash": "",
+    "isVerified": true,
+    "emailVerified": true,
+    "verifiedAt": "2026-09-05T20:14:42.686Z",
+    "profile": {
+      "fullName": "GOWTHAM KUMAR M",
+      "emailAddress": "gowthamkumarm25ml@srishakthi.ac.in",
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocJFZZHCMd4rdWKn7tLBpvCXOAauPiehbbmOqO2kiO-4cjYgtA=s96-c"
+    }
   }
 ]
