@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
@@ -807,6 +808,78 @@ app.post(["/api/rag/analyze", "/analyzer", "/api/analyzer"], upload.single("file
     return res.json(ragAnalysis);
 });
 
+// --- User Database & Session Management ---
+const usersFile = path.join(__dirname, "users.json");
+const sessions = new Map();
+const sessionSecret = process.env.SESSION_SECRET || "autohire-development-secret";
+const googleClientId = process.env.GOOGLE_CLIENT_ID || "985018230796-l4mivu7or4h81n86na3rpgu0c8ru53ot.apps.googleusercontent.com";
+
+function readUsers() {
+    try {
+        if (!fs.existsSync(usersFile)) return [];
+        return JSON.parse(fs.readFileSync(usersFile, "utf8"));
+    } catch (error) {
+        return [];
+    }
+}
+
+function writeUsers(users) {
+    try {
+        fs.writeFileSync(usersFile, JSON.stringify(users, null, 2), "utf8");
+    } catch (error) {
+        console.error("Failed to write users.json:", error);
+    }
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
+    const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+    return { salt, hash };
+}
+
+function passwordsMatch(password, user) {
+    if (!user || !user.passwordSalt || !user.passwordHash) return false;
+    const candidate = crypto.scryptSync(password, user.passwordSalt, 64);
+    const stored = Buffer.from(user.passwordHash, "hex");
+    return candidate.length === stored.length && crypto.timingSafeEqual(candidate, stored);
+}
+
+function parseCookies(req) {
+    return Object.fromEntries((req.headers.cookie || "").split(";").filter(Boolean).map(cookie => {
+        const [name, ...value] = cookie.trim().split("=");
+        return [name, decodeURIComponent(value.join("="))];
+    }));
+}
+
+function createSession(arg1, arg2, arg3) {
+    const res = arg3 ? arg2 : arg1;
+    const user = arg3 ? arg3 : arg2;
+    const sessionId = crypto.randomBytes(32).toString("hex");
+    const signature = crypto.createHmac("sha256", sessionSecret).update(sessionId).digest("hex");
+    if (user && user.id) sessions.set(sessionId, user.id);
+    if (res && res.setHeader) {
+        res.setHeader("Set-Cookie", `session=${sessionId}.${signature}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`);
+    }
+    return sessionId;
+}
+
+function getSessionUser(req) {
+    const value = parseCookies(req).session || "";
+    const [sessionId, signature] = value.split(".");
+    if (!sessionId || !signature) return null;
+
+    const expected = crypto.createHmac("sha256", sessionSecret).update(sessionId).digest("hex");
+    if (signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+
+    const userId = sessions.get(sessionId);
+    return readUsers().find(user => user.id === userId) || null;
+}
+
+function publicUser(user) {
+    if (!user) return null;
+    const { passwordSalt, passwordHash, ...rest } = user;
+    return rest;
+}
+
 app.post("/api/auth/register", (req, res) => {
     const name = String(req.body.name || "").trim();
     const email = String(req.body.email || "").trim().toLowerCase();
@@ -849,52 +922,100 @@ app.post("/api/auth/login", (req, res) => {
 
 // --- Real Email OTP & Google OAuth Security Service ---
 let mailTransporter = null;
+let activeMailerMode = "none"; // 'gmail', 'smtp', 'ethereal', 'console'
+
 async function getMailTransporter() {
-    if (mailTransporter) return mailTransporter;
-    if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-        mailTransporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: parseInt(process.env.SMTP_PORT || "587", 10),
-            secure: process.env.SMTP_SECURE === "true",
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS
-            }
-        });
-    } else {
+    if (mailTransporter) return { transporter: mailTransporter, mode: activeMailerMode };
+
+    const smtpUser = (process.env.SMTP_USER || process.env.EMAIL_USER || "").trim();
+    const smtpPass = (process.env.SMTP_PASS || process.env.EMAIL_PASS || "").replace(/\s+/g, "");
+    const smtpHost = (process.env.SMTP_HOST || "").trim();
+    const smtpService = (process.env.SMTP_SERVICE || "").trim().toLowerCase();
+
+    // 1. Direct Gmail Configuration (Preferred for Gmail accounts with App Passwords)
+    if (smtpUser && smtpPass && (smtpService === "gmail" || smtpUser.endsWith("@gmail.com") || smtpHost.includes("gmail"))) {
         try {
-            const testAccount = await Promise.race([
-                nodemailer.createTestAccount(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout creating test account")), 3500))
-            ]);
             mailTransporter = nodemailer.createTransport({
-                host: "smtp.ethereal.email",
-                port: 587,
-                secure: false,
+                service: "gmail",
                 auth: {
-                    user: testAccount.user,
-                    pass: testAccount.pass
+                    user: smtpUser,
+                    pass: smtpPass
                 }
             });
-            console.log("ℹ️ Nodemailer initialized with Ethereal test SMTP account for OTP delivery:", testAccount.user);
+            activeMailerMode = "gmail";
+            console.log(`[AUTH] ✅ Real Gmail SMTP transporter initialized for: ${smtpUser}`);
+            return { transporter: mailTransporter, mode: activeMailerMode };
         } catch (e) {
-            console.warn("⚠️ Nodemailer test account fallback notice:", e.message);
-            mailTransporter = {
-                sendMail: async (opts) => {
-                    console.log(`📧 [Local Delivery to ${opts.to}]: Subject="${opts.subject}"`);
-                    return { messageId: "local_" + Date.now() };
-                }
-            };
+            console.error("[AUTH] ⚠️ Gmail SMTP transport initialization notice:", e.message);
         }
     }
-    return mailTransporter;
+
+    // 2. Custom SMTP Host Configuration (SendGrid, Mailgun, Brevo, AWS SES, or custom SMTP)
+    if (smtpHost && smtpUser && smtpPass) {
+        try {
+            const port = parseInt(process.env.SMTP_PORT || "587", 10);
+            mailTransporter = nodemailer.createTransport({
+                host: smtpHost,
+                port: port,
+                secure: port === 465 || process.env.SMTP_SECURE === "true",
+                auth: {
+                    user: smtpUser,
+                    pass: smtpPass
+                },
+                tls: {
+                    rejectUnauthorized: false
+                }
+            });
+            activeMailerMode = "smtp";
+            console.log(`[AUTH] ✅ Real Custom SMTP transporter initialized: ${smtpHost}:${port} (${smtpUser})`);
+            return { transporter: mailTransporter, mode: activeMailerMode };
+        } catch (e) {
+            console.error("[AUTH] ⚠️ Custom SMTP transport initialization notice:", e.message);
+        }
+    }
+
+    // 3. Fallback to Ethereal Test Sandbox if real SMTP credentials are not yet configured in .env
+    try {
+        console.log("[AUTH] ℹ️ Real SMTP credentials not configured in .env. Initializing test sandbox...");
+        const testAccount = await Promise.race([
+            nodemailer.createTestAccount(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout creating test account")), 4000))
+        ]);
+        mailTransporter = nodemailer.createTransport({
+            host: "smtp.ethereal.email",
+            port: 587,
+            secure: false,
+            auth: {
+                user: testAccount.user,
+                pass: testAccount.pass
+            }
+        });
+        activeMailerMode = "ethereal";
+        console.log(`[AUTH] ℹ️ Ethereal sandbox initialized: ${testAccount.user}`);
+        return { transporter: mailTransporter, mode: activeMailerMode };
+    } catch (e) {
+        console.warn("[AUTH] ⚠️ Ethereal account creation notice:", e.message);
+        mailTransporter = {
+            sendMail: async (opts) => {
+                console.log(`[AUTH] 📧 [Local Dev Delivery to ${opts.to}]: Subject="${opts.subject}"`);
+                return { messageId: "dev_" + Date.now() };
+            }
+        };
+        activeMailerMode = "console";
+        return { transporter: mailTransporter, mode: activeMailerMode };
+    }
 }
 
-
 async function sendOtpEmail(recipientEmail, otpCode) {
-    const transporter = await getMailTransporter();
-    const fromAddress = process.env.SMTP_FROM || '"AutoHire AI Security" <no-reply@autohire.ai>';
+    const { transporter, mode } = await getMailTransporter();
+    const fromUser = process.env.SMTP_USER || process.env.EMAIL_USER || "security@autohire.ai";
+    const fromAddress = process.env.SMTP_FROM || `"AutoHire AI Security" <${fromUser}>`;
     
+    console.log(`\n======================================================`);
+    console.log(`🛡️  [AUTOHIRE AI OTP] Code for ${recipientEmail}: [ ${otpCode} ]`);
+    console.log(`📡 Delivery Mode: ${mode.toUpperCase()} | Time: ${new Date().toISOString()}`);
+    console.log(`======================================================\n`);
+
     const htmlBody = `
         <div style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width:540px; margin:0 auto; background:#070b14; color:#f8fafc; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); box-shadow:0 20px 40px rgba(0,0,0,0.5);">
             <div style="padding:32px 32px 24px; background:linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(168,85,247,0.15) 100%); border-bottom:1px solid rgba(255,255,255,0.1);">
@@ -903,7 +1024,7 @@ async function sendOtpEmail(recipientEmail, otpCode) {
             </div>
             <div style="padding:32px;">
                 <h2 style="font-size:20px; font-weight:700; color:#f8fafc; margin-top:0;">Verify your email address</h2>
-                <p style="color:#cbd5e1; font-size:15px; line-height:1.6;">You are attempting to log into your AutoHire AI workspace via Google authentication. Please use the 6-digit verification code below to complete your login:</p>
+                <p style="color:#cbd5e1; font-size:15px; line-height:1.6;">You are logging into your AutoHire AI workspace via Google authentication. Please use the 6-digit verification code below to complete your login:</p>
                 
                 <div style="margin:28px 0; text-align:center;">
                     <div style="display:inline-block; padding:16px 32px; background:rgba(30,41,59,0.8); border:1px solid #38bdf8; border-radius:12px; font-size:32px; font-weight:800; letter-spacing:8px; color:#38bdf8; text-shadow:0 0 12px rgba(56,189,248,0.4);">
@@ -926,26 +1047,39 @@ async function sendOtpEmail(recipientEmail, otpCode) {
         </div>
     `;
 
-    if (transporter) {
-        try {
-            const info = await transporter.sendMail({
-                from: fromAddress,
-                to: recipientEmail,
-                subject: `AutoHire AI Security - Your Verification Code is ${otpCode}`,
-                text: `Your AutoHire AI verification code is ${otpCode}. Valid for 5 minutes.`,
-                html: htmlBody
-            });
-            if (nodemailer.getTestMessageUrl && info) {
-                const previewUrl = nodemailer.getTestMessageUrl(info);
-                if (previewUrl) console.log("📧 Ethereal Email Preview URL:", previewUrl);
-            }
-            return true;
-        } catch (e) {
-            console.error("⚠️ Failed to deliver OTP email:", e.message);
-            return false;
+    try {
+        const info = await transporter.sendMail({
+            from: fromAddress,
+            to: recipientEmail,
+            subject: `AutoHire AI Security - Your Verification Code is ${otpCode}`,
+            text: `Your AutoHire AI verification code is ${otpCode}. Valid for 5 minutes.`,
+            html: htmlBody
+        });
+
+        let previewUrl = "";
+        if (mode === "ethereal" && nodemailer.getTestMessageUrl && info) {
+            previewUrl = nodemailer.getTestMessageUrl(info) || "";
+            if (previewUrl) console.log("📧 Ethereal Email Preview URL:", previewUrl);
         }
+
+        const isReal = (mode === "gmail" || mode === "smtp");
+        return {
+            success: true,
+            isRealDelivery: isReal,
+            mode: mode,
+            previewUrl: previewUrl,
+            messageId: info.messageId || ""
+        };
+    } catch (e) {
+        console.error(`⚠️ [AUTH] Failed to deliver OTP email via ${mode}:`, e.message);
+        return {
+            success: false,
+            isRealDelivery: false,
+            mode: mode,
+            previewUrl: "",
+            error: e.message
+        };
     }
-    return false;
 }
 
 // In-Memory Pending OTP Store (tempToken => record)
@@ -1039,15 +1173,21 @@ app.post("/api/auth/google", async (req, res) => {
         lastResendAt: Date.now()
     });
 
-    // Send real email via Nodemailer asynchronously without blocking
-    sendOtpEmail(email, otp).catch(e => console.error("Email send error:", e.message));
+    // Send email via Nodemailer
+    const deliveryResult = await sendOtpEmail(email, otp);
 
-    // Return response without exposing raw OTP
+    // Return response with delivery status
     return res.json({
         success: true,
         pendingOtp: true,
         tempToken: tempToken,
-        email: maskEmail(email)
+        email: maskEmail(email),
+        delivery: {
+            isRealDelivery: deliveryResult.isRealDelivery,
+            mode: deliveryResult.mode,
+            previewUrl: deliveryResult.previewUrl || "",
+            devCode: deliveryResult.isRealDelivery ? null : otp
+        }
     });
 
 });
@@ -1079,12 +1219,20 @@ app.post(["/api/auth/send-otp", "/api/auth/resend-otp"], async (req, res) => {
     record.attempts = 0;
     record.lastResendAt = now;
 
-    sendOtpEmail(record.email, otp);
+    const deliveryResult = await sendOtpEmail(record.email, otp);
 
     return res.json({
         success: true,
-        message: "A new 6-digit verification code has been sent to your email.",
-        email: maskEmail(record.email)
+        message: deliveryResult.isRealDelivery 
+            ? "A new 6-digit verification code has been dispatched to your Gmail inbox."
+            : "A new verification code was generated (Sandbox Mode).",
+        email: maskEmail(record.email),
+        delivery: {
+            isRealDelivery: deliveryResult.isRealDelivery,
+            mode: deliveryResult.mode,
+            previewUrl: deliveryResult.previewUrl || "",
+            devCode: deliveryResult.isRealDelivery ? null : otp
+        }
     });
 });
 

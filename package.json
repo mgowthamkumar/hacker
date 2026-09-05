@@ -8,6 +8,7 @@
     },
     "dependencies": {
         "cors": "^2.8.5",
+        "dotenv": "^17.4.2",
         "express": "^5.1.0",
         "multer": "^2.0.2",
         "nodemailer": "^10.0.0"
