@@ -21,7 +21,16 @@
       "termsAgreement": "on",
       "resume": null,
       "picture": "https://lh3.googleusercontent.com/a/ACg8ocJBRlNnIY5DzhMAxcsAnoHD8HXM3i7JQVtivxXyyHW-ySvkCFIg=s96-c"
-    }
+    },
+    "trustedDevices": [
+      {
+        "deviceId": "dev_7a8dfd5e-c46c-4ec2-a9b3-c4078b741be3",
+        "verifiedAt": "2026-09-08T10:13:36.078Z",
+        "lastVerifiedAt": "2026-09-08T10:13:36.078Z",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+        "ip": "127.0.0.1"
+      }
+    ]
   },
   {
     "id": "3782344b-27ac-4f11-b19a-95acbe6e81a8",
