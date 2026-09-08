@@ -850,14 +850,19 @@ function parseCookies(req) {
     }));
 }
 
-function createSession(arg1, arg2, arg3) {
+function createSession(arg1, arg2, arg3, deviceId = "") {
     const res = arg3 ? arg2 : arg1;
     const user = arg3 ? arg3 : arg2;
+    const effectiveDeviceId = deviceId || (arg3 && typeof arg3 === "string" ? arg3 : "");
     const sessionId = crypto.randomBytes(32).toString("hex");
     const signature = crypto.createHmac("sha256", sessionSecret).update(sessionId).digest("hex");
     if (user && user.id) sessions.set(sessionId, user.id);
     if (res && res.setHeader) {
-        res.setHeader("Set-Cookie", `session=${sessionId}.${signature}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`);
+        const cookies = [`session=${sessionId}.${signature}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`];
+        if (effectiveDeviceId) {
+            cookies.push(`autohire_device_id=${encodeURIComponent(effectiveDeviceId)}; SameSite=Lax; Path=/; Max-Age=31536000`);
+        }
+        res.setHeader("Set-Cookie", cookies);
     }
     return sessionId;
 }
@@ -1105,6 +1110,7 @@ function hashOtp(otp, salt) {
 app.post(["/api/auth/login", "/auth/login"], async (req, res) => {
     const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "");
+    const deviceId = String(req.body.deviceId || req.headers["x-device-id"] || parseCookies(req).autohire_device_id || "").trim();
 
     // 1. Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1138,7 +1144,27 @@ app.post(["/api/auth/login", "/auth/login"], async (req, res) => {
         });
     }
 
-    // 5. Credentials valid -> Generate cryptographically secure 6-digit OTP
+    // 5. Account-Specific Trusted Device Check (Skip OTP if this account previously verified OTP on this device)
+    const isTrustedDevice = Boolean(
+        deviceId &&
+        Array.isArray(user.trustedDevices) &&
+        user.trustedDevices.some(d => d.deviceId === deviceId)
+    );
+
+    if (isTrustedDevice) {
+        console.log(`[AUTH] ⚡ Recognized trusted device (${deviceId}) for account: ${email}. Skipping OTP.`);
+        createSession(req, res, user, deviceId);
+        return res.json({
+            success: true,
+            pendingOtp: false,
+            trustedDevice: true,
+            message: "Welcome back! Account verified on this trusted device.",
+            redirect: "dashboard.html",
+            user: publicUser(user)
+        });
+    }
+
+    // 6. Credentials valid on new/untrusted device -> Generate cryptographically secure 6-digit OTP
     const otp = generateSecureOtp();
     const salt = crypto.randomBytes(16).toString("hex");
     const hashedOtp = hashOtp(otp, salt);
@@ -1161,6 +1187,7 @@ app.post(["/api/auth/login", "/auth/login"], async (req, res) => {
         email,
         authMethod: "password",
         userId: user.id,
+        deviceId,
         createdAt: Date.now(),
         expiresAt: Date.now() + 5 * 60 * 1000,
         attempts: 0,
@@ -1180,10 +1207,11 @@ app.post(["/api/auth/login", "/auth/login"], async (req, res) => {
 
 // ==========================================
 // METHOD 2: Sign in with Google Auth
-// Mandates Security OTP Verification before session creation (No OTP Bypass)
+// Mandates Security OTP Verification unless device is trusted for this specific account
 // ==========================================
 app.post(["/api/auth/google", "/auth/google"], async (req, res) => {
     const credential = String(req.body.credential || "");
+    const deviceId = String(req.body.deviceId || req.headers["x-device-id"] || parseCookies(req).autohire_device_id || "").trim();
     if (!credential) return res.status(400).json({ success: false, message: "Google credential is required." });
 
     let profile = null;
@@ -1217,7 +1245,35 @@ app.post(["/api/auth/google", "/auth/google"], async (req, res) => {
         return res.status(401).json({ success: false, message: "Google account email not found." });
     }
 
-    // Both new and returning users MUST verify OTP before gaining workspace access
+    const users = readUsers();
+    let existingUser = users.find(candidate => candidate.email === email);
+
+    // Account-Specific Trusted Device Check for Google users
+    const isTrustedDevice = Boolean(
+        existingUser &&
+        deviceId &&
+        Array.isArray(existingUser.trustedDevices) &&
+        existingUser.trustedDevices.some(d => d.deviceId === deviceId)
+    );
+
+    if (isTrustedDevice) {
+        console.log(`[AUTH] ⚡ Recognized trusted device (${deviceId}) for Google account: ${email}. Skipping OTP.`);
+        if (profile.picture && existingUser.profile) {
+            existingUser.profile.picture = profile.picture;
+            writeUsers(users);
+        }
+        createSession(req, res, existingUser, deviceId);
+        return res.json({
+            success: true,
+            pendingOtp: false,
+            trustedDevice: true,
+            message: "Welcome back! Account verified on this trusted device.",
+            redirect: "dashboard.html",
+            user: publicUser(existingUser)
+        });
+    }
+
+    // Untrusted device -> Generate cryptographically secure 6-digit OTP
     const otp = generateSecureOtp();
     const salt = crypto.randomBytes(16).toString("hex");
     const hashedOtp = hashOtp(otp, salt);
@@ -1249,6 +1305,7 @@ app.post(["/api/auth/google", "/auth/google"], async (req, res) => {
         email,
         authMethod: "google",
         googleUser,
+        deviceId,
         createdAt: Date.now(),
         expiresAt: Date.now() + 5 * 60 * 1000,
         attempts: 0,
@@ -1353,6 +1410,7 @@ app.post(["/api/auth/verify-otp", "/auth/verify-otp"], (req, res) => {
     pendingOtps.delete(tempToken);
 
     const email = record.email;
+    const deviceId = record.deviceId || String(req.body.deviceId || req.headers["x-device-id"] || parseCookies(req).autohire_device_id || "").trim();
     const users = readUsers();
     let user = users.find(candidate => candidate.email === email);
 
@@ -1400,9 +1458,30 @@ app.post(["/api/auth/verify-otp", "/auth/verify-otp"], (req, res) => {
             }
         }
     }
+
+    // 5. Remember OTP verification for THIS SPECIFIC USER ACCOUNT on THIS TRUSTED DEVICE
+    if (!Array.isArray(user.trustedDevices)) {
+        user.trustedDevices = [];
+    }
+    if (deviceId) {
+        const existingDevice = user.trustedDevices.find(d => d.deviceId === deviceId);
+        if (existingDevice) {
+            existingDevice.lastVerifiedAt = new Date().toISOString();
+        } else {
+            user.trustedDevices.push({
+                deviceId: deviceId,
+                verifiedAt: new Date().toISOString(),
+                lastVerifiedAt: new Date().toISOString(),
+                userAgent: req.headers["user-agent"] || "",
+                ip: req.ip || req.connection.remoteAddress || ""
+            });
+        }
+        console.log(`[AUTH] 🛡️ Added trusted device (${deviceId}) for account: ${user.email}`);
+    }
+
     writeUsers(users);
 
-    createSession(req, res, user);
+    createSession(req, res, user, deviceId);
     return res.json({
         success: true,
         message: "Authentication successful.",

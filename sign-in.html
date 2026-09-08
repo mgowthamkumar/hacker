@@ -479,6 +479,25 @@
             window.location.href = redirectUrl;
         }
 
+        function getOrCreateDeviceId() {
+            let deviceId = "";
+            try {
+                deviceId = localStorage.getItem("autohire_device_id") || "";
+                if (!deviceId) {
+                    const match = document.cookie.match(/(?:^|; )autohire_device_id=([^;]*)/);
+                    if (match) deviceId = decodeURIComponent(match[1]);
+                }
+                if (!deviceId) {
+                    deviceId = "dev_" + (window.crypto && crypto.randomUUID ? crypto.randomUUID() : (Date.now() + "_" + Math.random().toString(36).substring(2)));
+                    localStorage.setItem("autohire_device_id", deviceId);
+                    document.cookie = `autohire_device_id=${encodeURIComponent(deviceId)}; Path=/; Max-Age=31536000; SameSite=Lax`;
+                }
+            } catch (e) {
+                deviceId = "dev_default";
+            }
+            return deviceId;
+        }
+
         function renderOtpModal(tempToken, maskedEmail) {
             const existing = document.getElementById("autohire-otp-modal");
             if (existing) existing.remove();
@@ -671,7 +690,7 @@
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         credentials: isCrossOrigin ? "omit" : "include",
-                        body: JSON.stringify({ tempToken, otp })
+                        body: JSON.stringify({ tempToken, otp, deviceId: getOrCreateDeviceId() })
                     });
                     const data = await response.json();
                     if (!response.ok) {
@@ -722,7 +741,8 @@
                         headers: { "Content-Type": "application/json" },
                         credentials: isCrossOrigin ? "omit" : "include",
                         body: JSON.stringify({ 
-                            credential: response.credential
+                            credential: response.credential,
+                            deviceId: getOrCreateDeviceId()
                         })
                     });
                     
@@ -799,7 +819,7 @@
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         credentials: isCrossOrigin ? "omit" : "include",
-                        body: JSON.stringify({ email, password })
+                        body: JSON.stringify({ email, password, deviceId: getOrCreateDeviceId() })
                     });
                     const data = await response.json();
 
