@@ -906,18 +906,7 @@ app.post("/api/auth/register", (req, res) => {
     });
 });
 
-app.post("/api/auth/login", (req, res) => {
-    const email = String(req.body.email || "").trim().toLowerCase();
-    const password = String(req.body.password || "");
-    const user = readUsers().find(candidate => candidate.email === email);
-
-    if (!user || !passwordsMatch(password, user)) {
-        return res.status(401).json({ message: "Invalid email or password." });
-    }
-
-    createSession(req, res, user);
-    return res.json({ user: publicUser(user) });
-});
+// Note: POST /api/auth/login is implemented below with full Security OTP dispatch & validation
 
 
 // --- Real Email OTP & Google OAuth Security Service ---
@@ -1013,7 +1002,7 @@ async function sendOtpEmail(recipientEmail, otpCode) {
             </div>
             <div style="padding:32px;">
                 <h2 style="font-size:20px; font-weight:700; color:#f8fafc; margin-top:0;">Verify your email address</h2>
-                <p style="color:#cbd5e1; font-size:15px; line-height:1.6;">You are logging into your AutoHire AI workspace via Google authentication. Please use the 6-digit verification code below to complete your login:</p>
+                <p style="color:#cbd5e1; font-size:15px; line-height:1.6;">You are signing into your AutoHire AI workspace. Please use the 6-digit verification code below to complete your authentication:</p>
                 
                 <div style="margin:28px 0; text-align:center;">
                     <div style="display:inline-block; padding:16px 32px; background:rgba(30,41,59,0.8); border:1px solid #38bdf8; border-radius:12px; font-size:32px; font-weight:800; letter-spacing:8px; color:#38bdf8; text-shadow:0 0 12px rgba(56,189,248,0.4);">
@@ -1109,6 +1098,90 @@ function hashOtp(otp, salt) {
     return crypto.createHash("sha256").update(otp + salt).digest("hex");
 }
 
+// ==========================================
+// METHOD 1: Email Address + Password Auth
+// Mandates Security OTP Verification before session creation
+// ==========================================
+app.post(["/api/auth/login", "/auth/login"], async (req, res) => {
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
+
+    // 1. Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+        return res.status(400).json({ success: false, message: "Please enter a valid email address." });
+    }
+
+    // 2. Check if account exists
+    const users = readUsers();
+    const user = users.find(candidate => candidate.email === email);
+    if (!user) {
+        return res.status(404).json({
+            success: false,
+            message: "Account not found. Please create an account or continue with Google."
+        });
+    }
+
+    // 3. Check if account was created via Google only
+    if (!user.passwordHash || !user.passwordSalt) {
+        return res.status(400).json({
+            success: false,
+            message: "This account was created with Google. Please continue with Google."
+        });
+    }
+
+    // 4. Validate password
+    if (!passwordsMatch(password, user)) {
+        return res.status(401).json({
+            success: false,
+            message: "Incorrect password. Please try again."
+        });
+    }
+
+    // 5. Credentials valid -> Generate cryptographically secure 6-digit OTP
+    const otp = generateSecureOtp();
+    const salt = crypto.randomBytes(16).toString("hex");
+    const hashedOtp = hashOtp(otp, salt);
+    const tempToken = crypto.randomUUID();
+
+    // Deliver OTP to user's registered email
+    const mailResult = await sendOtpEmail(email, otp);
+    if (!mailResult.success) {
+        console.error(`[AUTH] ❌ Refusing to create pending OTP session for ${email} because email delivery failed: ${mailResult.error}`);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to send verification code. Please try again."
+        });
+    }
+
+    // Store in pendingOtps Map with 5-minute TTL, single-use, max 5 attempts
+    pendingOtps.set(tempToken, {
+        hashedOtp,
+        salt,
+        email,
+        authMethod: "password",
+        userId: user.id,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        attempts: 0,
+        maxAttempts: 5,
+        lastResendAt: Date.now()
+    });
+
+    // Return pendingOtp response - Session is NOT issued until OTP is verified
+    return res.json({
+        success: true,
+        message: "Verification code sent",
+        pendingOtp: true,
+        tempToken: tempToken,
+        email: maskEmail(email)
+    });
+});
+
+// ==========================================
+// METHOD 2: Sign in with Google Auth
+// Mandates Security OTP Verification before session creation (No OTP Bypass)
+// ==========================================
 app.post(["/api/auth/google", "/auth/google"], async (req, res) => {
     const credential = String(req.body.credential || "");
     if (!credential) return res.status(400).json({ success: false, message: "Google credential is required." });
@@ -1144,31 +1217,7 @@ app.post(["/api/auth/google", "/auth/google"], async (req, res) => {
         return res.status(401).json({ success: false, message: "Google account email not found." });
     }
 
-    const users = readUsers();
-    let existingUser = users.find(candidate => candidate.email === email);
-    // ⚡ Subsequent Login Check: If account was verified via OTP, SKIP OTP COMPLETELY!
-    const isAccountVerified = Boolean(existingUser && (existingUser.isVerified === true || existingUser.emailVerified === true));
-    if (isAccountVerified) {
-        console.log(`[AUTH] ⚡ Recognized verified account: ${email}. Logging in directly without OTP.`);
-        existingUser.isVerified = true;
-        existingUser.emailVerified = true;
-        if (profile.picture && existingUser.profile) {
-            existingUser.profile.picture = profile.picture;
-        }
-        writeUsers(users);
-
-        createSession(req, res, existingUser);
-        return res.json({
-            success: true,
-            pendingOtp: false,
-            alreadyVerified: true,
-            message: "Welcome back! Account verified.",
-            redirect: "dashboard.html",
-            user: publicUser(existingUser)
-        });
-    }
-
-    // First-Time Sign-In: Generate cryptographically secure 6-digit OTP
+    // Both new and returning users MUST verify OTP before gaining workspace access
     const otp = generateSecureOtp();
     const salt = crypto.randomBytes(16).toString("hex");
     const hashedOtp = hashOtp(otp, salt);
@@ -1198,6 +1247,7 @@ app.post(["/api/auth/google", "/auth/google"], async (req, res) => {
         hashedOtp,
         salt,
         email,
+        authMethod: "google",
         googleUser,
         createdAt: Date.now(),
         expiresAt: Date.now() + 5 * 60 * 1000,
@@ -1206,7 +1256,7 @@ app.post(["/api/auth/google", "/auth/google"], async (req, res) => {
         lastResendAt: Date.now()
     });
 
-    // Return clean response for first-time OTP verification
+    // Return clean response for OTP verification
     return res.json({
         success: true,
         message: "Verification code sent",
@@ -1302,38 +1352,52 @@ app.post(["/api/auth/verify-otp", "/auth/verify-otp"], (req, res) => {
     // 4. Correct OTP -> Invalidate tempToken immediately (single use)
     pendingOtps.delete(tempToken);
 
-    const googleUser = record.googleUser;
     const email = record.email;
-
     const users = readUsers();
     let user = users.find(candidate => candidate.email === email);
-    if (!user) {
-        user = {
-            id: googleUser.id || crypto.randomUUID(),
-            name: googleUser.name || email.split("@")[0],
-            email: email,
-            passwordSalt: "",
-            passwordHash: "",
-            isVerified: true,
-            emailVerified: true,
-            verifiedAt: new Date().toISOString(),
-            profile: {
-                fullName: googleUser.name || email.split("@")[0],
-                emailAddress: email,
-                picture: googleUser.picture || ""
-            }
-        };
-        users.push(user);
-    } else {
+
+    if (record.authMethod === "password") {
+        if (!user) {
+            return res.status(404).json({ success: false, message: "Account not found." });
+        }
         user.isVerified = true;
         user.emailVerified = true;
         user.verifiedAt = new Date().toISOString();
-        if (!user.profile) {
-            user.profile = {
-                fullName: user.name || googleUser.name || email.split("@")[0],
-                emailAddress: email,
-                picture: googleUser.picture || ""
+    } else {
+        // Google auth method
+        const googleUser = record.googleUser || {};
+        if (!user) {
+            user = {
+                id: googleUser.id || crypto.randomUUID(),
+                name: googleUser.name || email.split("@")[0],
+                email: email,
+                passwordSalt: "",
+                passwordHash: "",
+                isVerified: true,
+                emailVerified: true,
+                verifiedAt: new Date().toISOString(),
+                profile: {
+                    fullName: googleUser.name || email.split("@")[0],
+                    emailAddress: email,
+                    picture: googleUser.picture || ""
+                }
             };
+            users.push(user);
+        } else {
+            user.isVerified = true;
+            user.emailVerified = true;
+            user.verifiedAt = new Date().toISOString();
+            if (googleUser.picture) {
+                if (!user.profile) user.profile = {};
+                user.profile.picture = googleUser.picture;
+            }
+            if (!user.profile) {
+                user.profile = {
+                    fullName: user.name || googleUser.name || email.split("@")[0],
+                    emailAddress: email,
+                    picture: googleUser.picture || ""
+                };
+            }
         }
     }
     writeUsers(users);

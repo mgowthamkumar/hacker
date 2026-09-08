@@ -197,8 +197,9 @@
             margin: 24px 0;
             color: var(--text-muted);
             font-size: 0.82rem;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
 
         .divider::before, .divider::after {
@@ -212,40 +213,6 @@
             min-height: 44px;
             display: flex;
             justify-content: center;
-        }
-
-        .github-button {
-            width: 100%;
-            margin-top: 14px;
-            padding: 14px 18px;
-            border: 1px solid var(--card-border);
-            border-radius: var(--radius-md);
-            background: rgba(15, 23, 42, 0.8);
-            color: var(--text-main);
-            font-weight: 700;
-            font-size: 0.92rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            text-decoration: none;
-            backdrop-filter: blur(10px);
-            transition: all 0.25s var(--ease-out);
-        }
-
-        .github-button:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 0 15px var(--primary-glow);
-        }
-
-        .github-button svg {
-            width: 20px;
-            height: 20px;
-            fill: currentColor;
-            flex-shrink: 0;
         }
 
         .message {
@@ -399,25 +366,20 @@
             <input id="emailInput" type="email" autocomplete="email" required placeholder="you@example.com">
             <label for="passInput">Password</label>
             <input id="passInput" type="password" autocomplete="current-password" required placeholder="••••••••">
-            <button id="loginButton" type="submit">Sign in to Workspace</button>
+            <button id="loginButton" type="submit">Sign In</button>
             <div class="message" id="loginMessage" role="status"></div>
         </form>
 
-        <div class="divider">or continue with</div>
+        <div class="divider">──────── OR ────────</div>
 
-        <div id="g_id_onload" data-client_id="869568422226-14fcbs1j1esdl1f0phijfhoude5il7qk.apps.googleusercontent.com"
-            data-callback="handleCredentialResponse"></div>
+        <div id="g_id_onload"
+            data-client_id="869568422226-14fcbs1j1esdl1f0phijfhoude5il7qk.apps.googleusercontent.com"
+            data-callback="handleCredentialResponse"
+            data-auto_select="false"></div>
         <div class="google-button">
             <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"
                 data-text="continue_with"></div>
         </div>
-
-        <a href="https://github.com/login/oauth/authorize" class="github-button" id="githubSignInBtn">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
-            </svg>
-            Continue with GitHub
-        </a>
 
         <p class="footer">New to AutoHire? <a href="register.html">Create an account</a></p>
     </main>
@@ -517,7 +479,7 @@
             window.location.href = redirectUrl;
         }
 
-        function renderGoogleOtpModal(tempToken, maskedEmail) {
+        function renderOtpModal(tempToken, maskedEmail) {
             const existing = document.getElementById("autohire-otp-modal");
             if (existing) existing.remove();
 
@@ -724,16 +686,6 @@
                     errorDisplay.textContent = "✅ Email verified! Redirecting to workspace...";
                     if (timerInterval) clearInterval(timerInterval);
 
-                    // Remember verified email on this device so subsequent logins skip OTP
-                    try {
-                        const verifiedList = JSON.parse(localStorage.getItem("autohire_verified_accounts") || "[]");
-                        const userEmail = (data.user && data.user.email) ? data.user.email.toLowerCase() : "";
-                        if (userEmail && !verifiedList.includes(userEmail)) {
-                            verifiedList.push(userEmail);
-                            localStorage.setItem("autohire_verified_accounts", JSON.stringify(verifiedList));
-                        }
-                    } catch (e) {}
-
                     setTimeout(() => {
                         processUserLogin(data.user, data.redirect || "dashboard.html");
                     }, 600);
@@ -749,28 +701,6 @@
         async function handleCredentialResponse(response) {
             loginMessage.style.color = "#38bdf8";
             loginMessage.textContent = "Verifying Google account...";
-
-            let googleUser = null;
-            try {
-                const base64Url = response.credential.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-                const payload = JSON.parse(jsonPayload);
-                googleUser = {
-                    id: payload.sub || Date.now().toString(),
-                    name: payload.name || (payload.email ? payload.email.split('@')[0] : "User"),
-                    email: (payload.email || "").toLowerCase(),
-                    picture: payload.picture || ""
-                };
-            } catch (e) {
-                console.warn("Client JWT decode notice:", e);
-            }
-
-            // Check if this account was previously verified on this device
-            const verifiedAccounts = (() => {
-                try { return JSON.parse(localStorage.getItem("autohire_verified_accounts") || "[]"); } catch(e) { return []; }
-            })();
-            const isDeviceVerified = Boolean(googleUser && googleUser.email && verifiedAccounts.includes(googleUser.email.toLowerCase()));
 
             // Candidate URLs to support local server, live preview, and hosted domains
             const candidateUrls = [
@@ -792,8 +722,7 @@
                         headers: { "Content-Type": "application/json" },
                         credentials: isCrossOrigin ? "omit" : "include",
                         body: JSON.stringify({ 
-                            credential: response.credential,
-                            deviceVerified: isDeviceVerified
+                            credential: response.credential
                         })
                     });
                     
@@ -809,16 +738,11 @@
                     serverSuccess = true;
                     window.ACTIVE_AUTH_API_URL = base;
 
-                    // If user requires OTP (first-time sign-in):
+                    // Google login requires OTP verification before session creation
                     if (data.pendingOtp && data.tempToken) {
                         loginMessage.textContent = "";
-                        renderGoogleOtpModal(data.tempToken, data.email);
+                        renderOtpModal(data.tempToken, data.email);
                     } else if (data.user) {
-                        // Account already verified! Remember on device and redirect immediately
-                        if (googleUser && googleUser.email && !verifiedAccounts.includes(googleUser.email.toLowerCase())) {
-                            verifiedAccounts.push(googleUser.email.toLowerCase());
-                            localStorage.setItem("autohire_verified_accounts", JSON.stringify(verifiedAccounts));
-                        }
                         loginMessage.style.color = "#4ade80";
                         loginMessage.textContent = "Welcome back! Connecting...";
                         processUserLogin(data.user, data.redirect || "dashboard.html");
@@ -835,6 +759,7 @@
             }
         }
 
+        // METHOD 1: Email Address + Password Auth Form Handler
         document.getElementById("loginForm").addEventListener("submit", async (event) => {
             event.preventDefault();
             const loginButton = document.getElementById("loginButton");
@@ -842,38 +767,73 @@
             loginButton.textContent = "Signing in...";
             loginMessage.textContent = "";
 
-            try {
-                const response = await fetch(`${apiUrl}/login`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({
-                        email: document.getElementById("emailInput").value.trim(),
-                        password: document.getElementById("passInput").value
-                    })
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    loginMessage.textContent = data.message || "Invalid email or password.";
-                    return;
-                }
-                if (data.user) {
-                    processUserLogin(data.user, "dashboard.html");
-                }
-            } catch (error) {
-                const email = document.getElementById("emailInput").value.trim().toLowerCase();
-                const password = document.getElementById("passInput").value;
-                const users = JSON.parse(localStorage.getItem("autoHireUsers") || "[]");
-                const user = users.find(candidate => candidate.email === email && candidate.password === password);
-                if (!user) {
-                    loginMessage.textContent = "Invalid email or password.";
-                    return;
-                }
-                processUserLogin(user, "dashboard.html");
-            } finally {
+            const email = document.getElementById("emailInput").value.trim().toLowerCase();
+            const password = document.getElementById("passInput").value;
+
+            // 1. Client-side email format validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email || !emailRegex.test(email)) {
+                loginMessage.style.color = "#f87171";
+                loginMessage.textContent = "Please enter a valid email address.";
                 loginButton.disabled = false;
-                loginButton.textContent = "Sign in to Workspace";
+                loginButton.textContent = "Sign In";
+                return;
             }
+
+            // Candidate URLs to support local server and network environments
+            const candidateUrls = [
+                apiUrl,
+                window.location.origin ? `${window.location.origin}/api/auth` : null,
+                "http://127.0.0.1:8800/api/auth",
+                "http://localhost:8800/api/auth",
+                "https://hacker-drab-mu.vercel.app/api/auth"
+            ].filter((val, idx, arr) => val && arr.indexOf(val) === idx);
+
+            let serverSuccess = false;
+            let lastErrorMsg = "";
+
+            for (const base of candidateUrls) {
+                try {
+                    const isCrossOrigin = window.location.protocol === "file:" || !base.startsWith(window.location.origin);
+                    const response = await fetch(`${base}/login`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: isCrossOrigin ? "omit" : "include",
+                        body: JSON.stringify({ email, password })
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        lastErrorMsg = data.message || "Invalid email or password.";
+                        loginMessage.style.color = "#f87171";
+                        loginMessage.textContent = lastErrorMsg;
+                        serverSuccess = true;
+                        break;
+                    }
+
+                    serverSuccess = true;
+                    window.ACTIVE_AUTH_API_URL = base;
+
+                    // Mandates Security OTP Verification before dashboard access
+                    if (data.pendingOtp && data.tempToken) {
+                        loginMessage.textContent = "";
+                        renderOtpModal(data.tempToken, data.email);
+                    } else if (data.user) {
+                        processUserLogin(data.user, data.redirect || "dashboard.html");
+                    }
+                    break;
+                } catch (err) {
+                    console.warn(`Login connection attempt to ${base} notice:`, err.message);
+                }
+            }
+
+            if (!serverSuccess) {
+                loginMessage.style.color = "#f87171";
+                loginMessage.textContent = lastErrorMsg || "Unable to connect to authentication service. Please try again.";
+            }
+
+            loginButton.disabled = false;
+            loginButton.textContent = "Sign In";
         });
 
         window.addEventListener("DOMContentLoaded", () => {
