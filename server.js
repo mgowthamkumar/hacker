@@ -81,7 +81,7 @@ app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Device-Id");
     if (req.method === "OPTIONS") {
         return res.sendStatus(204);
     }
@@ -1248,32 +1248,65 @@ app.post(["/api/auth/google", "/auth/google"], async (req, res) => {
     const users = readUsers();
     let existingUser = users.find(candidate => candidate.email === email);
 
-    // Account-Specific Trusted Device Check for Google users
-    const isTrustedDevice = Boolean(
-        existingUser &&
-        deviceId &&
-        Array.isArray(existingUser.trustedDevices) &&
-        existingUser.trustedDevices.some(d => d.deviceId === deviceId)
+    // Ensure stable effectiveDeviceId
+    let effectiveDeviceId = deviceId;
+    if (!effectiveDeviceId) {
+        const ua = req.headers["user-agent"] || "";
+        const ip = req.ip || req.connection.remoteAddress || "";
+        effectiveDeviceId = "dev_" + crypto.createHash("md5").update(ua + ip).digest("hex").substring(0, 16);
+    }
+
+    // Account-Specific Check: Has this Google account already completed OTP verification or is on a trusted device?
+    const hasCompletedOtpVerification = Boolean(
+        existingUser && (
+            existingUser.isVerified === true ||
+            existingUser.emailVerified === true ||
+            (Array.isArray(existingUser.trustedDevices) && existingUser.trustedDevices.some(d => d.deviceId === effectiveDeviceId))
+        )
     );
 
-    if (isTrustedDevice) {
-        console.log(`[AUTH] ⚡ Recognized trusted device (${deviceId}) for Google account: ${email}. Skipping OTP.`);
-        if (profile.picture && existingUser.profile) {
-            existingUser.profile.picture = profile.picture;
-            writeUsers(users);
+    if (hasCompletedOtpVerification) {
+        console.log(`[AUTH] ⚡ Recognized verified Google account: ${email}. Bypassing OTP and logging in directly.`);
+        if (!Array.isArray(existingUser.trustedDevices)) {
+            existingUser.trustedDevices = [];
         }
-        createSession(req, res, existingUser, deviceId);
+        if (effectiveDeviceId) {
+            const devEntry = existingUser.trustedDevices.find(d => d.deviceId === effectiveDeviceId);
+            if (devEntry) {
+                devEntry.lastVerifiedAt = new Date().toISOString();
+            } else {
+                existingUser.trustedDevices.push({
+                    deviceId: effectiveDeviceId,
+                    verifiedAt: new Date().toISOString(),
+                    lastVerifiedAt: new Date().toISOString(),
+                    userAgent: req.headers["user-agent"] || "",
+                    ip: req.ip || req.connection.remoteAddress || ""
+                });
+            }
+        }
+
+        existingUser.isVerified = true;
+        existingUser.emailVerified = true;
+        if (!existingUser.verifiedAt) existingUser.verifiedAt = new Date().toISOString();
+        if (profile.picture) {
+            if (!existingUser.profile) existingUser.profile = {};
+            existingUser.profile.picture = profile.picture;
+        }
+        writeUsers(users);
+
+        createSession(req, res, existingUser, effectiveDeviceId);
         return res.json({
             success: true,
             pendingOtp: false,
+            alreadyVerified: true,
             trustedDevice: true,
-            message: "Welcome back! Account verified on this trusted device.",
+            message: "Welcome back! Account verified.",
             redirect: "dashboard.html",
             user: publicUser(existingUser)
         });
     }
 
-    // Untrusted device -> Generate cryptographically secure 6-digit OTP
+    // First-time or unverified Google account -> Generate cryptographically secure 6-digit OTP
     const otp = generateSecureOtp();
     const salt = crypto.randomBytes(16).toString("hex");
     const hashedOtp = hashOtp(otp, salt);
@@ -1305,7 +1338,7 @@ app.post(["/api/auth/google", "/auth/google"], async (req, res) => {
         email,
         authMethod: "google",
         googleUser,
-        deviceId,
+        deviceId: effectiveDeviceId,
         createdAt: Date.now(),
         expiresAt: Date.now() + 5 * 60 * 1000,
         attempts: 0,
@@ -1410,7 +1443,12 @@ app.post(["/api/auth/verify-otp", "/auth/verify-otp"], (req, res) => {
     pendingOtps.delete(tempToken);
 
     const email = record.email;
-    const deviceId = record.deviceId || String(req.body.deviceId || req.headers["x-device-id"] || parseCookies(req).autohire_device_id || "").trim();
+    let deviceId = record.deviceId || String(req.body.deviceId || req.headers["x-device-id"] || parseCookies(req).autohire_device_id || "").trim();
+    if (!deviceId) {
+        const ua = req.headers["user-agent"] || "";
+        const ip = req.ip || req.connection.remoteAddress || "";
+        deviceId = "dev_" + crypto.createHash("md5").update(ua + ip).digest("hex").substring(0, 16);
+    }
     const users = readUsers();
     let user = users.find(candidate => candidate.email === email);
 

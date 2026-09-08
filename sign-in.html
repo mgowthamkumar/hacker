@@ -685,12 +685,16 @@
                 const authBase = window.ACTIVE_AUTH_API_URL || apiUrl;
                 const isCrossOrigin = window.location.protocol === "file:" || !authBase.startsWith(window.location.origin);
 
+                const devId = getOrCreateDeviceId();
                 try {
                     const response = await fetch(`${authBase}/verify-otp`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: { 
+                            "Content-Type": "application/json",
+                            "X-Device-Id": devId
+                        },
                         credentials: isCrossOrigin ? "omit" : "include",
-                        body: JSON.stringify({ tempToken, otp, deviceId: getOrCreateDeviceId() })
+                        body: JSON.stringify({ tempToken, otp, deviceId: devId })
                     });
                     const data = await response.json();
                     if (!response.ok) {
@@ -722,7 +726,10 @@
             loginMessage.textContent = "Verifying Google account...";
 
             // Candidate URLs to support local server, live preview, and hosted domains
+            const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.protocol === "file:";
             const candidateUrls = [
+                isLocal ? "http://127.0.0.1:8800/api/auth" : null,
+                isLocal ? "http://localhost:8800/api/auth" : null,
                 apiUrl,
                 window.location.origin ? `${window.location.origin}/api/auth` : null,
                 "http://127.0.0.1:8800/api/auth",
@@ -733,16 +740,20 @@
             let serverSuccess = false;
             let lastErrorMsg = "";
 
+            const devId = getOrCreateDeviceId();
             for (const base of candidateUrls) {
                 try {
                     const isCrossOrigin = window.location.protocol === "file:" || !base.startsWith(window.location.origin);
                     const loginResponse = await fetch(`${base}/google`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: { 
+                            "Content-Type": "application/json",
+                            "X-Device-Id": devId
+                        },
                         credentials: isCrossOrigin ? "omit" : "include",
                         body: JSON.stringify({ 
                             credential: response.credential,
-                            deviceId: getOrCreateDeviceId()
+                            deviceId: devId
                         })
                     });
                     
@@ -801,7 +812,10 @@
             }
 
             // Candidate URLs to support local server and network environments
+            const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.protocol === "file:";
             const candidateUrls = [
+                isLocal ? "http://127.0.0.1:8800/api/auth" : null,
+                isLocal ? "http://localhost:8800/api/auth" : null,
                 apiUrl,
                 window.location.origin ? `${window.location.origin}/api/auth` : null,
                 "http://127.0.0.1:8800/api/auth",
@@ -812,14 +826,18 @@
             let serverSuccess = false;
             let lastErrorMsg = "";
 
+            const devId = getOrCreateDeviceId();
             for (const base of candidateUrls) {
                 try {
                     const isCrossOrigin = window.location.protocol === "file:" || !base.startsWith(window.location.origin);
                     const response = await fetch(`${base}/login`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: { 
+                            "Content-Type": "application/json",
+                            "X-Device-Id": devId
+                        },
                         credentials: isCrossOrigin ? "omit" : "include",
-                        body: JSON.stringify({ email, password, deviceId: getOrCreateDeviceId() })
+                        body: JSON.stringify({ email, password, deviceId: devId })
                     });
                     const data = await response.json();
 
