@@ -333,9 +333,9 @@ class RagEngine {
     const skillsLower = skills.map(s => s.toLowerCase());
 
     let detectedLevel = "UG";
-    if (/\b(diploma|polytechnic)\b/i.test(textLower)) detectedLevel = "Diploma";
-    else if (/\b(m\.tech|mtech|m\.e|msc|mba|mca|post graduate|masters|pg)\b/i.test(textLower)) detectedLevel = "PG";
-    else if (/\b(b\.tech|btech|b\.e|bsc|bba|bca|bachelor|ug)\b/i.test(textLower)) detectedLevel = "UG";
+    if (/\b(diploma in|polytechnic diploma|diploma holder)\b/i.test(textLower)) detectedLevel = "Diploma";
+    else if (/\b(m\.?tech|m\.?e\b\.?|msc|m\.sc|mba|mca|post graduate|master of|masters degree|m\.s\b)\b/i.test(textLower)) detectedLevel = "PG";
+    else if (/\b(b\.?tech|b\.?e\b\.?|bsc|b\.sc|bba|bca|bachelor of|bachelors degree|b\.s\b)\b/i.test(textLower)) detectedLevel = "UG";
 
     const subjectSynonyms = {
       "data structures & algorithms": ["dsa", "data structure", "data structures", "algorithms", "algorithm", "trees", "graphs", "dynamic programming", "leetcode", "time complexity"],
@@ -347,11 +347,43 @@ class RagEngine {
       "object-oriented programming": ["object-oriented", "object oriented", "oop", "oops", "classes", "inheritance", "polymorphism", "encapsulation", "abstraction"],
       "python programming": ["python", "python3", "pandas", "numpy", "flask", "django", "fastapi", "pytest"],
       "java programming": ["java", "jvm", "spring", "spring boot", "hibernate", "maven", "gradle"],
+      "c++ programming": ["c++", "cpp", "stl", "pointers", "templates"],
+      "c programming": ["c programming", "c language", "pointers", "memory allocation", "gcc"],
       "machine learning": ["machine learning", "ml", "supervised learning", "unsupervised learning", "scikit-learn", "tensorflow", "pytorch", "neural network", "regression", "classification"],
       "artificial intelligence": ["artificial intelligence", "ai", "genai", "llm", "deep learning", "nlp", "computer vision", "prompt engineering", "transformers"],
       "cloud computing": ["cloud", "aws", "amazon web services", "azure", "gcp", "google cloud", "docker", "kubernetes", "serverless", "lambda", "ec2", "s3"],
       "cyber security": ["cyber security", "cybersecurity", "infosec", "penetration testing", "vulnerability assessment", "cryptography", "firewalls", "owasp", "network security"],
-      "data science": ["data science", "data analytics", "data visualization", "pandas", "numpy", "matplotlib", "seaborn", "jupyter", "eda", "statistical analysis"]
+      "data science": ["data science", "data analytics", "data visualization", "pandas", "numpy", "matplotlib", "seaborn", "jupyter", "eda", "statistical analysis"],
+      "compiler design": ["compiler", "compiler design", "parsing", "lexical analysis", "ast", "syntax analysis", "code generation"],
+      "discrete mathematics": ["discrete math", "discrete mathematics", "graph theory", "set theory", "combinatorics", "boolean algebra"],
+      "cad/cam": ["cad", "cam", "autocad", "solidworks", "catia", "3d modeling", "computer aided design"],
+      "engineering mechanics": ["engineering mechanics", "statics", "dynamics", "kinematics", "stress analysis"],
+      "thermodynamics": ["thermodynamics", "heat transfer", "entropy", "enthalpy", "thermal", "carnot"],
+      "fluid mechanics": ["fluid mechanics", "fluid dynamics", "bernoulli", "viscosity", "hydraulics", "cfd"],
+      "manufacturing processes": ["manufacturing", "machining", "casting", "welding", "cnc", "fabrication"],
+      "strength of materials": ["strength of materials", "som", "tensile strength", "beam deflection", "shear stress", "elasticity"],
+      "financial accounting": ["accounting", "financial statements", "balance sheet", "p&l", "general ledger", "reconciliation"],
+      "business analytics": ["business analytics", "business intelligence", "power bi", "tableau", "excel modeling", "kpis"],
+      "digital marketing": ["digital marketing", "seo", "sem", "social media marketing", "google ads", "content strategy"],
+      "human resource management": ["hrm", "human resources", "talent acquisition", "recruitment", "payroll", "employee relations"],
+      "clinical diagnostics": ["clinical", "diagnostic", "patient care", "triage", "pathology", "vital signs"],
+      "pharmacology": ["pharmacology", "dosage", "prescription", "drugs", "medicinal", "pharmacokinetics"],
+      "deep learning": ["deep learning", "dl", "neural network", "neural networks", "cnn", "rnn", "lstm", "transformer", "transformers", "pytorch", "tensorflow"],
+      "generative ai": ["generative ai", "genai", "gen-ai", "large language model", "llm", "rag", "retrieval augmented", "langchain", "prompt engineering", "diffusion"],
+      "natural language processing": ["nlp", "natural language processing", "text processing", "tokenization", "bert", "gpt", "sentiment analysis", "spacy", "huggingface"],
+      "mlops": ["mlops", "model deployment", "model serving", "mlflow", "kubeflow", "ci/cd", "pipeline", "monitoring"],
+      "retrieval-augmented generation (rag)": ["rag", "retrieval augmented", "vector database", "vector search", "faiss", "pinecone", "chromadb", "embeddings"],
+      "linear algebra": ["linear algebra", "matrices", "matrix", "vectors", "eigenvalues", "pca"],
+      "probability & statistics": ["probability", "statistics", "statistical", "bayesian", "hypothesis testing", "distributions"],
+      "computer vision": ["computer vision", "cv", "opencv", "yolo", "object detection", "image classification"],
+      "analog electronics": ["analog electronics", "analog circuits", "op-amp", "operational amplifier", "bjt", "mosfet", "diodes"],
+      "digital electronics": ["digital electronics", "logic gates", "flip-flops", "boolean logic", "combinational circuits", "sequential circuits"],
+      "embedded systems": ["embedded systems", "embedded", "microcontroller", "arduino", "raspberry pi", "arm", "rtos", "firmware"],
+      "vlsi design": ["vlsi", "verilog", "vhdl", "asic", "fpga", "cadence", "cmos", "circuit layout"],
+      "signals & systems": ["signals and systems", "fourier transform", "laplace transform", "z-transform", "dsp", "digital signal processing"],
+      "control systems": ["control systems", "bode plot", "pid controller", "nyquist", "state space", "feedback control"],
+      "communication systems": ["communication systems", "modulation", "am", "fm", "wireless", "rf", "antenna", "signal transmission"],
+      "microprocessors & microcontrollers": ["microprocessor", "microcontrollers", "8085", "8086", "arm cortex", "pic", "assembly language"]
     };
 
     const scoredCourses = this.coursesData.map(c => {
@@ -854,38 +886,80 @@ class RagEngine {
 
     // 2. Precise Degree & Course Subject Classification
     const verbatimFacts = this.extractVerbatimFacts(rawText);
-    const taxonomyAnalysis = this.classifyTaxonomy(verbatimFacts, rawText);
+    const parsedSkills = Array.isArray(targetSkills) ? targetSkills : (typeof targetSkills === "string" ? targetSkills.split(",").map(s => s.trim()).filter(Boolean) : []);
+    const toolSkills = (verbatimFacts.explicit_tools_and_tech || []).map(t => t.name);
+    const combinedSkills = [...new Set([...parsedSkills, ...toolSkills])];
+
+    const curriculumAlignment = this.matchCurriculumInRag(rawText, combinedSkills);
+    const matchedCourse = curriculumAlignment ? curriculumAlignment.matched_course : null;
+
+    const taxonomyAnalysis = this.classifyTaxonomy(verbatimFacts, rawText, matchedCourse);
     const competencyAudit = this.auditCompetencyGaps(verbatimFacts, taxonomyAnalysis, rawText);
+    const discipline = taxonomyAnalysis.discipline;
 
     let domainTitle = "Engineering & Technology Candidate";
     let domainIcon = "💻";
-    let domainDesc = "Degree background in B.Tech, M.Tech, B.E, M.E, BCA, MCA, or Computer Science.";
+    let domainDesc = "Degree background in B.Tech, M.Tech, B.E, BCA, MCA, or Computer Science.";
 
-    const discipline = taxonomyAnalysis.discipline;
-    if (discipline === "Medicine & Healthcare") {
-      domainTitle = "Medical & Healthcare Candidate";
-      domainIcon = "🩺";
-      domainDesc = "Degree background in Medical Sciences, MBBS, BDS, Pharmacy, Nursing, or Clinical Healthcare.";
-    } else if (discipline === "Arts & Humanities") {
-      domainTitle = "Arts, Design & Humanities Candidate";
-      domainIcon = "🎨";
-      domainDesc = "Degree background in Arts, Fine Arts, UI/UX Design, Literature, Journalism, or Visual Media.";
-    } else if (discipline === "Business & Finance") {
-      domainTitle = "Business, Commerce & Finance Candidate";
-      domainIcon = "📊";
-      domainDesc = "Degree background in Commerce, B.Com, M.Com, BBA, MBA, Corporate Finance, or Business Analytics.";
-    } else if (discipline === "Pure & Applied Sciences") {
-      domainTitle = "Pure & Applied Sciences Candidate";
-      domainIcon = "🔬";
-      domainDesc = "Degree background in B.Sc, M.Sc, Physics, Chemistry, Mathematics, Statistics, or Lab Research.";
-    } else if (discipline === "Education & Teaching") {
-      domainTitle = "Teaching & Education Candidate";
-      domainIcon = "📚";
-      domainDesc = "Degree background in Pedagogy, B.Ed, M.Ed, STEM Instruction, or Educational Curriculum Design.";
-    } else if (discipline === "Law") {
-      domainTitle = "Law & Legal Studies Candidate";
-      domainIcon = "⚖️";
-      domainDesc = "Degree background in LL.B, LL.M, Corporate Law, or Legal Advisory.";
+    if (matchedCourse && matchedCourse.course_name) {
+      const cCat = (matchedCourse.category || "").toLowerCase();
+      const cName = matchedCourse.course_name;
+      const cLvl = matchedCourse.course_level || "UG";
+      if (cCat.includes("engineering") || cCat.includes("technology") || cCat.includes("computer")) {
+        domainTitle = `${cName} Candidate`;
+        domainIcon = "💻";
+        domainDesc = `Matched to official ${cName} (${cLvl} - ${matchedCourse.category}) syllabus with verified coursework.`;
+      } else if (cCat.includes("medical") || cCat.includes("health")) {
+        domainTitle = "Medical & Healthcare Candidate";
+        domainIcon = "🩺";
+        domainDesc = `Predicted Degree: ${cName} (${cLvl} - ${matchedCourse.category}) from syllabus analysis.`;
+      } else if (cCat.includes("commerce") || cCat.includes("management") || cCat.includes("business") || cCat.includes("finance")) {
+        domainTitle = "Business, Commerce & Finance Candidate";
+        domainIcon = "📊";
+        domainDesc = `Predicted Degree: ${cName} (${cLvl} - ${matchedCourse.category}) from syllabus analysis.`;
+      } else if (cCat.includes("design") || cCat.includes("art") || cCat.includes("humanities")) {
+        domainTitle = "Arts, Design & Humanities Candidate";
+        domainIcon = "🎨";
+        domainDesc = `Predicted Degree: ${cName} (${cLvl} - ${matchedCourse.category}) from syllabus analysis.`;
+      } else if (cCat.includes("science")) {
+        domainTitle = "Pure & Applied Sciences Candidate";
+        domainIcon = "🔬";
+        domainDesc = `Predicted Degree: ${cName} (${cLvl} - ${matchedCourse.category}) from syllabus analysis.`;
+      } else if (cCat.includes("law")) {
+        domainTitle = "Law & Legal Studies Candidate";
+        domainIcon = "⚖️";
+        domainDesc = `Predicted Degree: ${cName} (${cLvl} - ${matchedCourse.category}) from syllabus analysis.`;
+      } else if (cCat.includes("education")) {
+        domainTitle = "Teaching & Education Candidate";
+        domainIcon = "📚";
+        domainDesc = `Predicted Degree: ${cName} (${cLvl} - ${matchedCourse.category}) from syllabus analysis.`;
+      }
+    } else {
+      if (discipline === "Medicine & Healthcare") {
+        domainTitle = "Medical & Healthcare Candidate";
+        domainIcon = "🩺";
+        domainDesc = "Degree background in Medical Sciences, MBBS, BDS, Pharmacy, Nursing, or Clinical Healthcare.";
+      } else if (discipline === "Arts & Humanities") {
+        domainTitle = "Arts, Design & Humanities Candidate";
+        domainIcon = "🎨";
+        domainDesc = "Degree background in Arts, Fine Arts, UI/UX Design, Literature, Journalism, or Visual Media.";
+      } else if (discipline === "Business & Finance") {
+        domainTitle = "Business, Commerce & Finance Candidate";
+        domainIcon = "📊";
+        domainDesc = "Degree background in Commerce, B.Com, M.Com, BBA, MBA, Corporate Finance, or Business Analytics.";
+      } else if (discipline === "Pure & Applied Sciences") {
+        domainTitle = "Pure & Applied Sciences Candidate";
+        domainIcon = "🔬";
+        domainDesc = "Degree background in B.Sc, M.Sc, Physics, Chemistry, Mathematics, Statistics, or Lab Research.";
+      } else if (discipline === "Education & Teaching") {
+        domainTitle = "Teaching & Education Candidate";
+        domainIcon = "📚";
+        domainDesc = "Degree background in Pedagogy, B.Ed, M.Ed, STEM Instruction, or Educational Curriculum Design.";
+      } else if (discipline === "Law") {
+        domainTitle = "Law & Legal Studies Candidate";
+        domainIcon = "⚖️";
+        domainDesc = "Degree background in LL.B, LL.M, Corporate Law, or Legal Advisory.";
+      }
     }
 
     // 3. ATS Action Verbs & Metrics Analysis
@@ -1025,10 +1099,7 @@ class RagEngine {
           competencyAudit
         )
       ),
-      curriculum_alignment: this.matchCurriculumInRag(rawText, [
-        ...(Array.isArray(targetSkills) ? targetSkills : (typeof targetSkills === "string" ? targetSkills.split(",").map(s => s.trim()).filter(Boolean) : [])),
-        ...(competencyAudit.verified_strengths || [])
-      ])
+      curriculum_alignment: curriculumAlignment
     };
   }
 
@@ -1256,7 +1327,7 @@ class RagEngine {
     };
   }
 
-  classifyTaxonomy(verbatimFacts, rawText) {
+  classifyTaxonomy(verbatimFacts, rawText, matchedCourse = null) {
     const textLower = (rawText || "").toLowerCase();
     const degrees = verbatimFacts.explicit_degrees || [];
     const tools = (verbatimFacts.explicit_tools_and_tech || []).map(t => t.name.toLowerCase());
@@ -1266,30 +1337,102 @@ class RagEngine {
     let specialization = "Computer Science - Software Engineering";
     let targetRole = "Full Stack Software Engineer";
 
-    if (degNames.some(d => ["MBBS", "BDS", "B.PHARMA", "M.PHARMA", "NURSING"].includes(d)) || /\b(doctor|clinical|hospital|patient|bls|acls)\b/i.test(textLower)) {
+    // Priority 1: Grounded in official matchedCourse from courses.csv dataset
+    if (matchedCourse && matchedCourse.course_name) {
+      const cName = matchedCourse.course_name;
+      const cCat = (matchedCourse.category || "").toLowerCase();
+      const cNameLower = cName.toLowerCase();
+
+      if (cCat.includes("engineering") || cCat.includes("technology") || cCat.includes("computer")) {
+        discipline = "Engineering";
+        if (cNameLower.includes("data science") || cNameLower.includes("machine learning") || cNameLower.includes("artificial intelligence")) {
+          specialization = `${cName} & Applied Intelligence`;
+          targetRole = "Data Scientist / Machine Learning Engineer";
+        } else if (cNameLower.includes("electronics") || cNameLower.includes("communication") || cNameLower.includes("embedded") || cNameLower.includes("vlsi")) {
+          specialization = "Electronics & Embedded Systems Engineering";
+          targetRole = "Electronics / Embedded Systems Engineer";
+        } else if (cNameLower.includes("mechanical") || cNameLower.includes("automobile")) {
+          specialization = "Mechanical & CAD/CAM Systems Engineering";
+          targetRole = "Mechanical Design Engineer";
+        } else if (cNameLower.includes("civil")) {
+          specialization = "Civil & Structural Infrastructure Engineering";
+          targetRole = "Civil / Structural Project Engineer";
+        } else {
+          specialization = `${cName} - Software Engineering`;
+          targetRole = "Full Stack Software Engineer";
+        }
+      } else if (cCat.includes("medical") || cCat.includes("health")) {
+        discipline = "Medicine & Healthcare";
+        specialization = `${cName} - Clinical Practice`;
+        targetRole = "Clinical Medical Officer / Resident Doctor";
+      } else if (cCat.includes("commerce") || cCat.includes("management") || cCat.includes("business") || cCat.includes("finance")) {
+        discipline = "Business & Finance";
+        specialization = `${cName} & Financial Analytics`;
+        targetRole = "Business & Financial Analyst";
+      } else if (cCat.includes("design") || cCat.includes("art") || cCat.includes("humanities")) {
+        discipline = "Arts & Humanities";
+        specialization = `${cName} - UI/UX & Design Systems`;
+        targetRole = "UI/UX Designer & Visual Systems Specialist";
+      } else if (cCat.includes("law")) {
+        discipline = "Law";
+        specialization = "Corporate Law & Legal Advisory";
+        targetRole = "Legal Associate / Compliance Officer";
+      } else if (cCat.includes("education")) {
+        discipline = "Education & Teaching";
+        specialization = "STEM Education & Computer Pedagogy";
+        targetRole = "Computer Science Educator / STEM Instructor";
+      } else if (cCat.includes("science")) {
+        discipline = "Pure & Applied Sciences";
+        specialization = `${cName} - Scientific Analytics`;
+        targetRole = "Scientific Data Analyst / Research Associate";
+      }
+    } else if (degNames.some(d => ["B.TECH", "BTECH", "B.E", "BE", "M.TECH", "MTECH", "MCA", "BCA"].includes(d)) || /\b(b\.?tech|m\.?tech|b\.?e|computer science|data science|software engineer|developer|programmer)\b/i.test(textLower)) {
+      // Priority 2: Technical/Engineering and CS/Data Science degrees & keywords
+      discipline = "Engineering";
+      if (textLower.includes("data science") || (textLower.includes("machine learning") && textLower.includes("deep learning"))) {
+        specialization = "Data Science & Machine Learning Engineering";
+        targetRole = "Data Scientist / Machine Learning Engineer";
+      } else if (tools.includes("python") && (tools.includes("fastapi") || tools.includes("django") || tools.includes("sql"))) {
+        specialization = "Computer Science - Backend Software Engineering";
+        targetRole = "Backend Software Engineer";
+      } else if (tools.includes("react") || tools.includes("javascript") || tools.includes("html") || tools.includes("css")) {
+        specialization = "Computer Science - Web Engineering";
+        targetRole = "Full Stack Web Developer";
+      } else if (tools.includes("aws") || tools.includes("docker") || tools.includes("kubernetes")) {
+        specialization = "Computer Science - Cloud & DevOps Architecture";
+        targetRole = "DevOps / Cloud Solutions Engineer";
+      } else {
+        specialization = "Computer Science - Software Engineering";
+        targetRole = "Software Engineer";
+      }
+    } else if (degNames.some(d => ["MBBS", "BDS", "B.PHARMA", "M.PHARMA", "NURSING"].includes(d)) || /\b(doctor|clinical|hospital|patient care|bls|acls)\b/i.test(textLower)) {
       discipline = "Medicine & Healthcare";
       specialization = tools.includes("bls") || tools.includes("acls") ? "Clinical Practice - General Residency" : "Pharmaceutical Sciences - Care Delivery";
       targetRole = tools.includes("bls") || tools.includes("acls") ? "Clinical Medical Officer / Resident Doctor" : "Healthcare Specialist / Pharmacist";
-    } else if (degNames.some(d => ["B.SC", "BSC", "M.SC", "MSC"].includes(d)) || /\b(physics|chemistry|biology|research|lab|spss)\b/i.test(textLower)) {
-      discipline = "Pure & Applied Sciences";
-      specialization = "Data Analytics & Applied Research";
-      targetRole = "Scientific Data Analyst / Research Associate";
-    } else if (degNames.some(d => ["B.COM", "BCOM", "M.COM", "MCOM", "BBA", "MBA"].includes(d)) || /\b(finance|banking|accounting|power bi|tableau)\b/i.test(textLower)) {
+    } else if (degNames.some(d => ["B.COM", "BCOM", "M.COM", "MCOM", "BBA", "MBA"].includes(d)) || /\b(finance|banking|accounting|chartered accountant)\b/i.test(textLower)) {
       discipline = "Business & Finance";
       specialization = "Corporate Finance & Analytics";
       targetRole = "Business & Financial Analyst";
-    } else if (degNames.some(d => ["B.A", "BA", "M.A", "MA", "FINE ARTS"].includes(d)) || /\b(figma|design|ui\/ux|illustrator|photoshop)\b/i.test(textLower)) {
+    } else if (degNames.some(d => ["B.A", "BA", "M.A", "MA", "FINE ARTS"].includes(d)) || /\b(figma|graphic design|ui\/ux|illustrator)\b/i.test(textLower)) {
       discipline = "Arts & Humanities";
       specialization = "Digital Product & UI/UX Design";
       targetRole = "UI/UX Designer & Visual Systems Specialist";
-    } else if (degNames.some(d => ["B.ED", "M.ED"].includes(d)) || /\b(teaching|teacher|pedagogy|curriculum|lecturer)\b/i.test(textLower)) {
+    } else if (degNames.some(d => ["B.ED", "M.ED"].includes(d)) || /\b(pedagogy|school teacher|lecturer)\b/i.test(textLower)) {
       discipline = "Education & Teaching";
       specialization = "STEM Education & Computer Pedagogy";
       targetRole = "Computer Science Educator / STEM Instructor";
-    } else if (/\b(law|llb|llm|attorney|legal)\b/i.test(textLower)) {
+    } else if (/\b(law|llb|llm|attorney)\b/i.test(textLower)) {
       discipline = "Law";
       specialization = "Corporate Law & Legal Advisory";
       targetRole = "Legal Associate / Compliance Officer";
+    } else if (degNames.some(d => ["B.SC", "BSC", "M.SC", "MSC"].includes(d)) && /\b(physics|chemistry|biology|botany|zoology)\b/i.test(textLower)) {
+      discipline = "Pure & Applied Sciences";
+      specialization = "Scientific Research & Applied Analytics";
+      targetRole = "Scientific Data Analyst / Research Associate";
+    } else {
+      discipline = "Engineering";
+      specialization = "Computer Science - Software Engineering";
+      targetRole = "Software Engineer";
     }
 
     const yrsMatch = textLower.match(/\b(\d+)\+?\s*(?:years?|yrs?)\b/);

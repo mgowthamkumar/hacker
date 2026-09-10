@@ -664,6 +664,188 @@
         @media (max-width: 900px) {
             .probability-grid { grid-template-columns: 1fr; }
         }
+
+        /* Searchable Course Combobox & Category Filter Chips */
+        .course-picker-container {
+            width: 100%;
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+        }
+
+        .course-picker-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .course-category-chips {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: thin;
+        }
+
+        .course-chip-btn {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .course-chip-btn:hover {
+            border-color: #38bdf8;
+            color: #f8fafc;
+            background: rgba(56, 189, 248, 0.1);
+        }
+
+        .course-chip-btn.active {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: #38bdf8;
+            color: #38bdf8;
+            font-weight: 700;
+        }
+
+        .course-search-bar-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .course-search-input-box {
+            position: relative;
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .course-search-icon {
+            position: absolute;
+            left: 12px;
+            color: #38bdf8;
+            font-size: 0.95rem;
+            pointer-events: none;
+        }
+
+        .course-search-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            color: #f8fafc;
+            border-radius: 10px;
+            padding: 10px 38px 10px 36px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+        }
+
+        .course-search-input:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+            background: rgba(15, 23, 42, 0.98);
+        }
+
+        .course-search-clear {
+            position: absolute;
+            right: 12px;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: none;
+            transition: color 0.2s;
+        }
+
+        .course-search-clear:hover {
+            color: #f8fafc;
+        }
+
+        .course-search-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.98);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 12px;
+            max-height: 340px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.15);
+            display: none;
+            backdrop-filter: blur(20px);
+        }
+
+        .course-search-dropdown.open {
+            display: block;
+        }
+
+        .course-dropdown-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            transition: background 0.15s ease;
+        }
+
+        .course-dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .course-dropdown-item:hover,
+        .course-dropdown-item.active-item {
+            background: rgba(56, 189, 248, 0.14);
+        }
+
+        .course-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .course-item-title {
+            font-weight: 700;
+            color: #f8fafc;
+            font-size: 0.88rem;
+        }
+
+        .course-item-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.35);
+            white-space: nowrap;
+        }
+
+        .course-item-subjects {
+            font-size: 0.76rem;
+            color: #94a3b8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
 
@@ -797,17 +979,46 @@
                         </div>
                     </div>
 
-                    <!-- INTERACTIVE 220-COURSE BENCHMARK SWITCHER -->
-                    <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
-                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 260px;">
-                            <label for="course-benchmark-select" style="font-size: 0.85rem; font-weight: 700; color: #94a3b8; white-space: nowrap;">🔄 Benchmark Against Any Course (220 Syllabi):</label>
-                            <select id="course-benchmark-select" style="flex: 1; background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(56, 189, 248, 0.35); color: #f8fafc; border-radius: 8px; padding: 8px 12px; font-size: 0.88rem; outline: none; cursor: pointer;">
-                                <option value="">Select a Course to Benchmark...</option>
-                            </select>
+                    <!-- SEARCHABLE 220-COURSE BENCHMARK PICKER -->
+                    <div class="course-picker-container" id="course-picker-container">
+                        <div class="course-picker-header">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1rem;">🔍</span>
+                                <span style="font-size: 0.88rem; font-weight: 700; color: #f8fafc;">Search & Benchmark Any Course (220 Syllabi)</span>
+                                <span id="course-results-count" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700;">220 Courses</span>
+                            </div>
+                            <div style="font-size: 0.78rem; color: var(--text-muted);">Instant live search & subject matching from <code>courses.csv</code></div>
                         </div>
-                        <button id="btn-benchmark-course" type="button" style="padding: 8px 16px; background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
-                            ⚡ Benchmark Syllabus
-                        </button>
+
+                        <!-- Category Filter Chips -->
+                        <div class="course-category-chips" id="course-category-chips">
+                            <button type="button" class="course-chip-btn active" data-filter="all">All Disciplines (220)</button>
+                            <button type="button" class="course-chip-btn" data-filter="ug-eng">UG Engineering</button>
+                            <button type="button" class="course-chip-btn" data-filter="pg">PG Programs</button>
+                            <button type="button" class="course-chip-btn" data-filter="diploma">Diploma / Polytechnic</button>
+                            <button type="button" class="course-chip-btn" data-filter="commerce">Commerce & MBA</button>
+                            <button type="button" class="course-chip-btn" data-filter="science">Sciences & Healthcare</button>
+                        </div>
+
+                        <!-- Search Input & Interactive Dropdown -->
+                        <div class="course-search-bar-wrap">
+                            <div class="course-search-input-box">
+                                <span class="course-search-icon">⚡</span>
+                                <input type="text" id="course-search-input" class="course-search-input" placeholder="Type course or subject (e.g. Data Science, AI, Mechanical, MBA, Cloud, VLSI)..." autocomplete="off" />
+                                <span id="course-search-clear" class="course-search-clear" title="Clear search">✕</span>
+                                <div id="course-search-dropdown" class="course-search-dropdown">
+                                    <!-- Dynamic list of courses rendered here -->
+                                </div>
+                            </div>
+                            <button id="btn-benchmark-course" type="button" style="padding: 10px 18px; background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(168, 85, 247, 0.25)); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; transition: all 0.2s ease;">
+                                ⚡ Benchmark Selected
+                            </button>
+                        </div>
+
+                        <!-- Hidden select element for form sync and backwards compatibility -->
+                        <select id="course-benchmark-select" style="display: none;">
+                            <option value="">Select a Course to Benchmark...</option>
+                        </select>
                     </div>
                 </div>
 
@@ -1404,9 +1615,19 @@
             resultsSection.style.display = 'flex';
             resultsSection.scrollIntoView({ behavior: 'smooth' });
 
-            const domainTitle = data.predicted_domain || (data.domain && data.domain.title) || "Engineering & Technology Student";
-            const domainIcon = data.domain_icon || (data.domain && data.domain.icon) || "🎓";
-            const domainDesc = data.domain_description || (data.domain && data.domain.description) || "Field-tailored analysis";
+            let domainTitle = data.predicted_domain || (data.domain && data.domain.title) || "Engineering & Technology Student";
+            let domainIcon = data.domain_icon || (data.domain && data.domain.icon) || "🎓";
+            let domainDesc = data.domain_description || (data.domain && data.domain.description) || "Field-tailored analysis";
+
+            if (data.curriculum_alignment && data.curriculum_alignment.matched_course) {
+                const mc = data.curriculum_alignment.matched_course;
+                const mcCat = (mc.category || "").toLowerCase();
+                if (domainTitle.includes("Pure & Applied") && !mcCat.includes("science")) {
+                    domainTitle = `${mc.course_name} Candidate`;
+                    domainIcon = "💻";
+                    domainDesc = `Predicted Degree: ${mc.course_name} (${mc.course_level} - ${mc.category}) from official syllabus.`;
+                }
+            }
 
             document.getElementById('domain-title').innerText = domainTitle;
             document.getElementById('domain-icon').innerText = domainIcon;
@@ -1801,9 +2022,16 @@
                 });
             }
 
-            // Sync benchmark dropdown selection
+            // Sync benchmark search input & dropdown selection
+            const searchInput = document.getElementById('course-search-input');
+            if (searchInput && courseName) {
+                searchInput.value = `${courseName} [${level}]`;
+                const searchClear = document.getElementById('course-search-clear');
+                if (searchClear) searchClear.style.display = 'block';
+            }
             const selectEl = document.getElementById('course-benchmark-select');
             if (selectEl) {
+                selectEl.value = courseName;
                 for (let opt of selectEl.options) {
                     if (opt.value.toLowerCase() === courseName.toLowerCase()) {
                         opt.selected = true;
@@ -1815,8 +2043,9 @@
 
         async function benchmarkCustomCourse(courseName) {
             if (!courseName) {
+                const searchInput = document.getElementById('course-search-input');
                 const sel = document.getElementById('course-benchmark-select');
-                courseName = sel ? sel.value : "";
+                courseName = (searchInput && searchInput.value) ? searchInput.value.replace(/\s*\[.*?\]$/, '').trim() : (sel ? sel.value : "");
             }
             if (!courseName) return;
 
@@ -1892,32 +2121,62 @@
             }
         }
 
+        const CURRICULUM_SUBJECT_SYNONYMS = {
+            "data structures & algorithms": ["dsa", "data structure", "data structures", "algorithms", "algorithm", "trees", "graphs", "dynamic programming", "leetcode", "time complexity"],
+            "database management systems": ["dbms", "database", "databases", "sql", "relational database", "rdbms", "postgresql", "mysql", "mongodb", "nosql", "query optimization", "sqlite"],
+            "operating systems": ["operating system", "operating systems", "os", "linux", "unix", "kernel", "multithreading", "processes", "memory management", "concurrency", "bash"],
+            "computer networks": ["computer network", "computer networks", "networking", "tcp/ip", "udp", "http", "https", "dns", "osi model", "routing", "protocols", "socket programming", "vpn"],
+            "web development": ["web development", "web dev", "frontend", "backend", "full stack", "fullstack", "html", "css", "javascript", "typescript", "react", "nodejs", "rest api", "vue", "angular"],
+            "software engineering": ["software engineering", "sdlc", "agile", "scrum", "design patterns", "ci/cd", "system design", "code refactoring", "software architecture", "unit testing"],
+            "object-oriented programming": ["object-oriented", "object oriented", "oop", "oops", "classes", "inheritance", "polymorphism", "encapsulation", "abstraction"],
+            "python programming": ["python", "python3", "pandas", "numpy", "flask", "django", "fastapi", "pytest"],
+            "java programming": ["java", "jvm", "spring", "spring boot", "hibernate", "maven", "gradle"],
+            "c++ programming": ["c++", "cpp", "stl", "pointers", "templates"],
+            "c programming": ["c programming", "c language", "pointers", "memory allocation", "gcc"],
+            "machine learning": ["machine learning", "ml", "supervised learning", "unsupervised learning", "scikit-learn", "tensorflow", "pytorch", "neural network", "regression", "classification"],
+            "artificial intelligence": ["artificial intelligence", "ai", "genai", "llm", "deep learning", "nlp", "computer vision", "prompt engineering", "transformers"],
+            "cloud computing": ["cloud", "aws", "amazon web services", "azure", "gcp", "google cloud", "docker", "kubernetes", "serverless", "lambda", "ec2", "s3"],
+            "cyber security": ["cyber security", "cybersecurity", "infosec", "penetration testing", "vulnerability assessment", "cryptography", "firewalls", "owasp", "network security"],
+            "data science": ["data science", "data analytics", "data visualization", "pandas", "numpy", "matplotlib", "seaborn", "jupyter", "eda", "statistical analysis"],
+            "deep learning": ["deep learning", "dl", "neural network", "neural networks", "cnn", "rnn", "lstm", "transformer", "transformers", "pytorch", "tensorflow"],
+            "generative ai": ["generative ai", "genai", "gen-ai", "large language model", "llm", "rag", "retrieval augmented", "langchain", "prompt engineering", "diffusion"],
+            "natural language processing": ["nlp", "natural language processing", "text processing", "tokenization", "bert", "gpt", "sentiment analysis", "spacy", "huggingface"],
+            "mlops": ["mlops", "model deployment", "model serving", "mlflow", "kubeflow", "ci/cd", "pipeline", "monitoring"],
+            "retrieval-augmented generation (rag)": ["rag", "retrieval augmented", "vector database", "vector search", "faiss", "pinecone", "chromadb", "embeddings"],
+            "linear algebra": ["linear algebra", "matrices", "matrix", "vectors", "eigenvalues", "pca"],
+            "probability & statistics": ["probability", "statistics", "statistical", "bayesian", "hypothesis testing", "distributions"],
+            "computer vision": ["computer vision", "cv", "opencv", "yolo", "object detection", "image classification"],
+            "cad/cam": ["cad", "cam", "autocad", "solidworks", "catia", "3d modeling", "computer aided design"],
+            "engineering mechanics": ["engineering mechanics", "statics", "dynamics", "kinematics", "stress analysis"],
+            "thermodynamics": ["thermodynamics", "heat transfer", "entropy", "enthalpy", "thermal", "carnot"],
+            "fluid mechanics": ["fluid mechanics", "fluid dynamics", "bernoulli", "viscosity", "hydraulics", "cfd"],
+            "manufacturing processes": ["manufacturing", "machining", "casting", "welding", "cnc", "fabrication"],
+            "strength of materials": ["strength of materials", "som", "tensile strength", "beam deflection", "shear stress", "elasticity"],
+            "financial accounting": ["accounting", "financial statements", "balance sheet", "p&l", "general ledger", "reconciliation"],
+            "business analytics": ["business analytics", "business intelligence", "power bi", "tableau", "excel modeling", "kpis"],
+            "digital marketing": ["digital marketing", "seo", "sem", "social media marketing", "google ads", "content strategy"],
+            "human resource management": ["hrm", "human resources", "talent acquisition", "recruitment", "payroll", "employee relations"],
+            "clinical diagnostics": ["clinical", "diagnostic", "patient care", "triage", "pathology", "vital signs"],
+            "pharmacology": ["pharmacology", "dosage", "prescription", "drugs", "medicinal", "pharmacokinetics"],
+            "analog electronics": ["analog electronics", "analog circuits", "op-amp", "operational amplifier", "bjt", "mosfet", "diodes"],
+            "digital electronics": ["digital electronics", "logic gates", "flip-flops", "boolean logic", "combinational circuits", "sequential circuits"],
+            "embedded systems": ["embedded systems", "embedded", "microcontroller", "arduino", "raspberry pi", "arm", "rtos", "firmware"],
+            "vlsi design": ["vlsi", "verilog", "vhdl", "asic", "fpga", "cadence", "cmos", "circuit layout"],
+            "signals & systems": ["signals and systems", "fourier transform", "laplace transform", "z-transform", "dsp", "digital signal processing"],
+            "control systems": ["control systems", "bode plot", "pid controller", "nyquist", "state space", "feedback control"],
+            "communication systems": ["communication systems", "modulation", "am", "fm", "wireless", "rf", "antenna", "signal transmission"],
+            "microprocessors & microcontrollers": ["microprocessor", "microcontrollers", "8085", "8086", "arm cortex", "pic", "assembly language"]
+        };
+
         function clientMatchCurriculum(rawText) {
             const list = window.COURSES_COMPACT_DATA || [];
             if (list.length === 0) return null;
 
             const textLower = (rawText || "").toLowerCase();
             let detectedLevel = "UG";
-            if (/\b(diploma|polytechnic)\b/i.test(textLower)) detectedLevel = "Diploma";
-            else if (/\b(m\.tech|mtech|m\.e|msc|mba|mca|post graduate|masters|pg)\b/i.test(textLower)) detectedLevel = "PG";
-            else if (/\b(b\.tech|btech|b\.e|bsc|bba|bca|bachelor|ug)\b/i.test(textLower)) detectedLevel = "UG";
-
-            const subjectSynonyms = {
-                "data structures & algorithms": ["dsa", "data structure", "data structures", "algorithms", "algorithm", "trees", "graphs", "dynamic programming", "leetcode"],
-                "database management systems": ["dbms", "database", "databases", "sql", "relational database", "rdbms", "postgresql", "mysql", "mongodb", "nosql"],
-                "operating systems": ["operating system", "operating systems", "os", "linux", "unix", "kernel", "multithreading", "processes", "memory management"],
-                "computer networks": ["computer network", "computer networks", "networking", "tcp/ip", "udp", "http", "https", "dns", "osi model", "routing"],
-                "web development": ["web development", "web dev", "frontend", "backend", "full stack", "fullstack", "html", "css", "javascript", "typescript", "react", "nodejs"],
-                "software engineering": ["software engineering", "sdlc", "agile", "scrum", "design patterns", "ci/cd", "system design", "code refactoring"],
-                "object-oriented programming": ["object-oriented", "object oriented", "oop", "oops", "classes", "inheritance", "polymorphism"],
-                "python programming": ["python", "python3", "pandas", "numpy", "flask", "django", "fastapi"],
-                "java programming": ["java", "jvm", "spring", "spring boot", "hibernate"],
-                "machine learning": ["machine learning", "ml", "supervised learning", "unsupervised learning", "scikit-learn", "tensorflow", "pytorch"],
-                "artificial intelligence": ["artificial intelligence", "ai", "genai", "llm", "deep learning", "nlp", "computer vision"],
-                "cloud computing": ["cloud", "aws", "amazon web services", "azure", "gcp", "google cloud", "docker", "kubernetes"],
-                "cyber security": ["cyber security", "cybersecurity", "infosec", "penetration testing", "vulnerability assessment", "cryptography"],
-                "data science": ["data science", "data analytics", "data visualization", "pandas", "numpy", "matplotlib"]
-            };
+            if (/\b(diploma in|polytechnic diploma|diploma holder)\b/i.test(textLower)) detectedLevel = "Diploma";
+            else if (/\b(m\.?tech|m\.?e\b\.?|msc|m\.sc|mba|mca|post graduate|master of|masters degree|m\.s\b)\b/i.test(textLower)) detectedLevel = "PG";
+            else if (/\b(b\.?tech|b\.?e\b\.?|bsc|b\.sc|bba|bca|bachelor of|bachelors degree|b\.s\b)\b/i.test(textLower)) detectedLevel = "UG";
 
             const scored = list.map(c => {
                 let score = 0;
@@ -1947,7 +2206,7 @@
                     if (textLower.includes(subLower)) {
                         matched = true;
                     } else {
-                        const syns = subjectSynonyms[subLower] || [];
+                        const syns = CURRICULUM_SUBJECT_SYNONYMS[subLower] || [];
                         if (syns.some(s => textLower.includes(s))) matched = true;
                     }
                     if (matched) hits++;
@@ -2030,23 +2289,6 @@
             const textLower = (rawText || "").toLowerCase();
             const lines = (rawText || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
-            const subjectSynonyms = {
-                "data structures & algorithms": ["dsa", "data structure", "data structures", "algorithms", "algorithm", "trees", "graphs", "dynamic programming", "leetcode"],
-                "database management systems": ["dbms", "database", "databases", "sql", "relational database", "rdbms", "postgresql", "mysql", "mongodb", "nosql"],
-                "operating systems": ["operating system", "operating systems", "os", "linux", "unix", "kernel", "multithreading", "processes", "memory management"],
-                "computer networks": ["computer network", "computer networks", "networking", "tcp/ip", "udp", "http", "https", "dns", "osi model", "routing"],
-                "web development": ["web development", "web dev", "frontend", "backend", "full stack", "fullstack", "html", "css", "javascript", "typescript", "react", "nodejs"],
-                "software engineering": ["software engineering", "sdlc", "agile", "scrum", "design patterns", "ci/cd", "system design", "code refactoring"],
-                "object-oriented programming": ["object-oriented", "object oriented", "oop", "oops", "classes", "inheritance", "polymorphism"],
-                "python programming": ["python", "python3", "pandas", "numpy", "flask", "django", "fastapi"],
-                "java programming": ["java", "jvm", "spring", "spring boot", "hibernate"],
-                "machine learning": ["machine learning", "ml", "supervised learning", "unsupervised learning", "scikit-learn", "tensorflow", "pytorch"],
-                "artificial intelligence": ["artificial intelligence", "ai", "genai", "llm", "deep learning", "nlp", "computer vision"],
-                "cloud computing": ["cloud", "aws", "amazon web services", "azure", "gcp", "google cloud", "docker", "kubernetes"],
-                "cyber security": ["cyber security", "cybersecurity", "infosec", "penetration testing", "vulnerability assessment", "cryptography"],
-                "data science": ["data science", "data analytics", "data visualization", "pandas", "numpy", "matplotlib"]
-            };
-
             const mastered = [];
             const partial = [];
             const gaps = [];
@@ -2072,7 +2314,7 @@
                 }
 
                 if (!isMastered) {
-                    const syns = subjectSynonyms[subLower] || [];
+                    const syns = CURRICULUM_SUBJECT_SYNONYMS[subLower] || [];
                     for (const s of syns) {
                         if (textLower.includes(s)) {
                             isMastered = true;
@@ -2123,58 +2365,222 @@
             };
         }
 
-        function initCoursesDropdown() {
+        function initCourseSearchPicker() {
+            const searchInput = document.getElementById('course-search-input');
+            const searchClear = document.getElementById('course-search-clear');
+            const dropdown = document.getElementById('course-search-dropdown');
+            const chipsContainer = document.getElementById('course-category-chips');
+            const resultsCount = document.getElementById('course-results-count');
             const selectEl = document.getElementById('course-benchmark-select');
-            if (!selectEl) return;
+            const benchmarkBtn = document.getElementById('btn-benchmark-course');
 
-            let courses = window.COURSES_COMPACT_DATA || [];
-            if (courses.length === 0) {
+            if (!searchInput || !dropdown) return;
+
+            let allCourses = window.COURSES_COMPACT_DATA || [];
+            let activeFilter = 'all';
+            let activeIndex = -1;
+
+            if (allCourses.length === 0) {
                 fetch("/api/courses")
                     .then(r => r.json())
                     .then(data => {
                         if (data && data.courses) {
-                            populateDropdown(data.courses.map(c => ({ name: c.course_name, level: c.course_level, category: c.category, subjects: c.sample_subjects })));
+                            allCourses = data.courses.map(c => ({
+                                name: c.course_name,
+                                level: c.course_level,
+                                category: c.category,
+                                subjects: c.sample_subjects || []
+                            }));
+                            window.COURSES_COMPACT_DATA = allCourses;
+                            renderFilteredList();
                         }
                     })
                     .catch(() => {});
-            } else {
-                populateDropdown(courses);
             }
 
-            function populateDropdown(list) {
-                selectEl.innerHTML = '<option value="">-- Choose a Degree / Course Syllabus (220 Available) --</option>';
-                const groups = {};
-                list.forEach(c => {
-                    const cat = c.category || "General Courses";
-                    if (!groups[cat]) groups[cat] = [];
-                    groups[cat].push(c);
-                });
+            function filterMatches(c, query, filter) {
+                const cLevel = (c.level || '').toUpperCase();
+                const cCat = (c.category || '').toLowerCase();
+                const cNameLower = (c.name || '').toLowerCase();
 
-                Object.keys(groups).sort().forEach(cat => {
-                    const optgroup = document.createElement('optgroup');
-                    optgroup.label = cat;
-                    groups[cat].sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
-                        const opt = document.createElement('option');
-                        opt.value = c.name;
-                        opt.innerText = `${c.name} [${c.level}]`;
-                        optgroup.appendChild(opt);
+                // Category Filter
+                if (filter === 'ug-eng') {
+                    if (cLevel !== 'UG' || !cCat.includes('engineering')) return false;
+                } else if (filter === 'pg') {
+                    if (cLevel !== 'PG') return false;
+                } else if (filter === 'diploma') {
+                    if (cLevel !== 'DIPLOMA') return false;
+                } else if (filter === 'commerce') {
+                    if (!cCat.includes('commerce') && !cCat.includes('management') && !cNameLower.includes('mba') && !cNameLower.includes('b.com') && !cNameLower.includes('bba')) return false;
+                } else if (filter === 'science') {
+                    if (!cCat.includes('science') && !cCat.includes('medical') && !cCat.includes('pharmacy') && !cCat.includes('healthcare') && !cCat.includes('nursing')) return false;
+                }
+
+                // Query Filter (matches course name, category, level, or subjects)
+                if (!query) return true;
+                const q = query.toLowerCase().trim();
+                if (cNameLower.includes(q)) return true;
+                if (cCat.includes(q)) return true;
+                if (cLevel.toLowerCase() === q) return true;
+                return (c.subjects || []).some(s => s.toLowerCase().includes(q));
+            }
+
+            function renderFilteredList() {
+                const query = searchInput.value.replace(/\s*\[.*?\]$/, '').trim();
+                const filtered = allCourses.filter(c => filterMatches(c, query, activeFilter));
+
+                if (resultsCount) {
+                    resultsCount.innerText = `${filtered.length} Courses`;
+                }
+
+                dropdown.innerHTML = '';
+                if (filtered.length === 0) {
+                    dropdown.innerHTML = `
+                        <div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
+                            ❌ No courses matching "<strong>${query}</strong>". Try searching a different keyword.
+                        </div>
+                    `;
+                    dropdown.classList.add('open');
+                    return;
+                }
+
+                const displayItems = filtered.slice(0, 40);
+                displayItems.forEach((c, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'course-dropdown-item';
+                    item.dataset.index = idx;
+                    item.dataset.courseName = c.name;
+
+                    const subsPreview = (c.subjects || []).slice(0, 4).join(', ');
+                    item.innerHTML = `
+                        <div class="course-item-header">
+                            <span class="course-item-title">${c.name}</span>
+                            <span class="course-item-badge">[${c.level}] ${c.category || ''}</span>
+                        </div>
+                        <div class="course-item-subjects">📚 Core: ${subsPreview || 'Curriculum core subjects'}</div>
+                    `;
+
+                    item.addEventListener('click', () => {
+                        selectCourse(c);
                     });
-                    selectEl.appendChild(optgroup);
+
+                    dropdown.appendChild(item);
+                });
+
+                if (filtered.length > 40) {
+                    const more = document.createElement('div');
+                    more.style.padding = '8px 14px';
+                    more.style.fontSize = '0.78rem';
+                    more.style.color = '#38bdf8';
+                    more.style.textAlign = 'center';
+                    more.style.background = 'rgba(56, 189, 248, 0.06)';
+                    more.innerText = `+ ${filtered.length - 40} more courses. Type specific keywords to narrow search.`;
+                    dropdown.appendChild(more);
+                }
+
+                dropdown.classList.add('open');
+                activeIndex = -1;
+            }
+
+            function selectCourse(course) {
+                searchInput.value = `${course.name} [${course.level}]`;
+                if (selectEl) {
+                    selectEl.value = course.name;
+                    let exists = false;
+                    for (let opt of selectEl.options) {
+                        if (opt.value.toLowerCase() === course.name.toLowerCase()) {
+                            opt.selected = true;
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (!exists) {
+                        const newOpt = document.createElement('option');
+                        newOpt.value = course.name;
+                        newOpt.innerText = `${course.name} [${course.level}]`;
+                        newOpt.selected = true;
+                        selectEl.appendChild(newOpt);
+                    }
+                }
+                dropdown.classList.remove('open');
+                if (searchClear) searchClear.style.display = 'block';
+                benchmarkCustomCourse(course.name);
+            }
+
+            if (chipsContainer) {
+                chipsContainer.querySelectorAll('.course-chip-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        chipsContainer.querySelectorAll('.course-chip-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        activeFilter = btn.dataset.filter || 'all';
+                        renderFilteredList();
+                        dropdown.classList.add('open');
+                    });
                 });
             }
 
-            selectEl.addEventListener('change', (e) => {
-                if (e.target.value) {
-                    benchmarkCustomCourse(e.target.value);
+            searchInput.addEventListener('input', () => {
+                if (searchClear) searchClear.style.display = searchInput.value ? 'block' : 'none';
+                renderFilteredList();
+            });
+
+            searchInput.addEventListener('focus', () => {
+                renderFilteredList();
+            });
+
+            if (searchClear) {
+                searchClear.addEventListener('click', () => {
+                    searchInput.value = '';
+                    searchClear.style.display = 'none';
+                    renderFilteredList();
+                    searchInput.focus();
+                });
+            }
+
+            searchInput.addEventListener('keydown', (e) => {
+                const items = dropdown.querySelectorAll('.course-dropdown-item');
+                if (!items.length || !dropdown.classList.contains('open')) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    activeIndex = (activeIndex + 1) % items.length;
+                    items.forEach((it, i) => it.classList.toggle('active-item', i === activeIndex));
+                    items[activeIndex].scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    activeIndex = (activeIndex - 1 + items.length) % items.length;
+                    items.forEach((it, i) => it.classList.toggle('active-item', i === activeIndex));
+                    items[activeIndex].scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (activeIndex >= 0 && activeIndex < items.length) {
+                        items[activeIndex].click();
+                    } else if (items.length > 0) {
+                        items[0].click();
+                    }
+                } else if (e.key === 'Escape') {
+                    dropdown.classList.remove('open');
                 }
             });
 
-            const benchmarkBtn = document.getElementById('btn-benchmark-course');
+            document.addEventListener('click', (e) => {
+                const container = document.getElementById('course-picker-container');
+                if (container && !container.contains(e.target)) {
+                    dropdown.classList.remove('open');
+                }
+            });
+
             if (benchmarkBtn) {
                 benchmarkBtn.addEventListener('click', () => {
-                    if (selectEl.value) benchmarkCustomCourse(selectEl.value);
+                    let cName = searchInput.value.replace(/\s*\[.*?\]$/, '').trim();
+                    if (!cName && selectEl) cName = selectEl.value;
+                    if (cName) benchmarkCustomCourse(cName);
                 });
             }
+        }
+
+        function initCoursesDropdown() {
+            initCourseSearchPicker();
         }
 
         function downloadStudyPackPdf(topicTitle) {

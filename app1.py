@@ -366,11 +366,11 @@ def extract_verbatim_facts(raw_text: str) -> dict:
     }
 
 
-def classify_candidate_taxonomy(verbatim_facts: dict, raw_text: str) -> dict:
+def classify_candidate_taxonomy(verbatim_facts: dict, raw_text: str, matched_course: Optional[dict] = None) -> dict:
     """
-    Academic & Professional Taxonomist Engine.
-    Classifies candidate discipline, specialization, target role, and experience tier
-    based strictly on verified extracted facts and raw text quotes without hallucination.
+    Lead Hiring Auditor & Curriculum Director Engine.
+    Maps candidate strictly to discipline, specialization, target role, and experience tier,
+    grounded directly in official courses.csv curriculum alignment.
     """
     text_lower = raw_text.lower()
 
@@ -385,43 +385,66 @@ def classify_candidate_taxonomy(verbatim_facts: dict, raw_text: str) -> dict:
     specialization = "Computer Science - Software Engineering"
     target_role = "Full Stack Software Engineer"
 
-    if any(d in deg_names for d in ["MBBS", "BDS", "B.PHARMA", "M.PHARMA", "NURSING"]) or any(k in text_lower for k in ["doctor", "clinical", "hospital", "patient", "bls", "acls"]):
-        discipline = "Medicine & Healthcare"
-        if "bls" in tools or "acls" in tools or "clinical" in text_lower:
-            specialization = "Clinical Practice - General Residency"
+    # Priority 1: Ground directly in matched course from courses.csv if available
+    if matched_course and matched_course.get("course_name"):
+        c_name = matched_course.get("course_name", "")
+        c_cat = matched_course.get("category", "")
+        c_name_lower = c_name.lower()
+
+        if any(k in c_cat.lower() for k in ["engineering", "technology", "computer"]):
+            discipline = "Engineering"
+            if "data science" in c_name_lower:
+                specialization = "Data Science & Machine Learning Engineering"
+                target_role = "Data Scientist / Machine Learning Engineer"
+            elif "artificial intelligence" in c_name_lower or "(ai)" in c_name_lower:
+                specialization = "Artificial Intelligence & Deep Learning"
+                target_role = "AI Engineer / ML Specialist"
+            elif "cyber security" in c_name_lower:
+                specialization = "Cyber Security & Information Assurance"
+                target_role = "Cyber Security Engineer / Security Analyst"
+            elif "cloud" in c_name_lower:
+                specialization = "Cloud Architecture & DevOps Engineering"
+                target_role = "Cloud Solutions Architect / DevOps Engineer"
+            elif "electrical" in c_name_lower or "electronics" in c_name_lower:
+                specialization = "Electronics & Embedded Systems Engineering"
+                target_role = "Electronics / Embedded Systems Engineer"
+            elif "mechanical" in c_name_lower:
+                specialization = "Mechanical & CAD/CAM Systems Engineering"
+                target_role = "Mechanical Design Engineer"
+            elif "civil" in c_name_lower:
+                specialization = "Civil & Structural Infrastructure Engineering"
+                target_role = "Civil / Structural Project Engineer"
+            else:
+                specialization = f"{c_name} - Software Engineering"
+                target_role = "Full Stack Software Engineer"
+        elif any(k in c_cat.lower() for k in ["medical", "health"]):
+            discipline = "Medicine & Healthcare"
+            specialization = f"{c_name} - Clinical Practice"
             target_role = "Clinical Medical Officer / Resident Doctor"
-        else:
-            specialization = "Pharmaceutical Sciences - Care Delivery"
-            target_role = "Healthcare Specialist / Pharmacist"
+        elif any(k in c_cat.lower() for k in ["commerce", "management", "business", "finance"]):
+            discipline = "Business & Finance"
+            specialization = f"{c_name} & Financial Analytics"
+            target_role = "Business & Financial Analyst"
+        elif any(k in c_cat.lower() for k in ["design", "art", "humanities"]):
+            discipline = "Arts & Humanities"
+            specialization = f"{c_name} - UI/UX & Design Systems"
+            target_role = "UI/UX Designer & Visual Systems Specialist"
+        elif "law" in c_cat.lower():
+            discipline = "Law"
+            specialization = "Corporate Law & Legal Advisory"
+            target_role = "Legal Associate / Compliance Officer"
+        elif "education" in c_cat.lower():
+            discipline = "Education & Teaching"
+            specialization = "STEM Education & Computer Pedagogy"
+            target_role = "Computer Science Educator / STEM Instructor"
 
-    elif any(d in deg_names for d in ["B.SC", "BSC", "M.SC", "MSC"]) or any(k in text_lower for k in ["physics", "chemistry", "biology", "research", "lab", "spss"]):
-        discipline = "Pure & Applied Sciences"
-        specialization = "Data Analytics & Applied Research"
-        target_role = "Scientific Data Analyst / Research Associate"
-
-    elif any(d in deg_names for d in ["B.COM", "BCOM", "M.COM", "MCOM", "BBA", "MBA"]) or any(k in text_lower for k in ["finance", "banking", "accounting", "power bi", "tableau"]):
-        discipline = "Business & Finance"
-        specialization = "Corporate Finance & Analytics"
-        target_role = "Business & Financial Analyst"
-
-    elif any(d in deg_names for d in ["B.A", "BA", "M.A", "MA", "FINE ARTS"]) or any(k in text_lower for k in ["figma", "design", "ui/ux", "illustrator", "photoshop"]):
-        discipline = "Arts & Humanities"
-        specialization = "Digital Product & UI/UX Design"
-        target_role = "UI/UX Designer & Visual Systems Specialist"
-
-    elif any(d in deg_names for d in ["B.ED", "M.ED"]) or any(k in text_lower for k in ["teaching", "teacher", "pedagogy", "curriculum", "lecturer"]):
-        discipline = "Education & Teaching"
-        specialization = "STEM Education & Computer Pedagogy"
-        target_role = "Computer Science Educator / STEM Instructor"
-
-    elif any(k in text_lower for k in ["law", "llb", "llm", "attorney", "legal"]):
-        discipline = "Law"
-        specialization = "Corporate Law & Legal Advisory"
-        target_role = "Legal Associate / Compliance Officer"
-
-    else:
+    # Priority 2: Keyword and Degree detection if discipline not set by matched_course
+    elif any(d in deg_names for d in ["B.TECH", "BTECH", "B.E", "BE", "M.TECH", "MTECH", "MCA", "BCA"]) or any(re.search(r"\b" + kw + r"\b", text_lower) for kw in ["b.tech", "btech", "m.tech", "mtech", "b.e", "computer science", "data science", "software engineer", "developer"]):
         discipline = "Engineering"
-        if "python" in tools and ("fastapi" in tools or "django" in tools or "sql" in tools):
+        if "data science" in text_lower or ("machine learning" in text_lower and "deep learning" in text_lower):
+            specialization = "Data Science & Machine Learning Engineering"
+            target_role = "Data Scientist / Machine Learning Engineer"
+        elif "python" in tools and ("fastapi" in tools or "django" in tools or "sql" in tools):
             specialization = "Computer Science - Backend Software Engineering"
             target_role = "Backend Software Engineer"
         elif "react" in tools or "javascript" in tools or "html" in tools or "css" in tools:
@@ -433,6 +456,45 @@ def classify_candidate_taxonomy(verbatim_facts: dict, raw_text: str) -> dict:
         else:
             specialization = "Computer Science - Software Engineering"
             target_role = "Software Engineer"
+
+    elif any(d in deg_names for d in ["MBBS", "BDS", "B.PHARMA", "M.PHARMA", "NURSING"]) or any(re.search(r"\b" + k + r"\b", text_lower) for k in ["doctor", "clinical", "hospital", "patient care", "bls", "acls"]):
+        discipline = "Medicine & Healthcare"
+        if "bls" in tools or "acls" in tools or "clinical" in text_lower:
+            specialization = "Clinical Practice - General Residency"
+            target_role = "Clinical Medical Officer / Resident Doctor"
+        else:
+            specialization = "Pharmaceutical Sciences - Care Delivery"
+            target_role = "Healthcare Specialist / Pharmacist"
+
+    elif any(d in deg_names for d in ["B.COM", "BCOM", "M.COM", "MCOM", "BBA", "MBA"]) or any(re.search(r"\b" + k + r"\b", text_lower) for k in ["finance", "banking", "accounting", "chartered accountant"]):
+        discipline = "Business & Finance"
+        specialization = "Corporate Finance & Analytics"
+        target_role = "Business & Financial Analyst"
+
+    elif any(d in deg_names for d in ["B.A", "BA", "M.A", "MA", "FINE ARTS"]) or any(re.search(r"\b" + k + r"\b", text_lower) for k in ["figma", "graphic design", "ui/ux", "illustrator"]):
+        discipline = "Arts & Humanities"
+        specialization = "Digital Product & UI/UX Design"
+        target_role = "UI/UX Designer & Visual Systems Specialist"
+
+    elif any(d in deg_names for d in ["B.ED", "M.ED"]) or any(re.search(r"\b" + k + r"\b", text_lower) for k in ["pedagogy", "lecturer", "school teacher"]):
+        discipline = "Education & Teaching"
+        specialization = "STEM Education & Computer Pedagogy"
+        target_role = "Computer Science Educator / STEM Instructor"
+
+    elif any(re.search(r"\b" + k + r"\b", text_lower) for k in ["law", "llb", "llm", "attorney"]):
+        discipline = "Law"
+        specialization = "Corporate Law & Legal Advisory"
+        target_role = "Legal Associate / Compliance Officer"
+
+    elif any(d in deg_names for d in ["B.SC", "BSC", "M.SC", "MSC"]) and any(re.search(r"\b" + k + r"\b", text_lower) for k in ["physics", "chemistry", "biology", "botany", "zoology"]):
+        discipline = "Pure & Applied Sciences"
+        specialization = "Scientific Research & Applied Analytics"
+        target_role = "Scientific Data Analyst / Research Associate"
+
+    else:
+        discipline = "Engineering"
+        specialization = "Computer Science - Software Engineering"
+        target_role = "Software Engineer"
 
     years_found = re.findall(r"\b(\d+)\+?\s*(?:years?|yrs?)\b", text_lower)
     max_yrs = 0
@@ -759,8 +821,41 @@ def compile_typeset_study_manual(taxonomy: dict, competency_audit: dict, raw_mar
     return header + "\n\n" + body
 
 
-def predict_resume_domain(raw_text: str, detected_skills: List[str]) -> tuple[str, str, str]:
-    """Predict resume discipline/domain accurately using word-boundary matching to prevent false positives."""
+def predict_resume_domain(raw_text: str, detected_skills: List[str], matched_course: Optional[dict] = None) -> tuple[str, str, str]:
+    """Predict resume discipline/domain accurately using word-boundary matching and courses.csv alignment."""
+    # Priority 1: Ground directly in matched course from courses.csv if available
+    if matched_course and matched_course.get("course_name"):
+        c_name = matched_course.get("course_name", "")
+        c_cat = matched_course.get("category", "")
+        c_lvl = matched_course.get("course_level", "UG")
+        c_name_lower = c_name.lower()
+
+        if any(k in c_cat.lower() for k in ["engineering", "technology", "computer"]):
+            if "data science" in c_name_lower:
+                return ("Data Science & Engineering Candidate", "🤖", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+            elif "artificial intelligence" in c_name_lower or "(ai)" in c_name_lower:
+                return ("Artificial Intelligence Candidate", "⚡", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+            elif "cyber security" in c_name_lower:
+                return ("Cyber Security Candidate", "🛡️", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+            elif "cloud" in c_name_lower:
+                return ("Cloud & DevOps Candidate", "☁️", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+            elif "electrical" in c_name_lower or "electronics" in c_name_lower:
+                return ("Electronics & Communication Candidate", "🔌", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+            elif "mechanical" in c_name_lower:
+                return ("Mechanical Engineering Candidate", "⚙️", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+            elif "civil" in c_name_lower:
+                return ("Civil Engineering Candidate", "🏗️", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+            else:
+                return ("Engineering & Technology Candidate", "💻", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+        elif any(k in c_cat.lower() for k in ["commerce", "management", "business", "finance"]):
+            return ("Business, Commerce & Finance Candidate", "📊", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+        elif any(k in c_cat.lower() for k in ["medical", "health"]):
+            return ("Medical & Healthcare Candidate", "🩺", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+        elif any(k in c_cat.lower() for k in ["design", "art", "humanities"]):
+            return ("Arts & Design Systems Candidate", "🎨", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+        elif any(k in c_cat.lower() for k in ["science"]) and not ("computer" in c_name_lower or "data" in c_name_lower):
+            return ("Pure & Applied Sciences Candidate", "🔬", f"Predicted Course: {c_name} ({c_lvl} - {c_cat}) from official syllabus.")
+
     lower_text = raw_text.lower()
     skills_set = set(s.lower() for s in detected_skills)
 
@@ -1138,9 +1233,11 @@ async def analyze_resume(
     # 1. Document Resume Validation (Check required resume sections: Personal Details, Career Objective, Education, Technical Skills, Languages)
     is_valid_resume, is_complete_resume, warning_msg, missing_sections = validate_resume_document(raw_text)
 
-    # 2. Extract detected skills & Predict Domain
+    # 2. Extract detected skills & Match Official Curriculum from courses.csv
     detected_skills = extract_resume_skills(raw_text)
-    domain_name, domain_icon, domain_desc = predict_resume_domain(raw_text, detected_skills)
+    curriculum_alignment = curriculum_engine.match_resume_to_curriculum(raw_text, detected_skills)
+    matched_course = curriculum_alignment.get("matched_course") if curriculum_alignment else None
+    domain_name, domain_icon, domain_desc = predict_resume_domain(raw_text, detected_skills, matched_course)
 
     # 3. Preprocess for scoring
     lower_text = raw_text.lower()
@@ -1243,9 +1340,6 @@ async def analyze_resume(
         raw_text, detected_skills, domain_name, total_score, action_score, metrics_score, structure_score, is_valid_resume and is_complete_resume
     )
 
-    # 6. Academic Curriculum & Course Alignment (courses.csv Dataset)
-    curriculum_alignment = curriculum_engine.match_resume_to_curriculum(raw_text, detected_skills)
-
     if is_valid_resume and is_complete_resume:
         feedback.append({"type": "pass", "text": f"Technical Skills Analysis -> Predicted Field: {domain_icon} {domain_name}."})
         if curriculum_alignment and curriculum_alignment.get("matched_course"):
@@ -1258,6 +1352,11 @@ async def analyze_resume(
 
     roadmap_dict_list = [{"title": r.title, "category": r.category, "desc": r.description, "impact": r.impact} for r in roadmap]
     jobs_dict_list = [{"title": j.title, "match_score": j.match_score, "reason": j.reason, "matched_skills": j.matched_skills, "missing_skills": j.missing_skills} for j in suggested_jobs]
+
+    taxonomy_result = classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text, matched_course)
+    competency_result = audit_competency_gaps(extract_verbatim_facts(raw_text), taxonomy_result, raw_text)
+    precision_manual = generate_precision_study_manual(taxonomy_result, competency_result)
+    typeset_manual = compile_typeset_study_manual(taxonomy_result, competency_result, precision_manual)
 
     return AnalysisResult(
         is_valid_resume=is_valid_resume and is_complete_resume,
@@ -1291,20 +1390,10 @@ async def analyze_resume(
         roadmap=roadmap_dict_list,
         job_matches=jobs_dict_list,
         verbatim_facts=extract_verbatim_facts(raw_text),
-        taxonomy_analysis=classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text),
-        competency_audit=audit_competency_gaps(extract_verbatim_facts(raw_text), classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text), raw_text),
-        precision_study_manual=generate_precision_study_manual(
-            classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text),
-            audit_competency_gaps(extract_verbatim_facts(raw_text), classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text), raw_text)
-        ),
-        compiled_typeset_manual=compile_typeset_study_manual(
-            classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text),
-            audit_competency_gaps(extract_verbatim_facts(raw_text), classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text), raw_text),
-            generate_precision_study_manual(
-                classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text),
-                audit_competency_gaps(extract_verbatim_facts(raw_text), classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text), raw_text)
-            )
-        ),
+        taxonomy_analysis=taxonomy_result,
+        competency_audit=competency_result,
+        precision_study_manual=precision_manual,
+        compiled_typeset_manual=typeset_manual,
         curriculum_alignment=curriculum_alignment
     )
 

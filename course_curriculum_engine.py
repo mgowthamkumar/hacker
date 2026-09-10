@@ -37,7 +37,23 @@ SUBJECT_SYNONYMS: Dict[str, List[str]] = {
     "digital marketing": ["digital marketing", "seo", "sem", "social media marketing", "google ads", "content strategy"],
     "human resource management": ["hrm", "human resources", "talent acquisition", "recruitment", "payroll", "employee relations"],
     "clinical diagnostics": ["clinical", "diagnostic", "patient care", "triage", "pathology", "vital signs"],
-    "pharmacology": ["pharmacology", "dosage", "prescription", "drugs", "medicinal", "pharmacokinetics"]
+    "pharmacology": ["pharmacology", "dosage", "prescription", "drugs", "medicinal", "pharmacokinetics"],
+    "deep learning": ["deep learning", "dl", "neural network", "neural networks", "cnn", "rnn", "lstm", "transformer", "transformers", "pytorch", "tensorflow"],
+    "generative ai": ["generative ai", "genai", "gen-ai", "large language model", "llm", "rag", "retrieval augmented", "langchain", "prompt engineering", "diffusion"],
+    "natural language processing": ["nlp", "natural language processing", "text processing", "tokenization", "bert", "gpt", "sentiment analysis", "spacy", "huggingface"],
+    "mlops": ["mlops", "model deployment", "model serving", "mlflow", "kubeflow", "ci/cd", "pipeline", "monitoring"],
+    "retrieval-augmented generation (rag)": ["rag", "retrieval augmented", "vector database", "vector search", "faiss", "pinecone", "chromadb", "embeddings"],
+    "linear algebra": ["linear algebra", "matrices", "matrix", "vectors", "eigenvalues", "pca"],
+    "probability & statistics": ["probability", "statistics", "statistical", "bayesian", "hypothesis testing", "distributions"],
+    "computer vision": ["computer vision", "cv", "opencv", "yolo", "object detection", "image classification"],
+    "analog electronics": ["analog electronics", "analog circuits", "op-amp", "operational amplifier", "bjt", "mosfet", "diodes"],
+    "digital electronics": ["digital electronics", "logic gates", "flip-flops", "boolean logic", "combinational circuits", "sequential circuits"],
+    "embedded systems": ["embedded systems", "embedded", "microcontroller", "arduino", "raspberry pi", "arm", "rtos", "firmware"],
+    "vlsi design": ["vlsi", "verilog", "vhdl", "asic", "fpga", "cadence", "cmos", "circuit layout"],
+    "signals & systems": ["signals and systems", "fourier transform", "laplace transform", "z-transform", "dsp", "digital signal processing"],
+    "control systems": ["control systems", "bode plot", "pid controller", "nyquist", "state space", "feedback control"],
+    "communication systems": ["communication systems", "modulation", "am", "fm", "wireless", "rf", "antenna", "signal transmission"],
+    "microprocessors & microcontrollers": ["microprocessor", "microcontrollers", "8085", "8086", "arm cortex", "pic", "assembly language"]
 }
 
 
@@ -98,35 +114,31 @@ class CourseCurriculumEngine:
         print(f"[CourseCurriculumEngine] Successfully indexed {len(self.courses)} distinct courses across {len(self.categories)} categories.")
 
     def search_courses(self, query: str = "", level: Optional[str] = None, category: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Search and filter courses by keyword query, level (UG/PG/Diploma), or category."""
-        query_lower = query.strip().lower()
-        level_upper = level.strip().upper() if level else None
-        cat_lower = category.strip().lower() if category else None
-
+        """Searches and filters courses by keyword, level, or category."""
+        q = query.strip().lower()
         results = []
         for c in self.courses:
-            if level_upper and c["course_level"] != level_upper:
+            if level and c["course_level"].lower() != level.strip().lower():
                 continue
-            if cat_lower and cat_lower not in c["category"].lower():
+            if category and c["category"].lower() != category.strip().lower():
                 continue
-            if query_lower:
-                match_name = query_lower in c["course_name"].lower()
-                match_sub = any(query_lower in s.lower() for s in c["major_subjects"])
-                match_cat = query_lower in c["category"].lower()
-                if not (match_name or match_sub or match_cat):
+            if q:
+                in_name = q in c["course_name"].lower()
+                in_cat = q in c["category"].lower()
+                in_subjects = any(q in sub.lower() for sub in c["major_subjects"])
+                if not (in_name or in_cat or in_subjects):
                     continue
             results.append({
                 "course_name": c["course_name"],
                 "course_level": c["course_level"],
                 "category": c["category"],
-                "subject_count": c["total_subjects"],
-                "sample_subjects": c["major_subjects"][:4]
+                "total_subjects": c["total_subjects"],
+                "sample_subjects": c["major_subjects"][:5]
             })
-
-        return results[:60]
+        return results
 
     def get_course_details(self, course_name: str) -> Optional[Dict[str, Any]]:
-        """Get full syllabus subjects and metadata for a specific course."""
+        """Retrieves complete syllabus record for a course."""
         c = self.courses_by_name.get(course_name.strip().lower())
         if not c:
             q = course_name.strip().lower()
@@ -150,13 +162,19 @@ class CourseCurriculumEngine:
         text_lower = raw_text.lower()
         skills_set = set(s.lower() for s in (detected_skills or []))
 
-        # 1. Detect candidate level from explicit degree tokens
+        # 1. Accurately detect candidate level using word boundaries
         detected_level = None
-        if any(token in text_lower for token in ["diploma", "polytechnic"]):
-            detected_level = "Diploma"
-        elif any(token in text_lower for token in ["m.tech", "mtech", "m.e", "me", "m.sc", "msc", "mba", "mca", "m.com", "mcom", "post graduate", "masters"]):
+        has_ug = bool(re.search(r"\b(b\.?tech|btech|b\.?e\.?|b\.?sc|bsc|bba|bca|b\.?com|bcom|bachelor|undergraduate|ug)\b", text_lower))
+        has_pg = bool(re.search(r"\b(m\.?tech|mtech|m\.?e\.?|m\.?sc|msc|mba|mca|m\.?com|mcom|masters|post\s*graduate|pg)\b", text_lower))
+        has_diploma = bool(re.search(r"\b(diploma|polytechnic)\b", text_lower))
+
+        if has_pg and not has_ug:
             detected_level = "PG"
-        elif any(token in text_lower for token in ["b.tech", "btech", "b.e", "be", "b.sc", "bsc", "bba", "bca", "b.com", "bcom", "bachelor", "undergraduate"]):
+        elif has_ug:
+            detected_level = "UG"
+        elif has_diploma:
+            detected_level = "Diploma"
+        else:
             detected_level = "UG"
 
         candidate_scores: List[Tuple[Dict[str, Any], float, int]] = []
@@ -166,28 +184,34 @@ class CourseCurriculumEngine:
             course_name_lower = c["course_name"].lower()
             course_level = c["course_level"]
 
-            # A. Title Match Bonus
-            if course_name_lower in text_lower:
-                score += 45.0
+            # A. Title Match Bonus with word boundary check
+            escaped_name = re.escape(course_name_lower)
+            if re.search(r"\b" + escaped_name + r"\b", text_lower):
+                score += 50.0
+                # Extra boost if mentioned along with degree keywords (e.g. 'b.tech in data science')
+                if re.search(r"(degree|b\.?tech|m\.?tech|b\.?e|m\.?e|bachelor|master|diploma).*?" + escaped_name, text_lower):
+                    score += 25.0
             else:
-                tokens = [t for t in re.split(r"[\s&/,()\-]+", course_name_lower) if len(t) > 2 and t not in ["and", "engineering", "technology", "studies", "science", "arts"]]
+                stop_words = ["and", "engineering", "technology", "studies", "science", "arts", "general"]
+                tokens = [t for t in re.split(r"[\s&/,()\-]+", course_name_lower) if len(t) > 2 and t not in stop_words]
                 if tokens:
                     token_hits = sum(1 for t in tokens if re.search(r"\b" + re.escape(t) + r"\b", text_lower))
                     score += (token_hits / len(tokens)) * 25.0
 
-            # B. Level Preference Alignment
-            if detected_level:
-                if course_level == detected_level:
-                    score += 15.0
-                elif detected_level == "Diploma" and course_level == "UG":
-                    score -= 5.0
+            # B. Level Alignment
+            if course_level == detected_level:
+                score += 15.0
+            elif detected_level == "UG" and course_level == "Diploma":
+                score -= 10.0
+            elif detected_level == "Diploma" and course_level == "UG":
+                score -= 5.0
 
             # C. Major Subject Alignment
             subject_hits = 0
             for subject in c["major_subjects"]:
                 sub_lower = subject.lower()
                 is_hit = False
-                if sub_lower in text_lower or any(re.search(r"\b" + re.escape(s) + r"\b", text_lower) for s in [sub_lower]):
+                if sub_lower in text_lower or re.search(r"\b" + re.escape(sub_lower) + r"\b", text_lower):
                     is_hit = True
                 else:
                     synonyms = SUBJECT_SYNONYMS.get(sub_lower, [])
@@ -198,7 +222,7 @@ class CourseCurriculumEngine:
                     subject_hits += 1
 
             subject_ratio = subject_hits / max(1, len(c["major_subjects"]))
-            score += subject_ratio * 40.0
+            score += subject_ratio * 45.0
 
             candidate_scores.append((c, score, subject_hits))
 
