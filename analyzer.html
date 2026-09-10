@@ -12,6 +12,7 @@
     <title>AutoHire | AI Resume Analyzer & Study Roadmap</title>
 
     <script src="api-config.js"></script>
+    <script src="courses-data.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
         if (window.pdfjsLib) {
@@ -532,6 +533,59 @@
             border-color: var(--primary);
         }
 
+        /* Curriculum & Subject Mastery Matrix */
+        .curriculum-tile {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 12px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.25s var(--ease-out);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .curriculum-tile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        .curriculum-tile.mastered {
+            border-color: rgba(34, 197, 94, 0.45);
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(15, 23, 42, 0.75));
+        }
+        .curriculum-tile.mastered:hover {
+            border-color: #22c55e;
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.2);
+        }
+        .curriculum-tile.partial {
+            border-color: rgba(234, 179, 8, 0.4);
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(15, 23, 42, 0.75));
+        }
+        .curriculum-tile.partial:hover {
+            border-color: #eab308;
+            box-shadow: 0 8px 24px rgba(234, 179, 8, 0.2);
+        }
+        .curriculum-tile.gap {
+            border-color: rgba(239, 68, 68, 0.35);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(15, 23, 42, 0.75));
+        }
+        .curriculum-tile.gap:hover {
+            border-color: #ef4444;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
+        }
+        .subject-evidence-box {
+            margin-top: 8px;
+            padding: 8px 10px;
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            border-left: 2px solid var(--primary);
+            line-height: 1.4;
+        }
+
         .account-button {
             display: none;
             align-items: center;
@@ -700,6 +754,94 @@
                     <div style="font-size:0.78rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.06em;">Predicted Candidate Field</div>
                     <div id="domain-title" style="font-size:1.25rem; font-weight:800; color:var(--primary); font-family:'Space Grotesk', sans-serif;">Engineering & Computer Science</div>
                     <div id="domain-desc" style="font-size:0.88rem; color:#cbd5e1; margin-top:2px;">Field-tailored analysis & career roadmap evaluation</div>
+                </div>
+            </div>
+
+            <!-- ACADEMIC CURRICULUM & COURSE ALIGNMENT MATRIX (courses.csv Dataset) -->
+            <div class="section-card" id="curriculum-alignment-card" style="display: none; width: 100%;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:18px;">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+                            <span style="font-size:1.6rem;">🎓</span>
+                            <h2 style="margin:0;">Academic Curriculum & Subject Mastery Matrix</h2>
+                        </div>
+                        <p class="subtitle" style="margin-bottom:0;">Benchmarked against 2,378 official course syllabi and 220 degree curricula (<code>courses.csv</code>):</p>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <span id="curriculum-level-badge" style="padding:6px 14px; border-radius:20px; font-size:0.85rem; font-weight:800; background:rgba(56, 189, 248, 0.2); color:#38bdf8; border:1px solid #38bdf8; text-transform:uppercase;">UG Degree</span>
+                        <span id="curriculum-category-pill" style="padding:6px 14px; border-radius:20px; font-size:0.85rem; font-weight:700; background:rgba(168, 85, 247, 0.2); color:#c084fc; border:1px solid rgba(168, 85, 247, 0.4);">UG Engineering & Technology</span>
+                    </div>
+                </div>
+
+                <!-- MATCHED COURSE HERO BANNER & BENCHMARK SELECTOR -->
+                <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 14px; padding: 20px; margin-bottom: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.3);">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; align-items: center;">
+                        <div>
+                            <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 700; margin-bottom: 4px;">Detected Academic Curriculum</div>
+                            <h3 id="matched-course-title" style="font-family: 'Space Grotesk', sans-serif; font-size: 1.4rem; color: #38bdf8; margin-bottom: 6px;">Computer Science Engineering</h3>
+                            <p id="curriculum-summary-text" style="font-size: 0.9rem; color: #cbd5e1; line-height: 1.5; margin: 0;">Syllabus audit verified core subject evidence across official major subjects.</p>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.88rem; font-weight: 700; color: #f8fafc;">Curriculum Coverage Rating</span>
+                                <span id="curriculum-score-num" style="font-size: 1.3rem; font-weight: 800; font-family: 'Space Grotesk', sans-serif; color: var(--success);">0%</span>
+                            </div>
+                            <div class="prob-bar-container" style="height: 12px; background: rgba(255,255,255,0.08);">
+                                <div id="curriculum-score-bar" class="prob-bar-fill" style="background: linear-gradient(90deg, #38bdf8, #22c55e); width: 0%;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); flex-wrap: wrap; gap: 8px;">
+                                <span id="curriculum-mastered-stat">🟢 0 Mastered</span>
+                                <span id="curriculum-partial-stat">🟡 0 Developing</span>
+                                <span id="curriculum-gap-stat">🔴 0 Syllabus Gaps</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- INTERACTIVE 220-COURSE BENCHMARK SWITCHER -->
+                    <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 260px;">
+                            <label for="course-benchmark-select" style="font-size: 0.85rem; font-weight: 700; color: #94a3b8; white-space: nowrap;">🔄 Benchmark Against Any Course (220 Syllabi):</label>
+                            <select id="course-benchmark-select" style="flex: 1; background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(56, 189, 248, 0.35); color: #f8fafc; border-radius: 8px; padding: 8px 12px; font-size: 0.88rem; outline: none; cursor: pointer;">
+                                <option value="">Select a Course to Benchmark...</option>
+                            </select>
+                        </div>
+                        <button id="btn-benchmark-course" type="button" style="padding: 8px 16px; background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+                            ⚡ Benchmark Syllabus
+                        </button>
+                    </div>
+                </div>
+
+                <!-- MAJOR SUBJECTS MASTERY GRID -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary); font-weight: 800; margin-bottom: 12px;">
+                        📚 Official Major Subjects Audit (Click any tile for resume evidence & study tips):
+                    </div>
+                    <div id="curriculum-subjects-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+                        <!-- Dynamically populated subject tiles -->
+                    </div>
+                </div>
+
+                <!-- ALTERNATIVE DEGREE FITS & HIGHER EDUCATION PATHWAY -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                    <!-- ALTERNATIVE COURSE FITS -->
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px;">
+                        <h4 style="font-family: 'Space Grotesk', sans-serif; font-size: 1rem; color: #cbd5e1; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                            🎯 Closest Alternative Degree Curricula
+                        </h4>
+                        <div id="alternative-courses-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- HIGHER EDUCATION & SPECIALIZATION PATHWAY -->
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px;">
+                        <h4 style="font-family: 'Space Grotesk', sans-serif; font-size: 1rem; color: #a855f7; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                            🚀 Recommended Higher Education / Specializations
+                        </h4>
+                        <div id="higher-education-pathway-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1112,6 +1254,9 @@
                 extractedText = selectedFile.name.replace(/[^a-zA-Z0-9\s]/g, ' ');
             }
 
+            window.currentExtractedText = extractedText;
+            window.selectedResumeFile = selectedFile;
+
             const clientValidation = validateDocumentClientSide(extractedText, fileName);
             if (!clientValidation.isValid) {
                 displayValidationError(clientValidation);
@@ -1236,7 +1381,8 @@
                 job_matches: [
                     { title: "Junior Software Engineer", match_score: Math.min(96, overallScore + 5), reason: "Matches detected core programming skills.", matched_skills: foundSkills.slice(0, 3), missing_skills: ["Docker", "Kubernetes"] },
                     { title: "Fullstack Web Developer Intern", match_score: Math.min(92, overallScore + 2), reason: "Aligns with web & application development stack.", matched_skills: foundSkills.slice(1, 4), missing_skills: ["GraphQL"] }
-                ]
+                ],
+                curriculum_alignment: clientMatchCurriculum(extractedText)
             };
 
             renderAnalysisResults(fallbackData);
@@ -1501,6 +1647,9 @@
                 `;
                 suggestionsList.appendChild(card);
             });
+
+            // Render Academic Curriculum & Course Alignment Matrix (courses.csv)
+            renderCurriculumAlignment(data.curriculum_alignment);
         }
 
         function setMetricBar(id, score) {
@@ -1509,6 +1658,523 @@
             const barEl = document.getElementById(`bar-${id}`);
             if (scoreEl) scoreEl.innerText = `${rounded}%`;
             if (barEl) barEl.style.width = `${rounded}%`;
+        }
+
+        function renderCurriculumAlignment(currData) {
+            const card = document.getElementById('curriculum-alignment-card');
+            if (!card) return;
+
+            if (!currData || !currData.matched_course) {
+                if (window.COURSES_COMPACT_DATA && window.currentExtractedText) {
+                    currData = clientMatchCurriculum(window.currentExtractedText);
+                }
+            }
+
+            if (!currData || !currData.matched_course) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'block';
+
+            const mc = currData.matched_course;
+            const courseName = mc.course_name || "Engineering Program";
+            const level = mc.course_level || currData.detected_level || "UG";
+            const category = mc.category || "Higher Education";
+            const score = currData.curriculum_score !== undefined ? currData.curriculum_score : 50;
+
+            document.getElementById('matched-course-title').innerText = courseName;
+            document.getElementById('curriculum-level-badge').innerText = `${level} Degree`;
+            document.getElementById('curriculum-category-pill').innerText = category;
+            document.getElementById('curriculum-score-num').innerText = `${score}%`;
+            document.getElementById('curriculum-score-bar').style.width = `${score}%`;
+            document.getElementById('curriculum-summary-text').innerText = currData.curriculum_summary || `Syllabus audit verified core subject evidence across official major subjects of ${courseName}.`;
+
+            const masteredCount = currData.mastered_count !== undefined ? currData.mastered_count : (currData.mastered_subjects || []).length;
+            const partialCount = currData.partial_count !== undefined ? currData.partial_count : (currData.partial_subjects || []).length;
+            const gapCount = currData.gap_count !== undefined ? currData.gap_count : (currData.gap_subjects || []).length;
+
+            document.getElementById('curriculum-mastered-stat').innerText = `🟢 ${masteredCount} Mastered`;
+            document.getElementById('curriculum-partial-stat').innerText = `🟡 ${partialCount} Developing`;
+            document.getElementById('curriculum-gap-stat').innerText = `🔴 ${gapCount} Syllabus Gaps`;
+
+            // Render Subjects Grid
+            const subjectsGrid = document.getElementById('curriculum-subjects-grid');
+            subjectsGrid.innerHTML = '';
+
+            const allEvals = currData.all_subject_evaluations || currData.all_evaluations || [];
+            if (allEvals.length === 0) {
+                (currData.mastered_subjects || []).forEach(s => allEvals.push({ ...s, status: 'MASTERED' }));
+                (currData.partial_subjects || []).forEach(s => allEvals.push({ ...s, status: 'PARTIAL' }));
+                (currData.gap_subjects || []).forEach(s => allEvals.push({ ...s, status: 'GAP' }));
+            }
+
+            allEvals.forEach((item, idx) => {
+                const tile = document.createElement('div');
+                const st = (item.status || 'GAP').toLowerCase();
+                tile.className = `curriculum-tile ${st}`;
+
+                let badgeColor = '#ef4444';
+                let badgeBg = 'rgba(239, 68, 68, 0.2)';
+                let badgeText = '🔴 Missing Syllabus Gap';
+
+                if (st === 'mastered') {
+                    badgeColor = '#22c55e';
+                    badgeBg = 'rgba(34, 197, 94, 0.2)';
+                    badgeText = '🟢 Verified in Resume';
+                } else if (st === 'partial') {
+                    badgeColor = '#eab308';
+                    badgeBg = 'rgba(234, 179, 8, 0.2)';
+                    badgeText = '🟡 Partial Evidence';
+                }
+
+                tile.innerHTML = `
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; gap:8px;">
+                            <span style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:${badgeColor}; background:${badgeBg}; padding:2px 8px; border-radius:6px;">
+                                ${badgeText}
+                            </span>
+                            <span style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">#${idx+1}</span>
+                        </div>
+                        <h4 style="font-family:'Space Grotesk', sans-serif; font-size:1.05rem; color:#f8fafc; margin:4px 0 8px 0;">${item.subject}</h4>
+                    </div>
+                    <div>
+                        <div class="subject-evidence-box">
+                            <strong style="color:#f8fafc;">Evidence:</strong> ${item.evidence_quote || 'Not evidenced in resume text.'}
+                        </div>
+                        <div style="font-size:0.78rem; color:#cbd5e1; margin-top:8px; line-height:1.4;">
+                            💡 <strong>Action:</strong> ${item.study_action || 'Study key concepts and demonstrate in portfolio projects.'}
+                        </div>
+                    </div>
+                `;
+                subjectsGrid.appendChild(tile);
+            });
+
+            // Render Alternative Courses
+            const altList = document.getElementById('alternative-courses-list');
+            altList.innerHTML = '';
+            const altCourses = currData.alternative_courses || [];
+            if (altCourses.length === 0) {
+                altList.innerHTML = '<div style="font-size:0.85rem; color:var(--text-muted); padding:8px 0;">No close alternative degrees found.</div>';
+            } else {
+                altCourses.forEach(alt => {
+                    const row = document.createElement('div');
+                    row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; transition:border-color 0.2s;";
+                    row.onmouseenter = () => row.style.borderColor = "#38bdf8";
+                    row.onmouseleave = () => row.style.borderColor = "rgba(255,255,255,0.06)";
+                    row.onclick = () => benchmarkCustomCourse(alt.course_name);
+                    row.innerHTML = `
+                        <div>
+                            <div style="font-weight:700; color:#f8fafc; font-size:0.9rem;">${alt.course_name}</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">${alt.category} [${alt.course_level}]</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="font-weight:800; color:#38bdf8; font-size:0.9rem;">${alt.match_score}% Match</span>
+                            <div style="font-size:0.72rem; color:#22c55e;">Benchmark ↗</div>
+                        </div>
+                    `;
+                    altList.appendChild(row);
+                });
+            }
+
+            // Render Higher Education Pathways
+            const pathList = document.getElementById('higher-education-pathway-list');
+            pathList.innerHTML = '';
+            const pathways = currData.higher_education_pathway || [];
+            if (pathways.length === 0) {
+                pathList.innerHTML = '<div style="font-size:0.85rem; color:var(--text-muted); padding:8px 0;">Explore advanced postgraduate specializations in your field.</div>';
+            } else {
+                pathways.forEach(p => {
+                    const row = document.createElement('div');
+                    row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:rgba(168,85,247,0.08); border-radius:8px; border:1px solid rgba(168,85,247,0.25);";
+                    const subs = (p.highlight_subjects || []).join(', ');
+                    row.innerHTML = `
+                        <div style="max-width:70%;">
+                            <div style="font-weight:700; color:#e2e8f0; font-size:0.9rem;">${p.course_name} <span style="font-size:0.75rem; color:#c084fc; font-weight:800;">[${p.course_level}]</span></div>
+                            <div style="font-size:0.75rem; color:#cbd5e1; margin-top:2px;">📖 ${subs || p.category}</div>
+                        </div>
+                        <button type="button" onclick="benchmarkCustomCourse('${p.course_name.replace(/'/g, "\\'")}')" style="padding:6px 12px; background:rgba(168,85,247,0.25); border:1px solid #a855f7; color:#f8fafc; border-radius:6px; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap;">
+                            Audit Degree
+                        </button>
+                    `;
+                    pathList.appendChild(row);
+                });
+            }
+
+            // Sync benchmark dropdown selection
+            const selectEl = document.getElementById('course-benchmark-select');
+            if (selectEl) {
+                for (let opt of selectEl.options) {
+                    if (opt.value.toLowerCase() === courseName.toLowerCase()) {
+                        opt.selected = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        async function benchmarkCustomCourse(courseName) {
+            if (!courseName) {
+                const sel = document.getElementById('course-benchmark-select');
+                courseName = sel ? sel.value : "";
+            }
+            if (!courseName) return;
+
+            const resumeText = window.currentExtractedText || (document.getElementById('pasted-resume-text') ? document.getElementById('pasted-resume-text').value : "");
+
+            const btn = document.getElementById('btn-benchmark-course');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = "⚡ Auditing Syllabus...";
+            }
+
+            try {
+                const apiOrigin = window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800";
+                const endpoints = [
+                    `${apiOrigin}/api/courses/audit-custom`,
+                    "http://127.0.0.1:8800/api/courses/audit-custom",
+                    "http://127.0.0.1:5503/api/courses/audit-custom"
+                ];
+
+                let auditData = null;
+                for (const url of endpoints) {
+                    try {
+                        const fd = new FormData();
+                        fd.append("target_course", courseName);
+                        if (resumeText) fd.append("resume_text", resumeText);
+                        if (window.selectedResumeFile) fd.append("file", window.selectedResumeFile);
+
+                        const res = await fetch(url, { method: "POST", body: fd });
+                        if (res.ok) {
+                            auditData = await res.json();
+                            break;
+                        }
+                    } catch (e) {}
+                }
+
+                if (!auditData && window.COURSES_COMPACT_DATA) {
+                    auditData = clientAuditCourse(courseName, resumeText);
+                }
+
+                if (auditData) {
+                    renderCurriculumAlignment({
+                        matched_course: {
+                            course_name: auditData.course_name,
+                            course_level: auditData.course_level,
+                            category: auditData.category,
+                            match_confidence: 92,
+                            total_curriculum_subjects: (auditData.all_evaluations || []).length
+                        },
+                        curriculum_score: auditData.curriculum_score,
+                        mastered_count: auditData.mastered_count,
+                        partial_count: auditData.partial_count,
+                        gap_count: auditData.gap_count,
+                        all_subject_evaluations: auditData.all_evaluations,
+                        mastered_subjects: auditData.mastered_subjects,
+                        partial_subjects: auditData.partial_subjects,
+                        gap_subjects: auditData.gap_subjects,
+                        higher_education_pathway: auditData.higher_education_pathway,
+                        curriculum_summary: `Custom benchmark audit against official syllabus for '${auditData.course_name}' (${auditData.course_level} - ${auditData.category}).`
+                    });
+
+                    const card = document.getElementById('curriculum-alignment-card');
+                    if (card) {
+                        card.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+            } catch (err) {
+                console.error("Benchmark error:", err);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = "⚡ Benchmark Syllabus";
+                }
+            }
+        }
+
+        function clientMatchCurriculum(rawText) {
+            const list = window.COURSES_COMPACT_DATA || [];
+            if (list.length === 0) return null;
+
+            const textLower = (rawText || "").toLowerCase();
+            let detectedLevel = "UG";
+            if (/\b(diploma|polytechnic)\b/i.test(textLower)) detectedLevel = "Diploma";
+            else if (/\b(m\.tech|mtech|m\.e|msc|mba|mca|post graduate|masters|pg)\b/i.test(textLower)) detectedLevel = "PG";
+            else if (/\b(b\.tech|btech|b\.e|bsc|bba|bca|bachelor|ug)\b/i.test(textLower)) detectedLevel = "UG";
+
+            const subjectSynonyms = {
+                "data structures & algorithms": ["dsa", "data structure", "data structures", "algorithms", "algorithm", "trees", "graphs", "dynamic programming", "leetcode"],
+                "database management systems": ["dbms", "database", "databases", "sql", "relational database", "rdbms", "postgresql", "mysql", "mongodb", "nosql"],
+                "operating systems": ["operating system", "operating systems", "os", "linux", "unix", "kernel", "multithreading", "processes", "memory management"],
+                "computer networks": ["computer network", "computer networks", "networking", "tcp/ip", "udp", "http", "https", "dns", "osi model", "routing"],
+                "web development": ["web development", "web dev", "frontend", "backend", "full stack", "fullstack", "html", "css", "javascript", "typescript", "react", "nodejs"],
+                "software engineering": ["software engineering", "sdlc", "agile", "scrum", "design patterns", "ci/cd", "system design", "code refactoring"],
+                "object-oriented programming": ["object-oriented", "object oriented", "oop", "oops", "classes", "inheritance", "polymorphism"],
+                "python programming": ["python", "python3", "pandas", "numpy", "flask", "django", "fastapi"],
+                "java programming": ["java", "jvm", "spring", "spring boot", "hibernate"],
+                "machine learning": ["machine learning", "ml", "supervised learning", "unsupervised learning", "scikit-learn", "tensorflow", "pytorch"],
+                "artificial intelligence": ["artificial intelligence", "ai", "genai", "llm", "deep learning", "nlp", "computer vision"],
+                "cloud computing": ["cloud", "aws", "amazon web services", "azure", "gcp", "google cloud", "docker", "kubernetes"],
+                "cyber security": ["cyber security", "cybersecurity", "infosec", "penetration testing", "vulnerability assessment", "cryptography"],
+                "data science": ["data science", "data analytics", "data visualization", "pandas", "numpy", "matplotlib"]
+            };
+
+            const scored = list.map(c => {
+                let score = 0;
+                const cNameLower = c.name.toLowerCase();
+                const escapedName = cNameLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                if (new RegExp(`\\b${escapedName}\\b`, 'i').test(textLower)) {
+                    score += 45;
+                } else {
+                    const stopWords = ["and", "engineering", "technology", "studies", "science", "arts", "general"];
+                    const tokens = cNameLower.split(/[\s&/,()\-]+/).filter(t => t.length > 2 && !stopWords.includes(t));
+                    if (tokens.length > 0) {
+                        const tokenHits = tokens.filter(t => {
+                            const esc = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            return new RegExp(`\\b${esc}\\b`, 'i').test(textLower);
+                        }).length;
+                        score += (tokenHits / tokens.length) * 25;
+                    }
+                }
+
+                if (c.level === detectedLevel) score += 15;
+                else if (detectedLevel === "Diploma" && c.level === "UG") score -= 5;
+
+                let hits = 0;
+                c.subjects.forEach(sub => {
+                    const subLower = sub.toLowerCase();
+                    let matched = false;
+                    if (textLower.includes(subLower)) {
+                        matched = true;
+                    } else {
+                        const syns = subjectSynonyms[subLower] || [];
+                        if (syns.some(s => textLower.includes(s))) matched = true;
+                    }
+                    if (matched) hits++;
+                });
+                score += (hits / Math.max(1, c.subjects.length)) * 40;
+
+                return { course: c, score, hits };
+            });
+
+            scored.sort((a, b) => b.score - a.score);
+            const bestCourse = scored[0].course;
+            const audit = clientAuditCourse(bestCourse.name, rawText);
+
+            const alternativeCourses = scored.slice(1, 4).map(sc => ({
+                course_name: sc.course.name,
+                course_level: sc.course.level,
+                category: sc.course.category,
+                match_score: Math.min(96, Math.max(45, Math.round(sc.score * 0.9))),
+                matching_subjects_count: sc.hits,
+                total_subjects: sc.course.subjects.length
+            }));
+
+            const currCat = (bestCourse.category || "").toLowerCase();
+            let targetPGs = ["mba", "m.tech", "m.sc"];
+            if (currCat.includes("computer") || currCat.includes("engineering") || currCat.includes("tech")) {
+                targetPGs = ["m.tech", "mca", "m.sc", "mba"];
+            } else if (currCat.includes("commerce") || currCat.includes("management")) {
+                targetPGs = ["mba", "m.com"];
+            }
+
+            let pathways = [];
+            if (detectedLevel === "Diploma") {
+                pathways = list.filter(c => c.level === "UG" && (c.category || "").toLowerCase().includes("engineering")).slice(0, 4);
+            } else {
+                pathways = list.filter(c => {
+                    if (c.level !== "PG" || c.name.toLowerCase() === bestCourse.name.toLowerCase()) return false;
+                    const n = c.name.toLowerCase();
+                    if (currCat.includes("computer") || currCat.includes("engineering")) {
+                        if (n.includes("nursing") || n.includes("medical")) return false;
+                    }
+                    return targetPGs.some(pg => n.includes(pg));
+                }).slice(0, 4);
+            }
+
+            if (pathways.length === 0) {
+                pathways = list.filter(c => c.level === (detectedLevel === "Diploma" ? "UG" : "PG") && c.name !== bestCourse.name).slice(0, 4);
+            }
+
+            return {
+                matched_course: {
+                    course_name: bestCourse.name,
+                    course_level: bestCourse.level,
+                    category: bestCourse.category,
+                    match_confidence: Math.min(98, Math.max(55, Math.round(scored[0].score * 0.95))),
+                    total_curriculum_subjects: bestCourse.subjects.length
+                },
+                detected_level: detectedLevel,
+                curriculum_score: audit.curriculum_score,
+                mastered_count: audit.mastered_count,
+                partial_count: audit.partial_count,
+                gap_count: audit.gap_count,
+                all_subject_evaluations: audit.all_evaluations,
+                mastered_subjects: audit.mastered_subjects,
+                partial_subjects: audit.partial_subjects,
+                gap_subjects: audit.gap_subjects,
+                alternative_courses: alternativeCourses,
+                higher_education_pathway: pathways.map(p => ({
+                    course_name: p.name,
+                    course_level: p.level,
+                    category: p.category,
+                    highlight_subjects: p.subjects.slice(0, 3)
+                })),
+                curriculum_summary: `Curriculum analysis matched profile to '${bestCourse.name}' (${bestCourse.level} - ${bestCourse.category}) with ${audit.curriculum_score}% syllabus evidence.`
+            };
+        }
+
+        function clientAuditCourse(courseName, rawText) {
+            const list = window.COURSES_COMPACT_DATA || [];
+            const course = list.find(c => c.name.toLowerCase() === (courseName || "").toLowerCase()) || list[0] || { name: courseName, level: "UG", category: "Academic", subjects: [] };
+            const textLower = (rawText || "").toLowerCase();
+            const lines = (rawText || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+            const subjectSynonyms = {
+                "data structures & algorithms": ["dsa", "data structure", "data structures", "algorithms", "algorithm", "trees", "graphs", "dynamic programming", "leetcode"],
+                "database management systems": ["dbms", "database", "databases", "sql", "relational database", "rdbms", "postgresql", "mysql", "mongodb", "nosql"],
+                "operating systems": ["operating system", "operating systems", "os", "linux", "unix", "kernel", "multithreading", "processes", "memory management"],
+                "computer networks": ["computer network", "computer networks", "networking", "tcp/ip", "udp", "http", "https", "dns", "osi model", "routing"],
+                "web development": ["web development", "web dev", "frontend", "backend", "full stack", "fullstack", "html", "css", "javascript", "typescript", "react", "nodejs"],
+                "software engineering": ["software engineering", "sdlc", "agile", "scrum", "design patterns", "ci/cd", "system design", "code refactoring"],
+                "object-oriented programming": ["object-oriented", "object oriented", "oop", "oops", "classes", "inheritance", "polymorphism"],
+                "python programming": ["python", "python3", "pandas", "numpy", "flask", "django", "fastapi"],
+                "java programming": ["java", "jvm", "spring", "spring boot", "hibernate"],
+                "machine learning": ["machine learning", "ml", "supervised learning", "unsupervised learning", "scikit-learn", "tensorflow", "pytorch"],
+                "artificial intelligence": ["artificial intelligence", "ai", "genai", "llm", "deep learning", "nlp", "computer vision"],
+                "cloud computing": ["cloud", "aws", "amazon web services", "azure", "gcp", "google cloud", "docker", "kubernetes"],
+                "cyber security": ["cyber security", "cybersecurity", "infosec", "penetration testing", "vulnerability assessment", "cryptography"],
+                "data science": ["data science", "data analytics", "data visualization", "pandas", "numpy", "matplotlib"]
+            };
+
+            const mastered = [];
+            const partial = [];
+            const gaps = [];
+            const allEvals = [];
+
+            course.subjects.forEach(sub => {
+                const subLower = sub.toLowerCase();
+                let isMastered = false;
+                let isPartial = false;
+                let foundQuote = "";
+
+                for (const line of lines) {
+                    if (line.toLowerCase().includes(subLower)) {
+                        isMastered = true;
+                        foundQuote = line.slice(0, 120);
+                        break;
+                    }
+                }
+
+                if (!isMastered && textLower.includes(subLower)) {
+                    isMastered = true;
+                    foundQuote = `Direct subject keyword '${sub}' detected in resume text.`;
+                }
+
+                if (!isMastered) {
+                    const syns = subjectSynonyms[subLower] || [];
+                    for (const s of syns) {
+                        if (textLower.includes(s)) {
+                            isMastered = true;
+                            foundQuote = `Subject concept verified via '${s}'.`;
+                            break;
+                        }
+                    }
+                }
+
+                if (!isMastered) {
+                    const tokens = subLower.split(/[\s&/,()-]+/).filter(t => t.length > 3);
+                    const tokenHits = tokens.filter(t => textLower.includes(t)).length;
+                    if (tokenHits > 0) {
+                        isPartial = true;
+                        foundQuote = `Related topic keyword detected in candidate experience.`;
+                    }
+                }
+
+                const item = {
+                    subject: sub,
+                    status: isMastered ? "MASTERED" : (isPartial ? "PARTIAL" : "GAP"),
+                    evidence_quote: foundQuote || (isMastered ? `Verified in resume text.` : `Not evidenced in uploaded resume.`),
+                    study_action: isMastered ? `Apply ${sub} to advanced scalable portfolio projects.` : `Core course subject '${sub}' is missing. Study fundamentals & highlight in skills.`
+                };
+
+                if (isMastered) mastered.push(item);
+                else if (isPartial) partial.push(item);
+                else gaps.push(item);
+
+                allEvals.push(item);
+            });
+
+            const total = Math.max(1, course.subjects.length);
+            const score = Math.round(((mastered.length + partial.length * 0.5) / total) * 100);
+
+            return {
+                course_name: course.name,
+                course_level: course.level,
+                category: course.category,
+                curriculum_score: score,
+                mastered_count: mastered.length,
+                partial_count: partial.length,
+                gap_count: gaps.length,
+                mastered_subjects: mastered,
+                partial_subjects: partial,
+                gap_subjects: gaps,
+                all_evaluations: allEvals
+            };
+        }
+
+        function initCoursesDropdown() {
+            const selectEl = document.getElementById('course-benchmark-select');
+            if (!selectEl) return;
+
+            let courses = window.COURSES_COMPACT_DATA || [];
+            if (courses.length === 0) {
+                fetch("/api/courses")
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.courses) {
+                            populateDropdown(data.courses.map(c => ({ name: c.course_name, level: c.course_level, category: c.category, subjects: c.sample_subjects })));
+                        }
+                    })
+                    .catch(() => {});
+            } else {
+                populateDropdown(courses);
+            }
+
+            function populateDropdown(list) {
+                selectEl.innerHTML = '<option value="">-- Choose a Degree / Course Syllabus (220 Available) --</option>';
+                const groups = {};
+                list.forEach(c => {
+                    const cat = c.category || "General Courses";
+                    if (!groups[cat]) groups[cat] = [];
+                    groups[cat].push(c);
+                });
+
+                Object.keys(groups).sort().forEach(cat => {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = cat;
+                    groups[cat].sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.name;
+                        opt.innerText = `${c.name} [${c.level}]`;
+                        optgroup.appendChild(opt);
+                    });
+                    selectEl.appendChild(optgroup);
+                });
+            }
+
+            selectEl.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    benchmarkCustomCourse(e.target.value);
+                }
+            });
+
+            const benchmarkBtn = document.getElementById('btn-benchmark-course');
+            if (benchmarkBtn) {
+                benchmarkBtn.addEventListener('click', () => {
+                    if (selectEl.value) benchmarkCustomCourse(selectEl.value);
+                });
+            }
         }
 
         function downloadStudyPackPdf(topicTitle) {
@@ -1600,6 +2266,13 @@
                 })
                 .catch(() => {});
         })();
+
+        // Initialize Course Benchmark Dropdown on Load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initCoursesDropdown);
+        } else {
+            initCoursesDropdown();
+        }
     </script>
 </body>
 </html>

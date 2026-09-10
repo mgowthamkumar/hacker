@@ -610,7 +610,8 @@ app.post(["/api/rag/analyze", "/api/analyzer", "/analyzer"], memoryUpload.single
                     domain: pyResult.domain || ragAnalysis.domain,
                     predicted_domain: pyResult.predicted_domain || ragAnalysis.predicted_domain,
                     hackathon_odds: pyResult.hackathon_odds || ragAnalysis.hackathon_odds,
-                    internship_odds: pyResult.internship_odds || ragAnalysis.internship_odds
+                    internship_odds: pyResult.internship_odds || ragAnalysis.internship_odds,
+                    curriculum_alignment: pyResult.curriculum_alignment || ragAnalysis.curriculum_alignment
                 });
             }
         } catch (pyErr) {
@@ -621,6 +622,127 @@ app.post(["/api/rag/analyze", "/api/analyzer", "/analyzer"], memoryUpload.single
     } catch (err) {
         console.error("[Analyzer Error]:", err);
         return res.status(500).json({ error: "Resume processing error" });
+    }
+});
+
+// --- Official Curriculum & Courses API Routes (courses.csv Dataset) ---
+app.get("/api/courses", async (req, res) => {
+    try {
+        const analyzerPort = process.env.ANALYZER_PORT || "5503";
+        const q = req.query.query || "";
+        const lvl = req.query.level || "";
+        const cat = req.query.category || "";
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const upstream = await fetch(`http://127.0.0.1:${analyzerPort}/api/courses?query=${encodeURIComponent(q)}&level=${encodeURIComponent(lvl)}&category=${encodeURIComponent(cat)}`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (upstream.ok) {
+                return res.json(await upstream.json());
+            }
+        } catch (e) {}
+
+        const courses = (ragEngine.coursesData || []).filter(c => {
+            if (lvl && c.level !== lvl.toUpperCase()) return false;
+            if (cat && !c.category.toLowerCase().includes(cat.toLowerCase())) return false;
+            if (q) {
+                const ql = q.toLowerCase();
+                return c.name.toLowerCase().includes(ql) || c.category.toLowerCase().includes(ql) || c.subjects.some(s => s.toLowerCase().includes(ql));
+            }
+            return true;
+        }).slice(0, 60);
+
+        return res.json({
+            total_courses: ragEngine.coursesData ? ragEngine.coursesData.length : 0,
+            categories: ragEngine.categoriesData || [],
+            levels: ["UG", "PG", "Diploma"],
+            courses: courses.map(c => ({
+                course_name: c.name,
+                course_level: c.level,
+                category: c.category,
+                subject_count: c.subjects.length,
+                sample_subjects: c.subjects.slice(0, 4)
+            }))
+        });
+    } catch (err) {
+        return res.status(500).json({ error: "Failed to fetch courses" });
+    }
+});
+
+app.get("/api/courses/:course_name/subjects", async (req, res) => {
+    try {
+        const analyzerPort = process.env.ANALYZER_PORT || "5503";
+        const courseName = req.params.course_name;
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const upstream = await fetch(`http://127.0.0.1:${analyzerPort}/api/courses/${encodeURIComponent(courseName)}/subjects`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (upstream.ok) {
+                return res.json(await upstream.json());
+            }
+        } catch (e) {}
+
+        const found = (ragEngine.coursesData || []).find(c => c.name.toLowerCase() === courseName.toLowerCase());
+        if (!found) return res.status(404).json({ error: "Course not found" });
+        return res.json({
+            course_name: found.name,
+            course_level: found.level,
+            category: found.category,
+            major_subjects: found.subjects,
+            total_subjects: found.subjects.length
+        });
+    } catch (err) {
+        return res.status(500).json({ error: "Failed to fetch subjects" });
+    }
+});
+
+app.post("/api/courses/audit-custom", memoryUpload.single("file"), async (req, res) => {
+    try {
+        const analyzerPort = process.env.ANALYZER_PORT || "5503";
+        const targetCourse = req.body ? (req.body.target_course || "") : "";
+        const resumeText = req.body ? (req.body.resume_text || "") : "";
+
+        try {
+            const FormData = require("form-data");
+            const formData = new FormData();
+            formData.append("target_course", targetCourse);
+            if (resumeText) formData.append("resume_text", resumeText);
+            if (req.file) formData.append("file", req.file.buffer, req.file.originalname);
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
+            const upstream = await fetch(`http://127.0.0.1:${analyzerPort}/api/courses/audit-custom`, {
+                method: "POST",
+                body: formData,
+                headers: formData.getHeaders(),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (upstream.ok) {
+                return res.json(await upstream.json());
+            }
+        } catch (e) {}
+
+        const audit = ragEngine.auditCourseInRag(targetCourse, resumeText);
+        const pathway = ragEngine.getHigherEdPathwaysInRag({
+            name: audit.course_name,
+            level: audit.course_level,
+            category: audit.category
+        });
+
+        return res.json({
+            ...audit,
+            higher_education_pathway: pathway
+        });
+    } catch (err) {
+        return res.status(500).json({ error: "Custom curriculum audit failed" });
     }
 });
 

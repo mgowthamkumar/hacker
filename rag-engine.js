@@ -8,6 +8,8 @@
  * 5. RAG Resume Analysis & Personalized Roadmap Generator
  */
 
+const fs = require("fs");
+const path = require("path");
 const jobAggregator = require("./job-aggregator.js");
 
 class VectorStore {
@@ -126,6 +128,8 @@ class RagEngine {
   constructor() {
     this.vectorStore = new VectorStore();
     this.initialized = false;
+    this.coursesData = [];
+    this.categoriesData = [];
     this.initKnowledgeBase();
   }
 
@@ -139,7 +143,10 @@ class RagEngine {
     // 2. Ingest Resume Best Practices Vector Chunks
     this.ingestResumeBestPractices();
 
-    // 3. Ingest Live Aggregated Jobs into Vector Store
+    // 3. Ingest Official Course Curriculum Dataset (courses.csv)
+    this.ingestCoursesCurriculum();
+
+    // 4. Ingest Live Aggregated Jobs into Vector Store
     await this.ingestLiveJobs();
 
     this.initialized = true;
@@ -248,6 +255,346 @@ class RagEngine {
     ];
 
     practices.forEach(p => this.vectorStore.addDocument(p));
+  }
+
+  ingestCoursesCurriculum() {
+    try {
+      let csvPath = path.join(__dirname, "courses.csv");
+      if (!fs.existsSync(csvPath)) {
+        csvPath = path.join(__dirname, ".agents", "skills", "ui-ux-pro-max", "data", "courses.csv");
+      }
+      if (!fs.existsSync(csvPath)) {
+        return;
+      }
+
+      const content = fs.readFileSync(csvPath, "utf8");
+      const lines = content.split(/\r?\n/);
+      if (lines.length <= 1) return;
+
+      const header = lines[0].replace(/^\ufeff/, "").split(",").map(h => h.trim());
+      const cNameIdx = header.indexOf("Course Name");
+      const cLevelIdx = header.indexOf("Course Level");
+      const catIdx = header.indexOf("Category");
+      const subIdx = header.indexOf("Major Subject");
+
+      const coursesMap = new Map();
+      const categoriesSet = new Set();
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const parts = line.split(",").map(p => p.trim());
+        const name = parts[cNameIdx >= 0 ? cNameIdx : 0] || "";
+        const level = parts[cLevelIdx >= 0 ? cLevelIdx : 1] || "UG";
+        const cat = parts[catIdx >= 0 ? catIdx : 2] || "";
+        const sub = parts[subIdx >= 0 ? subIdx : 3] || "";
+
+        if (!name || !sub) continue;
+        const key = `${name}__${level}__${cat}`;
+        if (!coursesMap.has(key)) {
+          coursesMap.set(key, { name, level, category: cat, subjects: [] });
+        }
+        const record = coursesMap.get(key);
+        if (!record.subjects.includes(sub)) {
+          record.subjects.push(sub);
+        }
+        if (cat) categoriesSet.add(cat);
+      }
+
+      this.coursesData = Array.from(coursesMap.values());
+      this.categoriesData = Array.from(categoriesSet).sort();
+
+      this.coursesData.forEach(c => {
+        this.vectorStore.addDocument({
+          id: `curriculum_${c.name.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${c.level.toLowerCase()}`,
+          title: `${c.name} (${c.level} - ${c.category})`,
+          category: "AcademicCurriculum",
+          type: "CurriculumGuide",
+          text: `Official syllabus curriculum for ${c.name} (${c.level} degree under ${c.category}). Major official subjects: ${c.subjects.join(", ")}.`,
+          course_name: c.name,
+          course_level: c.level,
+          category_name: c.category,
+          subjects: c.subjects
+        });
+      });
+
+      console.log(`[RAG Engine] Ingested ${this.coursesData.length} course curricula into Vector Store.`);
+    } catch (err) {
+      console.warn("[RAG Engine] Course curriculum ingestion notice:", err.message);
+    }
+  }
+
+  matchCurriculumInRag(rawText, skills = []) {
+    if (!this.coursesData || this.coursesData.length === 0) {
+      return null;
+    }
+
+    const textLower = (rawText || "").toLowerCase();
+    const skillsLower = skills.map(s => s.toLowerCase());
+
+    let detectedLevel = "UG";
+    if (/\b(diploma|polytechnic)\b/i.test(textLower)) detectedLevel = "Diploma";
+    else if (/\b(m\.tech|mtech|m\.e|msc|mba|mca|post graduate|masters|pg)\b/i.test(textLower)) detectedLevel = "PG";
+    else if (/\b(b\.tech|btech|b\.e|bsc|bba|bca|bachelor|ug)\b/i.test(textLower)) detectedLevel = "UG";
+
+    const subjectSynonyms = {
+      "data structures & algorithms": ["dsa", "data structure", "data structures", "algorithms", "algorithm", "trees", "graphs", "dynamic programming", "leetcode", "time complexity"],
+      "database management systems": ["dbms", "database", "databases", "sql", "relational database", "rdbms", "postgresql", "mysql", "mongodb", "nosql", "query optimization", "sqlite"],
+      "operating systems": ["operating system", "operating systems", "os", "linux", "unix", "kernel", "multithreading", "processes", "memory management", "concurrency", "bash"],
+      "computer networks": ["computer network", "computer networks", "networking", "tcp/ip", "udp", "http", "https", "dns", "osi model", "routing", "protocols", "socket programming", "vpn"],
+      "web development": ["web development", "web dev", "frontend", "backend", "full stack", "fullstack", "html", "css", "javascript", "typescript", "react", "nodejs", "rest api", "vue", "angular"],
+      "software engineering": ["software engineering", "sdlc", "agile", "scrum", "design patterns", "ci/cd", "system design", "code refactoring", "software architecture", "unit testing"],
+      "object-oriented programming": ["object-oriented", "object oriented", "oop", "oops", "classes", "inheritance", "polymorphism", "encapsulation", "abstraction"],
+      "python programming": ["python", "python3", "pandas", "numpy", "flask", "django", "fastapi", "pytest"],
+      "java programming": ["java", "jvm", "spring", "spring boot", "hibernate", "maven", "gradle"],
+      "machine learning": ["machine learning", "ml", "supervised learning", "unsupervised learning", "scikit-learn", "tensorflow", "pytorch", "neural network", "regression", "classification"],
+      "artificial intelligence": ["artificial intelligence", "ai", "genai", "llm", "deep learning", "nlp", "computer vision", "prompt engineering", "transformers"],
+      "cloud computing": ["cloud", "aws", "amazon web services", "azure", "gcp", "google cloud", "docker", "kubernetes", "serverless", "lambda", "ec2", "s3"],
+      "cyber security": ["cyber security", "cybersecurity", "infosec", "penetration testing", "vulnerability assessment", "cryptography", "firewalls", "owasp", "network security"],
+      "data science": ["data science", "data analytics", "data visualization", "pandas", "numpy", "matplotlib", "seaborn", "jupyter", "eda", "statistical analysis"]
+    };
+
+    const scoredCourses = this.coursesData.map(c => {
+      let score = 0;
+      const cNameLower = c.name.toLowerCase();
+
+      // Word boundary check for exact course match
+      const escapedName = cNameLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (new RegExp(`\\b${escapedName}\\b`, 'i').test(textLower)) {
+        score += 45;
+      } else {
+        const stopWords = ["and", "engineering", "technology", "studies", "science", "arts", "general"];
+        const tokens = cNameLower.split(/[\s&/,()\-]+/).filter(t => t.length > 2 && !stopWords.includes(t));
+        if (tokens.length > 0) {
+          const tokenHits = tokens.filter(t => {
+            const esc = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return new RegExp(`\\b${esc}\\b`, 'i').test(textLower);
+          }).length;
+          score += (tokenHits / tokens.length) * 25;
+        }
+      }
+
+      if (c.level === detectedLevel) score += 15;
+      else if (detectedLevel === "Diploma" && c.level === "UG") score -= 5;
+
+      let hits = 0;
+      c.subjects.forEach(sub => {
+        const subLower = sub.toLowerCase();
+        let matched = false;
+        if (textLower.includes(subLower) || skillsLower.includes(subLower)) {
+          matched = true;
+        } else {
+          const syns = subjectSynonyms[subLower] || [];
+          if (syns.some(s => textLower.includes(s) || skillsLower.includes(s))) {
+            matched = true;
+          }
+        }
+        if (matched) hits++;
+      });
+
+      const subRatio = hits / Math.max(1, c.subjects.length);
+      score += subRatio * 40;
+
+      return { course: c, score, hits };
+    });
+
+    scoredCourses.sort((a, b) => b.score - a.score);
+    const top = scoredCourses[0];
+    const bestCourse = top.course;
+    const matchConfidence = Math.min(98, Math.max(52, Math.round(top.score * 0.95)));
+
+    const audit = this.auditCourseInRag(bestCourse.name, rawText, skills);
+
+    const alternativeCourses = scoredCourses.slice(1, 4).map(sc => ({
+      course_name: sc.course.name,
+      course_level: sc.course.level,
+      category: sc.course.category,
+      match_score: Math.min(95, Math.max(45, Math.round(sc.score * 0.9))),
+      matching_subjects_count: sc.hits,
+      total_subjects: sc.course.subjects.length
+    }));
+
+    const higherEd = this.getHigherEdPathwaysInRag(bestCourse);
+
+    return {
+      matched_course: {
+        course_name: bestCourse.name,
+        course_level: bestCourse.level,
+        category: bestCourse.category,
+        match_confidence: matchConfidence,
+        total_curriculum_subjects: bestCourse.subjects.length
+      },
+      detected_level: detectedLevel,
+      curriculum_score: audit.curriculum_score,
+      mastered_count: audit.mastered_count,
+      partial_count: audit.partial_count,
+      gap_count: audit.gap_count,
+      mastered_subjects: audit.mastered_subjects,
+      partial_subjects: audit.partial_subjects,
+      gap_subjects: audit.gap_subjects,
+      all_subject_evaluations: audit.all_evaluations,
+      alternative_courses: alternativeCourses,
+      higher_education_pathway: higherEd,
+      curriculum_summary: `Curriculum analysis matched profile to '${bestCourse.name}' (${bestCourse.level} - ${bestCourse.category}) with ${audit.curriculum_score}% syllabus evidence.`
+    };
+  }
+
+  auditCourseInRag(courseName, rawText, skills = []) {
+    const textLower = (rawText || "").toLowerCase();
+    const skillsLower = skills.map(s => s.toLowerCase());
+    const lines = (rawText || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+    const course = (this.coursesData || []).find(c => c.name.toLowerCase() === (courseName || "").toLowerCase()) ||
+                   (this.coursesData || [])[0];
+
+    if (!course) {
+      return { curriculum_score: 50, mastered_count: 0, partial_count: 0, gap_count: 0, mastered_subjects: [], partial_subjects: [], gap_subjects: [], all_evaluations: [] };
+    }
+
+    const subjectSynonyms = {
+      "data structures & algorithms": ["dsa", "data structure", "data structures", "algorithms", "algorithm", "trees", "graphs", "dynamic programming", "leetcode", "time complexity"],
+      "database management systems": ["dbms", "database", "databases", "sql", "relational database", "rdbms", "postgresql", "mysql", "mongodb", "nosql", "query optimization", "sqlite"],
+      "operating systems": ["operating system", "operating systems", "os", "linux", "unix", "kernel", "multithreading", "processes", "memory management", "concurrency", "bash"],
+      "computer networks": ["computer network", "computer networks", "networking", "tcp/ip", "udp", "http", "https", "dns", "osi model", "routing", "protocols", "socket programming", "vpn"],
+      "web development": ["web development", "web dev", "frontend", "backend", "full stack", "fullstack", "html", "css", "javascript", "typescript", "react", "nodejs", "rest api", "vue", "angular"],
+      "software engineering": ["software engineering", "sdlc", "agile", "scrum", "design patterns", "ci/cd", "system design", "code refactoring", "software architecture", "unit testing"],
+      "object-oriented programming": ["object-oriented", "object oriented", "oop", "oops", "classes", "inheritance", "polymorphism", "encapsulation", "abstraction"],
+      "python programming": ["python", "python3", "pandas", "numpy", "flask", "django", "fastapi", "pytest"],
+      "java programming": ["java", "jvm", "spring", "spring boot", "hibernate", "maven", "gradle"],
+      "machine learning": ["machine learning", "ml", "supervised learning", "unsupervised learning", "scikit-learn", "tensorflow", "pytorch", "neural network", "regression", "classification"],
+      "artificial intelligence": ["artificial intelligence", "ai", "genai", "llm", "deep learning", "nlp", "computer vision", "prompt engineering", "transformers"],
+      "cloud computing": ["cloud", "aws", "amazon web services", "azure", "gcp", "google cloud", "docker", "kubernetes", "serverless", "lambda", "ec2", "s3"],
+      "cyber security": ["cyber security", "cybersecurity", "infosec", "penetration testing", "vulnerability assessment", "cryptography", "firewalls", "owasp", "network security"],
+      "data science": ["data science", "data analytics", "data visualization", "pandas", "numpy", "matplotlib", "seaborn", "jupyter", "eda", "statistical analysis"]
+    };
+
+    const mastered = [];
+    const partial = [];
+    const gaps = [];
+    const allEvals = [];
+
+    course.subjects.forEach(sub => {
+      const subLower = sub.toLowerCase();
+      let isMastered = false;
+      let isPartial = false;
+      let foundQuote = "";
+
+      for (const line of lines) {
+        if (line.toLowerCase().includes(subLower)) {
+          isMastered = true;
+          foundQuote = line.slice(0, 120);
+          break;
+        }
+      }
+
+      if (!isMastered && (skillsLower.includes(subLower) || textLower.includes(subLower))) {
+        isMastered = true;
+        foundQuote = `Direct evidence of ${sub} detected in verified skills.`;
+      }
+
+      // Check synonyms
+      if (!isMastered) {
+        const syns = subjectSynonyms[subLower] || [];
+        for (const syn of syns) {
+          if (textLower.includes(syn) || skillsLower.includes(syn)) {
+            isMastered = true;
+            foundQuote = `Technical evidence verified via '${syn}'.`;
+            break;
+          }
+        }
+      }
+
+      if (!isMastered) {
+        const tokens = subLower.split(/[\s&/,()-]+/).filter(t => t.length > 3);
+        const tokenHits = tokens.filter(t => textLower.includes(t)).length;
+        if (tokenHits > 0) {
+          isPartial = true;
+          foundQuote = `Related curriculum topic detected without deep project evidence.`;
+        }
+      }
+
+      const item = {
+        subject: sub,
+        status: isMastered ? "MASTERED" : (isPartial ? "PARTIAL" : "GAP"),
+        status_badge: isMastered ? "🟢 Verified in Resume" : (isPartial ? "🟡 Partial Evidence" : "🔴 Missing Syllabus Subject"),
+        evidence_quote: foundQuote || (isMastered ? `Verified in resume text.` : `Not mentioned in uploaded resume.`),
+        study_action: isMastered ? `Apply ${sub} to advanced scalable portfolio projects.` : `Core course subject '${sub}' is missing. Study fundamentals & highlight in skills.`
+      };
+
+      if (isMastered) mastered.push(item);
+      else if (isPartial) partial.push(item);
+      else gaps.push(item);
+
+      allEvals.push(item);
+    });
+
+    const total = Math.max(1, course.subjects.length);
+    const score = Math.round(((mastered.length + partial.length * 0.5) / total) * 100);
+
+    return {
+      course_name: course.name,
+      course_level: course.level,
+      category: course.category,
+      curriculum_score: score,
+      mastered_count: mastered.length,
+      partial_count: partial.length,
+      gap_count: gaps.length,
+      mastered_subjects: mastered,
+      partial_subjects: partial,
+      gap_subjects: gaps,
+      all_evaluations: allEvals
+    };
+  }
+
+  getHigherEdPathwaysInRag(course) {
+    if (!this.coursesData || !course) return [];
+    const courseName = course.name || course.course_name || "";
+    const courseLevel = course.level || course.course_level || "UG";
+    const isDiploma = courseLevel === "Diploma";
+    const currCat = (course.category || "").toLowerCase();
+
+    let targetPGs = [];
+    if (currCat.includes("computer") || currCat.includes("engineering") || currCat.includes("technology")) {
+      targetPGs = ["m.tech", "mca", "m.sc", "mba"];
+    } else if (currCat.includes("commerce") || currCat.includes("management") || currCat.includes("business")) {
+      targetPGs = ["mba", "m.com"];
+    } else if (currCat.includes("medical") || currCat.includes("health")) {
+      targetPGs = ["md", "m.sc nursing", "m.pharm", "mph"];
+    } else if (currCat.includes("design") || currCat.includes("art")) {
+      targetPGs = ["m.des", "m.arch"];
+    } else {
+      targetPGs = ["mba", "m.tech", "m.sc"];
+    }
+
+    let matches = [];
+    if (isDiploma) {
+      matches = this.coursesData.filter(c => c.level === "UG" && (c.category || "").toLowerCase().includes("engineering")).slice(0, 4);
+    } else {
+      matches = this.coursesData.filter(c => {
+        if (c.level !== "PG") return false;
+        if (courseName && c.name.toLowerCase() === courseName.toLowerCase()) return false;
+        const nameLow = c.name.toLowerCase();
+        const catLow = (c.category || "").toLowerCase();
+        if (currCat.includes("computer") || currCat.includes("engineering") || currCat.includes("tech")) {
+          if (nameLow.includes("nursing") || nameLow.includes("medical") || catLow.includes("medical")) return false;
+        }
+        return targetPGs.some(pg => nameLow.includes(pg));
+      }).slice(0, 4);
+    }
+
+    if (matches.length === 0) {
+      matches = this.coursesData.filter(c => c.level === (isDiploma ? "UG" : "PG") && (!courseName || c.name.toLowerCase() !== courseName.toLowerCase())).slice(0, 4);
+    }
+
+    return matches.map(m => ({
+      course_name: m.name,
+      course_level: m.level,
+      category: m.category,
+      highlight_subjects: m.subjects.slice(0, 3),
+      rationale: isDiploma
+        ? `Direct progression into Undergraduate degree from Diploma in ${courseName}.`
+        : `Recommended ${m.level} specialization from syllabus dataset to advance beyond ${courseName}.`
+    }));
   }
 
   async ingestLiveJobs() {
@@ -677,7 +1024,11 @@ class RagEngine {
           taxonomyAnalysis,
           competencyAudit
         )
-      )
+      ),
+      curriculum_alignment: this.matchCurriculumInRag(rawText, [
+        ...(Array.isArray(targetSkills) ? targetSkills : (typeof targetSkills === "string" ? targetSkills.split(",").map(s => s.trim()).filter(Boolean) : [])),
+        ...(competencyAudit.verified_strengths || [])
+      ])
     };
   }
 

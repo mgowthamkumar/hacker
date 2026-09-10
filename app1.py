@@ -91,6 +91,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from course_curriculum_engine import curriculum_engine
+
 class JobSuggestion(BaseModel):
     title: str
     match_score: int
@@ -141,6 +143,7 @@ class AnalysisResult(BaseModel):
     competency_audit: Optional[dict] = None
     precision_study_manual: Optional[str] = None
     compiled_typeset_manual: Optional[str] = None
+    curriculum_alignment: Optional[dict] = None
 
 
 def check_personal_details_section(raw_text: str) -> bool:
@@ -1240,8 +1243,18 @@ async def analyze_resume(
         raw_text, detected_skills, domain_name, total_score, action_score, metrics_score, structure_score, is_valid_resume and is_complete_resume
     )
 
+    # 6. Academic Curriculum & Course Alignment (courses.csv Dataset)
+    curriculum_alignment = curriculum_engine.match_resume_to_curriculum(raw_text, detected_skills)
+
     if is_valid_resume and is_complete_resume:
         feedback.append({"type": "pass", "text": f"Technical Skills Analysis -> Predicted Field: {domain_icon} {domain_name}."})
+        if curriculum_alignment and curriculum_alignment.get("matched_course"):
+            mc = curriculum_alignment["matched_course"]
+            cs = curriculum_alignment.get("curriculum_score", 0)
+            feedback.append({
+                "type": "pass",
+                "text": f"🎓 Syllabus Alignment: Profile matched to '{mc.get('course_name')}' ({mc.get('course_level')} - {mc.get('category')}) with {cs}% core subject evidence ({curriculum_alignment.get('mastered_count', 0)} verified subjects)."
+            })
 
     roadmap_dict_list = [{"title": r.title, "category": r.category, "desc": r.description, "impact": r.impact} for r in roadmap]
     jobs_dict_list = [{"title": j.title, "match_score": j.match_score, "reason": j.reason, "matched_skills": j.matched_skills, "missing_skills": j.missing_skills} for j in suggested_jobs]
@@ -1291,8 +1304,64 @@ async def analyze_resume(
                 classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text),
                 audit_competency_gaps(extract_verbatim_facts(raw_text), classify_candidate_taxonomy(extract_verbatim_facts(raw_text), raw_text), raw_text)
             )
-        )
+        ),
+        curriculum_alignment=curriculum_alignment
     )
+
+@app.get("/api/courses")
+async def list_courses(query: str = "", level: Optional[str] = None, category: Optional[str] = None):
+    return {
+        "total_courses": len(curriculum_engine.courses),
+        "categories": curriculum_engine.categories,
+        "levels": curriculum_engine.levels,
+        "courses": curriculum_engine.search_courses(query=query, level=level, category=category)
+    }
+
+@app.get("/api/courses/{course_name}/subjects")
+async def get_course_subjects(course_name: str):
+    details = curriculum_engine.get_course_details(course_name)
+    if not details:
+        raise HTTPException(status_code=404, detail=f"Course '{course_name}' not found in syllabus database")
+    return details
+
+@app.post("/api/courses/audit-custom")
+async def audit_custom_course(
+    target_course: str = Form(...),
+    resume_text: str = Form(""),
+    file: Optional[UploadFile] = File(None)
+):
+    raw_text = resume_text.strip()
+    if file:
+        try:
+            contents = await file.read()
+            ftext = extract_text_from_file(contents, file.filename)
+            if ftext:
+                raw_text = (ftext + "\n" + raw_text).strip()
+        except Exception:
+            pass
+
+    details = curriculum_engine.get_course_details(target_course)
+    if not details:
+        raise HTTPException(status_code=404, detail=f"Course '{target_course}' not found")
+
+    detected_skills = extract_resume_skills(raw_text) if raw_text else []
+    audit = curriculum_engine.audit_course_subjects(details, raw_text, detected_skills)
+    pathway = curriculum_engine.get_higher_education_pathway(details)
+
+    return {
+        "course_name": details["course_name"],
+        "course_level": details["course_level"],
+        "category": details["category"],
+        "curriculum_score": audit["curriculum_coverage_score"],
+        "mastered_count": len(audit["mastered_subjects"]),
+        "partial_count": len(audit["partial_subjects"]),
+        "gap_count": len(audit["gap_subjects"]),
+        "mastered_subjects": audit["mastered_subjects"],
+        "partial_subjects": audit["partial_subjects"],
+        "gap_subjects": audit["gap_subjects"],
+        "all_evaluations": audit["all_evaluations"],
+        "higher_education_pathway": pathway
+    }
 
 def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
     ext = os.path.splitext(filename)[1].lower()
