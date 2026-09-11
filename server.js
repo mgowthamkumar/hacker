@@ -1064,27 +1064,41 @@ async function getMailTransporter() {
         return { transporter: mailTransporter, mode: activeMailerMode };
     }
 
-    // Real SMTP Transporter Configuration (compatible with Gmail port 587 STARTTLS & port 465 SSL, plus custom SMTP)
+    // Real SMTP Transporter Configuration (compatible with Gmail service & custom SMTP)
     if (smtpUser && smtpPass) {
         try {
-            mailTransporter = nodemailer.createTransport({
-                host: smtpHost,
-                port: smtpPort,
-                secure: isPort465,
-                requireTLS: !isPort465,
-                auth: {
-                    user: smtpUser,
-                    pass: smtpPass
-                },
-                connectionTimeout: 10000,
-                greetingTimeout: 10000,
-                socketTimeout: 15000,
-                tls: {
-                    rejectUnauthorized: false
+            const isGmail = smtpHost.includes("gmail") || smtpUser.endsWith("@gmail.com");
+            const transportConfig = isGmail
+                ? {
+                    service: "gmail",
+                    auth: {
+                        user: smtpUser,
+                        pass: smtpPass
+                    },
+                    connectionTimeout: 10000,
+                    greetingTimeout: 10000,
+                    socketTimeout: 15000
                 }
-            });
-            activeMailerMode = (smtpHost.includes("gmail") || smtpUser.endsWith("@gmail.com")) ? "gmail" : "smtp";
-            console.log(`[AUTH] ✅ Real SMTP transporter initialized (${smtpHost}:${smtpPort}, secure=${isPort465}) for: ${smtpUser}`);
+                : {
+                    host: smtpHost,
+                    port: smtpPort,
+                    secure: isPort465,
+                    requireTLS: !isPort465,
+                    auth: {
+                        user: smtpUser,
+                        pass: smtpPass
+                    },
+                    connectionTimeout: 10000,
+                    greetingTimeout: 10000,
+                    socketTimeout: 15000,
+                    tls: {
+                        rejectUnauthorized: false
+                    }
+                };
+
+            mailTransporter = nodemailer.createTransport(transportConfig);
+            activeMailerMode = isGmail ? "gmail" : "smtp";
+            console.log(`[AUTH] ✅ Real SMTP transporter initialized (${isGmail ? "service:gmail" : `${smtpHost}:${smtpPort}`}) for: ${smtpUser}`);
             return { transporter: mailTransporter, mode: activeMailerMode };
         } catch (e) {
             console.error("[AUTH] ⚠️ SMTP transport initialization error:", e.message);
@@ -1496,18 +1510,25 @@ app.post(["/api/auth/send-otp", "/api/auth/resend-otp", "/auth/resend-otp", "/re
         }
     }
 
-    // Fallback 2: If session expired in memory (e.g. server restart), reconstruct pending session for existing user
+    // Fallback 2: If session expired in memory (e.g. server restart), reconstruct pending session for the email
     if (!record && requestedEmail) {
-        const users = readUsers();
-        const existingUser = users.find(u => u.email === requestedEmail);
-        if (existingUser) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (emailRegex.test(requestedEmail)) {
+            const users = readUsers();
+            const existingUser = users.find(u => u.email === requestedEmail);
             tempToken = crypto.randomUUID();
             record = {
                 hashedOtp: "",
                 salt: "",
-                email: existingUser.email,
-                authMethod: existingUser.passwordHash ? "password" : "google",
-                userId: existingUser.id,
+                email: requestedEmail,
+                authMethod: existingUser && existingUser.passwordHash ? "password" : "google",
+                userId: existingUser ? existingUser.id : crypto.randomUUID(),
+                googleUser: {
+                    id: crypto.randomUUID(),
+                    name: requestedEmail.split("@")[0],
+                    email: requestedEmail,
+                    picture: ""
+                },
                 deviceId: String(req.body.deviceId || "").trim(),
                 createdAt: Date.now(),
                 expiresAt: Date.now() + 5 * 60 * 1000,
@@ -1525,10 +1546,10 @@ app.post(["/api/auth/send-otp", "/api/auth/resend-otp", "/auth/resend-otp", "/re
 
     const now = Date.now();
 
-    // Rate limiting: 45 seconds cooldown between resend requests with 2.5s network skew tolerance
-    const cooldownMs = 45 * 1000;
+    // Rate limiting: 30 seconds cooldown between resend requests (ensures client 45s timer never hits 429)
+    const cooldownMs = 30 * 1000;
     const elapsed = now - (record.lastResendAt || 0);
-    if (elapsed < cooldownMs - 2500) {
+    if (elapsed < cooldownMs - 2000) {
         const secondsRemaining = Math.max(1, Math.ceil((cooldownMs - elapsed) / 1000));
         return res.status(429).json({
             success: false,

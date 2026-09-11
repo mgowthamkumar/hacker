@@ -515,7 +515,18 @@
 
         function renderOtpModal(tempToken, maskedEmail, rawEmail = "") {
             let currentTempToken = tempToken;
-            const userEmail = (rawEmail || "").trim().toLowerCase();
+            let userEmail = (rawEmail || "").trim().toLowerCase();
+            if (!userEmail) {
+                const emailInp = document.getElementById("emailInput");
+                if (emailInp && emailInp.value) {
+                    userEmail = emailInp.value.trim().toLowerCase();
+                }
+            }
+            if (userEmail) {
+                try { sessionStorage.setItem("autohire_otp_email", userEmail); } catch(e) {}
+            } else {
+                try { userEmail = sessionStorage.getItem("autohire_otp_email") || ""; } catch(e) {}
+            }
             const existing = document.getElementById("autohire-otp-modal");
             if (existing) existing.remove();
 
@@ -693,9 +704,6 @@
 
                         if (!res.ok) {
                             lastError = data.message || "Unable to send verification code. Please try again.";
-                            if (res.status === 400) {
-                                break;
-                            }
                             continue;
                         }
 
