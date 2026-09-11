@@ -1323,7 +1323,8 @@ app.post(["/api/auth/login", "/auth/login"], async (req, res) => {
         message: "Verification code sent",
         pendingOtp: true,
         tempToken: tempToken,
-        email: maskEmail(email)
+        email: maskEmail(email),
+        targetEmail: email
     });
 });
 
@@ -1474,25 +1475,64 @@ app.post(["/api/auth/google", "/auth/google"], async (req, res) => {
         message: "Verification code sent",
         pendingOtp: true,
         tempToken: tempToken,
-        email: maskEmail(email)
+        email: maskEmail(email),
+        targetEmail: email
     });
 });
 
-app.post(["/api/auth/send-otp", "/api/auth/resend-otp", "/auth/resend-otp"], async (req, res) => {
-    const tempToken = String(req.body.tempToken || "");
-    if (!tempToken || !pendingOtps.has(tempToken)) {
+app.post(["/api/auth/send-otp", "/api/auth/resend-otp", "/auth/resend-otp", "/resend-otp", "/api/resend-otp", "/send-otp", "/api/send-otp"], async (req, res) => {
+    let tempToken = String(req.body.tempToken || "");
+    const requestedEmail = String(req.body.email || "").trim().toLowerCase();
+    let record = tempToken && pendingOtps.has(tempToken) ? pendingOtps.get(tempToken) : null;
+
+    // Fallback 1: If record not found by token, look up active pending OTP by email
+    if (!record && requestedEmail) {
+        for (const [token, data] of pendingOtps.entries()) {
+            if (data.email === requestedEmail) {
+                record = data;
+                tempToken = token;
+                break;
+            }
+        }
+    }
+
+    // Fallback 2: If session expired in memory (e.g. server restart), reconstruct pending session for existing user
+    if (!record && requestedEmail) {
+        const users = readUsers();
+        const existingUser = users.find(u => u.email === requestedEmail);
+        if (existingUser) {
+            tempToken = crypto.randomUUID();
+            record = {
+                hashedOtp: "",
+                salt: "",
+                email: existingUser.email,
+                authMethod: existingUser.passwordHash ? "password" : "google",
+                userId: existingUser.id,
+                deviceId: String(req.body.deviceId || "").trim(),
+                createdAt: Date.now(),
+                expiresAt: Date.now() + 5 * 60 * 1000,
+                attempts: 0,
+                maxAttempts: 5,
+                lastResendAt: 0
+            };
+            pendingOtps.set(tempToken, record);
+        }
+    }
+
+    if (!record) {
         return res.status(400).json({ success: false, message: "This verification session has expired. Please sign in again." });
     }
 
-    const record = pendingOtps.get(tempToken);
     const now = Date.now();
 
-    // Rate limiting: 45 seconds cooldown between resend requests
+    // Rate limiting: 45 seconds cooldown between resend requests with 2.5s network skew tolerance
     const cooldownMs = 45 * 1000;
-    if (now - record.lastResendAt < cooldownMs) {
-        const secondsRemaining = Math.ceil((cooldownMs - (now - record.lastResendAt)) / 1000);
+    const elapsed = now - (record.lastResendAt || 0);
+    if (elapsed < cooldownMs - 2500) {
+        const secondsRemaining = Math.max(1, Math.ceil((cooldownMs - elapsed) / 1000));
         return res.status(429).json({
             success: false,
+            secondsRemaining,
             message: `Please wait ${secondsRemaining} second(s) before requesting another verification code.`
         });
     }
@@ -1522,20 +1562,33 @@ app.post(["/api/auth/send-otp", "/api/auth/resend-otp", "/auth/resend-otp"], asy
 
     return res.json({
         success: true,
-        message: "Verification code sent",
-        email: maskEmail(record.email)
+        message: "A new 6-digit code has been dispatched to your email.",
+        tempToken: tempToken,
+        email: maskEmail(record.email),
+        targetEmail: record.email
     });
 });
 
-app.post(["/api/auth/verify-otp", "/auth/verify-otp"], (req, res) => {
-    const tempToken = String(req.body.tempToken || "");
+app.post(["/api/auth/verify-otp", "/auth/verify-otp", "/api/verify-otp", "/verify-otp"], (req, res) => {
+    let tempToken = String(req.body.tempToken || "");
     const enteredOtp = String(req.body.otp || "").trim();
+    const requestedEmail = String(req.body.email || "").trim().toLowerCase();
 
-    if (!tempToken || !pendingOtps.has(tempToken)) {
+    let record = tempToken && pendingOtps.has(tempToken) ? pendingOtps.get(tempToken) : null;
+    if (!record && requestedEmail) {
+        for (const [token, data] of pendingOtps.entries()) {
+            if (data.email === requestedEmail) {
+                record = data;
+                tempToken = token;
+                break;
+            }
+        }
+    }
+
+    if (!record) {
         return res.status(400).json({ success: false, message: "This verification code has expired. Please request a new code." });
     }
 
-    const record = pendingOtps.get(tempToken);
     const now = Date.now();
 
     // 1. Check expiration (5 minutes)

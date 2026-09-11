@@ -498,7 +498,24 @@
             return deviceId;
         }
 
-        function renderOtpModal(tempToken, maskedEmail) {
+        function getAuthCandidateUrls() {
+            const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.protocol === "file:";
+            const active = window.ACTIVE_AUTH_API_URL;
+            return [
+                active,
+                isLocal ? "http://127.0.0.1:8800/api/auth" : null,
+                isLocal ? "http://localhost:8800/api/auth" : null,
+                apiUrl,
+                window.location.origin ? `${window.location.origin}/api/auth` : null,
+                "http://127.0.0.1:8800/api/auth",
+                "http://localhost:8800/api/auth",
+                "https://hacker-drab-mu.vercel.app/api/auth"
+            ].filter((val, idx, arr) => val && arr.indexOf(val) === idx);
+        }
+
+        function renderOtpModal(tempToken, maskedEmail, rawEmail = "") {
+            let currentTempToken = tempToken;
+            const userEmail = (rawEmail || "").trim().toLowerCase();
             const existing = document.getElementById("autohire-otp-modal");
             if (existing) existing.remove();
 
@@ -600,12 +617,12 @@
                 }
             });
 
-            // 45-Second Resend Countdown Timer (Requirement 8)
+            // Resend Countdown Timer with customizable duration
             let countdown = 45;
             let timerInterval = null;
 
-            function startResendTimer() {
-                countdown = 45;
+            function startResendTimer(seconds = 45) {
+                countdown = seconds;
                 btnResend.disabled = true;
                 btnResend.textContent = "Resend OTP";
                 timerText.style.color = "#eab308";
@@ -619,13 +636,14 @@
                         timerText.style.color = "#4ade80";
                         timerText.textContent = "⏱️ You can now request a new code.";
                         btnResend.disabled = false;
+                        btnResend.textContent = "Resend OTP";
                     } else {
                         timerText.textContent = `⏱️ Resend code in ${countdown} seconds`;
                     }
                 }, 1000);
             }
 
-            startResendTimer();
+            startResendTimer(45);
 
             btnCancel.addEventListener("click", () => {
                 if (timerInterval) clearInterval(timerInterval);
@@ -636,36 +654,78 @@
             btnResend.addEventListener("click", async () => {
                 if (btnResend.disabled) return;
                 btnResend.disabled = true;
+                btnResend.textContent = "Sending...";
                 errorDisplay.style.color = "#38bdf8";
                 errorDisplay.textContent = "Sending new verification code...";
 
-                const authBase = window.ACTIVE_AUTH_API_URL || apiUrl;
-                const isCrossOrigin = window.location.protocol === "file:" || !authBase.startsWith(window.location.origin);
+                const devId = getOrCreateDeviceId();
+                const candidates = getAuthCandidateUrls();
+                let sendSuccess = false;
+                let lastError = "";
 
-                try {
-                    const res = await fetch(`${authBase}/resend-otp`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: isCrossOrigin ? "omit" : "include",
-                        body: JSON.stringify({ tempToken })
-                    });
-                    const data = await res.json();
-                    if (!res.ok) {
-                        errorDisplay.style.color = "#f87171";
-                        errorDisplay.textContent = data.message || "Unable to send verification code. Please try again.";
-                        btnResend.disabled = false;
-                        return;
+                for (const base of candidates) {
+                    try {
+                        const isCrossOrigin = window.location.protocol === "file:" || !base.startsWith(window.location.origin);
+                        const res = await fetch(`${base}/resend-otp`, {
+                            method: "POST",
+                            headers: { 
+                                "Content-Type": "application/json",
+                                "X-Device-Id": devId
+                            },
+                            credentials: isCrossOrigin ? "omit" : "include",
+                            body: JSON.stringify({ 
+                                tempToken: currentTempToken,
+                                email: userEmail,
+                                deviceId: devId 
+                            })
+                        });
+
+                        const data = await res.json();
+
+                        if (res.status === 429) {
+                            sendSuccess = true;
+                            const waitSec = data.secondsRemaining || 45;
+                            errorDisplay.style.color = "#eab308";
+                            errorDisplay.textContent = data.message || `Please wait ${waitSec} seconds before resending.`;
+                            startResendTimer(waitSec);
+                            return;
+                        }
+
+                        if (!res.ok) {
+                            lastError = data.message || "Unable to send verification code. Please try again.";
+                            if (res.status === 400) {
+                                break;
+                            }
+                            continue;
+                        }
+
+                        sendSuccess = true;
+                        window.ACTIVE_AUTH_API_URL = base;
+                        if (data.tempToken) {
+                            currentTempToken = data.tempToken;
+                        }
+
+                        errorDisplay.style.color = "#4ade80";
+                        errorDisplay.textContent = data.message || "A new 6-digit code has been dispatched to your email.";
+
+                        inputs.forEach(inp => inp.value = "");
+                        inputs[0].focus();
+                        startResendTimer(45);
+                        break;
+                    } catch (err) {
+                        console.warn(`Resend connection attempt to ${base} notice:`, err.message);
                     }
-                    errorDisplay.style.color = "#4ade80";
-                    errorDisplay.textContent = data.message || "A new 6-digit code has been dispatched to your email.";
+                }
 
-                    inputs.forEach(inp => inp.value = "");
-                    inputs[0].focus();
-                    startResendTimer();
-                } catch (err) {
+                if (!sendSuccess) {
                     errorDisplay.style.color = "#f87171";
-                    errorDisplay.textContent = "Unable to send verification code. Please try again.";
+                    if (lastError && lastError.toLowerCase().includes("expired")) {
+                        errorDisplay.innerHTML = `${lastError} <a href="sign-in.html" style="color:#38bdf8; text-decoration:underline; font-weight:600; margin-left:4px;">Sign in again</a>`;
+                    } else {
+                        errorDisplay.textContent = lastError || "Unable to send verification code. Please try again.";
+                    }
                     btnResend.disabled = false;
+                    btnResend.textContent = "Resend OTP";
                 }
             });
 
@@ -682,42 +742,56 @@
                 btnVerify.textContent = "Verifying...";
                 errorDisplay.textContent = "";
 
-                const authBase = window.ACTIVE_AUTH_API_URL || apiUrl;
-                const isCrossOrigin = window.location.protocol === "file:" || !authBase.startsWith(window.location.origin);
-
                 const devId = getOrCreateDeviceId();
-                try {
-                    const response = await fetch(`${authBase}/verify-otp`, {
-                        method: "POST",
-                        headers: { 
-                            "Content-Type": "application/json",
-                            "X-Device-Id": devId
-                        },
-                        credentials: isCrossOrigin ? "omit" : "include",
-                        body: JSON.stringify({ tempToken, otp, deviceId: devId })
-                    });
-                    const data = await response.json();
-                    if (!response.ok) {
-                        errorDisplay.style.color = "#f87171";
-                        errorDisplay.textContent = data.message || "Invalid verification code. Please try again.";
-                        btnVerify.disabled = false;
-                        btnVerify.textContent = "Verify & Complete Login";
+                const candidates = getAuthCandidateUrls();
+                let verifySuccess = false;
+                let lastError = "";
+
+                for (const base of candidates) {
+                    try {
+                        const isCrossOrigin = window.location.protocol === "file:" || !base.startsWith(window.location.origin);
+                        const response = await fetch(`${base}/verify-otp`, {
+                            method: "POST",
+                            headers: { 
+                                "Content-Type": "application/json",
+                                "X-Device-Id": devId
+                            },
+                            credentials: isCrossOrigin ? "omit" : "include",
+                            body: JSON.stringify({ 
+                                tempToken: currentTempToken, 
+                                otp, 
+                                email: userEmail,
+                                deviceId: devId 
+                            })
+                        });
+                        const data = await response.json();
+                        if (!response.ok) {
+                            lastError = data.message || "Invalid verification code. Please try again.";
+                            if (response.status === 400 || response.status === 429) {
+                                break;
+                            }
+                            continue;
+                        }
+
+                        verifySuccess = true;
+                        window.ACTIVE_AUTH_API_URL = base;
+                        errorDisplay.style.color = "#4ade80";
+                        errorDisplay.textContent = "✅ Email verified! Redirecting to workspace...";
+                        if (timerInterval) clearInterval(timerInterval);
+
+                        setTimeout(() => {
+                            processUserLogin(data.user, data.redirect || "dashboard.html");
+                        }, 600);
                         return;
+                    } catch (error) {
+                        console.warn(`Verify connection attempt to ${base} notice:`, error.message);
                     }
-
-                    errorDisplay.style.color = "#4ade80";
-                    errorDisplay.textContent = "✅ Email verified! Redirecting to workspace...";
-                    if (timerInterval) clearInterval(timerInterval);
-
-                    setTimeout(() => {
-                        processUserLogin(data.user, data.redirect || "dashboard.html");
-                    }, 600);
-                } catch (error) {
-                    errorDisplay.style.color = "#f87171";
-                    errorDisplay.textContent = "Connection error while verifying OTP.";
-                    btnVerify.disabled = false;
-                    btnVerify.textContent = "Verify & Complete Login";
                 }
+
+                errorDisplay.style.color = "#f87171";
+                errorDisplay.textContent = lastError || "Connection error while verifying OTP.";
+                btnVerify.disabled = false;
+                btnVerify.textContent = "Verify & Complete Login";
             });
         }
 
@@ -726,16 +800,7 @@
             loginMessage.textContent = "Verifying Google account...";
 
             // Candidate URLs to support local server, live preview, and hosted domains
-            const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.protocol === "file:";
-            const candidateUrls = [
-                isLocal ? "http://127.0.0.1:8800/api/auth" : null,
-                isLocal ? "http://localhost:8800/api/auth" : null,
-                apiUrl,
-                window.location.origin ? `${window.location.origin}/api/auth` : null,
-                "http://127.0.0.1:8800/api/auth",
-                "http://localhost:8800/api/auth",
-                "https://hacker-drab-mu.vercel.app/api/auth"
-            ].filter((val, idx, arr) => val && arr.indexOf(val) === idx);
+            const candidateUrls = getAuthCandidateUrls();
 
             let serverSuccess = false;
             let lastErrorMsg = "";
@@ -772,7 +837,14 @@
                     // Google login requires OTP verification before session creation
                     if (data.pendingOtp && data.tempToken) {
                         loginMessage.textContent = "";
-                        renderOtpModal(data.tempToken, data.email);
+                        let googleEmail = data.targetEmail || "";
+                        if (!googleEmail && response.credential) {
+                            try {
+                                const payload = JSON.parse(decodeURIComponent(escape(atob(response.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")))));
+                                googleEmail = (payload.email || "").toLowerCase();
+                            } catch (e) {}
+                        }
+                        renderOtpModal(data.tempToken, data.email, googleEmail);
                     } else if (data.user) {
                         loginMessage.style.color = "#4ade80";
                         loginMessage.textContent = "Welcome back! Connecting...";
@@ -812,16 +884,7 @@
             }
 
             // Candidate URLs to support local server and network environments
-            const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.protocol === "file:";
-            const candidateUrls = [
-                isLocal ? "http://127.0.0.1:8800/api/auth" : null,
-                isLocal ? "http://localhost:8800/api/auth" : null,
-                apiUrl,
-                window.location.origin ? `${window.location.origin}/api/auth` : null,
-                "http://127.0.0.1:8800/api/auth",
-                "http://localhost:8800/api/auth",
-                "https://hacker-drab-mu.vercel.app/api/auth"
-            ].filter((val, idx, arr) => val && arr.indexOf(val) === idx);
+            const candidateUrls = getAuthCandidateUrls();
 
             let serverSuccess = false;
             let lastErrorMsg = "";
@@ -855,7 +918,7 @@
                     // Mandates Security OTP Verification before dashboard access
                     if (data.pendingOtp && data.tempToken) {
                         loginMessage.textContent = "";
-                        renderOtpModal(data.tempToken, data.email);
+                        renderOtpModal(data.tempToken, data.email, email);
                     } else if (data.user) {
                         processUserLogin(data.user, data.redirect || "dashboard.html");
                     }
