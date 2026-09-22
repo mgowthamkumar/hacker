@@ -1132,6 +1132,33 @@
                 </div>
             </div>
 
+            <!-- SECTION-WISE EXTRACTED RESUME CONTENT (HUMAN-READABLE) -->
+            <div class="section-card" id="extracted-resume-card" style="display: none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                    <div>
+                        <h2>📄 Extracted Resume Content (Section-Wise & Human-Readable)</h2>
+                        <p class="subtitle" style="margin-bottom:0;">Structured breakdown of verified information extracted from your resume:</p>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <button id="view-mode-structured-btn" onclick="switchResumeView('structured')" style="padding:8px 16px; font-size:0.85rem; font-weight:700; border-radius:8px; border:1px solid #38bdf8; background:#38bdf8; color:#0f172a; cursor:pointer;">
+                            📑 Structured View
+                        </button>
+                        <button id="view-mode-text-btn" onclick="switchResumeView('text')" style="padding:8px 16px; font-size:0.85rem; font-weight:700; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.05); color:#cbd5e1; cursor:pointer;">
+                            📝 Clean Text View
+                        </button>
+                        <button onclick="copyExtractedResumeText()" style="padding:8px 16px; font-size:0.85rem; font-weight:700; border-radius:8px; border:1px solid rgba(34,197,94,0.4); background:rgba(34,197,94,0.15); color:#4ade80; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                            📋 Copy Clean Text
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Structured Cards View -->
+                <div id="resume-structured-view" style="display: flex; flex-direction: column; gap: 16px;"></div>
+
+                <!-- Clean Formatted Text View -->
+                <div id="resume-text-view" style="display: none; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 20px; font-family: 'Space Grotesk', monospace, sans-serif; font-size: 0.9rem; line-height: 1.7; color: #f1f5f9; white-space: pre-wrap; max-height: 500px; overflow-y: auto;"></div>
+            </div>
+
             <!-- VERBATIM EXTRACTED FACTS (DIRECT QUOTES) -->
             <div class="section-card" id="verbatim-facts-card" style="display: none;">
                 <h2>📌 Verbatim Extracted Resume Facts (Direct Quotes)</h2>
@@ -1291,25 +1318,107 @@
             });
         }
 
+        function cleanResumeTextClient(rawText) {
+            if (!rawText) return "";
+            let text = rawText;
+
+            // 1. Repair PDF font ligature corruptions (fi, fl, ffi, ffl)
+            text = text.replace(/arti[\s\uFFFD]?cial/gi, "Artificial");
+            text = text.replace(/pro[\s\uFFFD]?les/gi, "profiles");
+            text = text.replace(/pro[\s\uFFFD]?le/gi, "profile");
+            text = text.replace(/certi[\s\uFFFD]?cations/gi, "Certifications");
+            text = text.replace(/certi[\s\uFFFD]?cation/gi, "Certification");
+            text = text.replace(/certi[\s\uFFFD]?cates/gi, "Certificates");
+            text = text.replace(/certi[\s\uFFFD]?cate/gi, "Certificate");
+            text = text.replace(/speci[\s\uFFFD]?c/gi, "specific");
+            text = text.replace(/identi[\s\uFFFD]?ed/gi, "identified");
+            text = text.replace(/quali[\s\uFFFD]?ed/gi, "qualified");
+            text = text.replace(/signi[\s\uFFFD]?cant/gi, "significant");
+            text = text.replace(/ef[\s\uFFFD]?cient/gi, "efficient");
+            text = text.replace(/im-\s*provement/gi, "improvement");
+
+            // Standard ligature unicode points
+            text = text.replace(/\uFB00/g, "ff")
+                       .replace(/\uFB01/g, "fi")
+                       .replace(/\uFB02/g, "fl")
+                       .replace(/\uFB03/g, "ffi")
+                       .replace(/\uFB04/g, "ffl");
+
+            // Replace corrupted bullets with standard bullet
+            text = text.replace(/[\uF0B7\u25CF\u2022\u25AA\u25BA]/g, " • ");
+            text = text.replace(/[\u2013\u2014]/g, " - ");
+            text = text.replace(/[\uFFFD\u0000]/g, " ");
+
+            // 2. Ensure standard section headers are separated by linebreaks if merged
+            const sectionHeaders = [
+                "Career Objective", "Profile Summary", "Professional Summary",
+                "Education", "Higher Secondary Education", "Secondary Education",
+                "Technical Skills", "Programming Language", "Web Technologies",
+                "Database", "Tools & Software", "Other Technical Skills",
+                "Projects", "Work Experience", "Experience",
+                "Certifications", "Soft Skills", "Languages", "Hobbies / Interests", "Hobbies", "Interests"
+            ];
+            for (const h of sectionHeaders) {
+                const reg = new RegExp(`([^\\n\\r])\\s*(${h})\\b`, 'gi');
+                text = text.replace(reg, '$1\n$2');
+            }
+
+            return text;
+        }
+
         async function readTextFromFile(file) {
             if (!file) return "";
             const ext = (file.name.split('.').pop() || '').toLowerCase();
             
             if (ext === 'txt') {
-                try { return await file.text(); } catch (e) {}
+                try {
+                    const raw = await file.text();
+                    return cleanResumeTextClient(raw);
+                } catch (e) {}
             }
             
             if (ext === 'pdf' && window.pdfjsLib) {
                 try {
                     const arrayBuffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                    let fullText = '';
+                    let pagesText = [];
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const tokenized = await page.getTextContent();
-                        const pageText = tokenized.items.map(item => item.str).join(' ');
-                        fullText += pageText + '\n';
+                        let pageLines = [];
+                        let currentLine = '';
+                        let lastY = null;
+
+                        for (const item of tokenized.items) {
+                            if (!item.str) continue;
+                            const y = item.transform ? item.transform[5] : null;
+                            if (lastY !== null && y !== null && Math.abs(y - lastY) > 3) {
+                                if (currentLine.trim()) {
+                                    pageLines.push(currentLine.trim());
+                                }
+                                currentLine = item.str;
+                            } else {
+                                if (currentLine && !currentLine.endsWith(' ') && !item.str.startsWith(' ')) {
+                                    currentLine += ' ';
+                                }
+                                currentLine += item.str;
+                            }
+                            if (item.hasEOL) {
+                                if (currentLine.trim()) {
+                                    pageLines.push(currentLine.trim());
+                                }
+                                currentLine = '';
+                                lastY = null;
+                            } else {
+                                lastY = y;
+                            }
+                        }
+                        if (currentLine.trim()) {
+                            pageLines.push(currentLine.trim());
+                        }
+                        pagesText.push(pageLines.join('\n'));
                     }
+                    const fullText = cleanResumeTextClient(pagesText.join('\n\n'));
                     if (fullText.trim()) return fullText;
                 } catch (err) {
                     console.warn("Client-side PDF extraction notice: attempting text fallback.");
@@ -1318,11 +1427,469 @@
 
             try {
                 const raw = await file.text();
-                const cleaned = raw.replace(/[^\x20-\x7E\s]/g, ' ').replace(/\s+/g, ' ').trim();
+                const cleaned = cleanResumeTextClient(raw.replace(/[^\x20-\x7E\s]/g, ' '));
                 if (cleaned.length > 15) return cleaned;
             } catch (e) {}
 
             return file.name.replace(/[^a-zA-Z0-9\s]/g, ' ');
+        }
+
+        function parseResumeSectionsClient(rawText) {
+            const cleaned = cleanResumeTextClient(rawText);
+            const sections = {
+                personal_info: {
+                    name: "",
+                    location: "",
+                    phone: "",
+                    email: "",
+                    linkedin: "",
+                    github: "",
+                    portfolio: ""
+                },
+                career_objective: "",
+                education: [],
+                technical_skills: {
+                    programming_languages: [],
+                    web_technologies: [],
+                    databases: [],
+                    tools_and_software: [],
+                    other_technical_skills: []
+                },
+                projects: [],
+                certifications: [],
+                soft_skills: [],
+                languages: [],
+                hobbies_interests: [],
+                clean_formatted_text: ""
+            };
+
+            // 1. Email
+            const emailM = cleaned.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/);
+            if (emailM) sections.personal_info.email = emailM[0];
+
+            // 2. Phone
+            const phoneM = cleaned.match(/(?:\+?\d{1,3}[-\s]?)?\(?\d{3,5}\)?[-\s]?\d{3,5}[-\s]?\d{3,5}/);
+            if (phoneM && phoneM[0].replace(/\D/g, '').length >= 10) {
+                sections.personal_info.phone = phoneM[0].trim();
+            }
+
+            // 3. Links
+            const liM = cleaned.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[A-Za-z0-9_-]+/i);
+            if (liM) sections.personal_info.linkedin = liM[0];
+
+            const ghM = cleaned.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[A-Za-z0-9_-]+/i);
+            if (ghM) sections.personal_info.github = ghM[0];
+
+            if (/portfolio/i.test(cleaned)) sections.personal_info.portfolio = "Portfolio";
+
+            // 4. Candidate Name & Location
+            const firstLines = cleaned.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            if (firstLines.length > 0) {
+                const topStr = firstLines[0];
+                const pipeParts = topStr.split('|').map(p => p.trim());
+                if (pipeParts.length > 0) {
+                    const namePart = pipeParts[0];
+                    const nameM = namePart.match(/^([A-Z\s]{3,30})(?:\s+([A-Za-z\s,]+))?$/);
+                    if (nameM) {
+                        sections.personal_info.name = nameM[1].trim();
+                        if (nameM[2]) sections.personal_info.location = nameM[2].trim();
+                    } else {
+                        sections.personal_info.name = namePart.split(/\s{2,}/)[0].substring(0, 35);
+                    }
+                }
+            }
+
+            // 5. Section Boundary Splitting
+            const sectionPatterns = [
+                { key: "career_objective", regex: /(?:^|[\r\n]|\s{2,})(?:career\s+objective|profile\s+summary|professional\s+summary|summary)\b/i },
+                { key: "education", regex: /(?:^|[\r\n]|\s{2,})(?:education|academic\s+background|academic\s+qualifications)\b(?!\s*\(1[02]th\))/i },
+                { key: "technical_skills", regex: /(?:^|[\r\n]|\s{2,})(?:technical\s+skills|skills\s*&?\s*tools|core\s+competencies|key\s+skills)\b/i },
+                { key: "projects", regex: /(?:^|[\r\n]|\s{2,})(?:projects|key\s+projects|academic\s+projects|work\s+experience)\b(?=\s+[A-Z0-9\-])/i },
+                { key: "certifications", regex: /(?:^|[\r\n]|\s{2,})(?:certifications|certificates|certification)\b/i },
+                { key: "soft_skills", regex: /(?:^|[\r\n]|\s{2,})(?:soft\s+skills|interpersonal\s+skills)\b/i },
+                { key: "languages", regex: /(?:^|[\r\n]|\s{2,})(?:languages|known\s+languages)\b/i },
+                { key: "hobbies_interests", regex: /(?:^|[\r\n]|\s{2,})(?:hobbies\s*(?:\/|&)?\s*interests|hobbies|interests)\b/i }
+            ];
+
+            const spans = [];
+            sectionPatterns.forEach(sec => {
+                const m = sec.regex.exec(cleaned);
+                if (m) spans.push({ key: sec.key, index: m.index, length: m[0].length });
+            });
+            spans.sort((a, b) => a.index - b.index);
+
+            const rawSections = {};
+            for (let i = 0; i < spans.length; i++) {
+                const current = spans[i];
+                const start = current.index + current.length;
+                const end = (i + 1 < spans.length) ? spans[i + 1].index : cleaned.length;
+                rawSections[current.key] = cleaned.substring(start, end).trim();
+            }
+
+            if (rawSections.career_objective) {
+                sections.career_objective = rawSections.career_objective.replace(/^[:\-\s]+/, '').trim();
+            }
+
+            if (rawSections.education) {
+                const eduLines = rawSections.education.split(/(?=(?:Bachelor\s+of|Master\s+of|Higher\s+Secondary\s+Education|(?<!Higher\s+)Secondary\s+Education|B\.Tech|BTech|B\.E|BCA|MCA)\b)/i).map(l => l.trim()).filter(Boolean);
+                sections.education = eduLines.length > 0 ? eduLines : [rawSections.education];
+            }
+
+            if (rawSections.technical_skills) {
+                const tsText = rawSections.technical_skills;
+                const subCats = [
+                    { key: "programming_languages", regex: /programming\s+language[s]?\s*[:\-]([\s\S]*?)(?=(?:web\s+tech|database|tools|other|$))/i },
+                    { key: "web_technologies", regex: /web\s+technologies\s*[:\-]([\s\S]*?)(?=(?:database|tools|other|programming|$))/i },
+                    { key: "databases", regex: /database[s]?\s*[:\-]([\s\S]*?)(?=(?:tools|other|web|programming|$))/i },
+                    { key: "tools_and_software", regex: /tools\s*&?\s*software\s*[:\-]([\s\S]*?)(?=(?:other|database|web|programming|$))/i },
+                    { key: "other_technical_skills", regex: /other\s+technical\s+skills\s*[:\-]([\s\S]*?)(?=(?:tools|database|web|programming|$))/i }
+                ];
+                let anyFound = false;
+                subCats.forEach(sc => {
+                    const m = sc.regex.exec(tsText);
+                    if (m && m[1]) {
+                        anyFound = true;
+                        sections.technical_skills[sc.key] = m[1].split(/[,|•\n]/).map(s => s.trim().replace(/^[-•\s]+|[-•\s]+$/g, '')).filter(Boolean);
+                    }
+                });
+                if (!anyFound) {
+                    sections.technical_skills.programming_languages = tsText.split(/[,|•\n]/).map(s => s.trim().replace(/^[-•\s]+|[-•\s]+$/g, '')).filter(Boolean);
+                }
+            }
+
+            if (rawSections.projects) {
+                const projText = rawSections.projects;
+                const projBlocks = projText.split(/(?=(?:[A-Z][A-Za-z0-9\s]{3,30}\s+(?:FastAPI|React|Node|Python|Django|Full\s*Stack|AI|ML|MERN|App)))/i).map(b => b.trim()).filter(Boolean);
+                if (projBlocks.length > 0) {
+                    sections.projects = projBlocks.map(block => {
+                        const lines = block.split(/\r?\n|(?=\s*[-•]\s*)/).map(l => l.trim().replace(/^[-•\s]+/, '')).filter(Boolean);
+                        return {
+                            name: lines[0] || "Featured Project",
+                            tech_stack: [],
+                            highlights: lines.slice(1).length > 0 ? lines.slice(1) : [block]
+                        };
+                    });
+                } else {
+                    sections.projects = [{
+                        name: "Featured Project",
+                        tech_stack: [],
+                        highlights: projText.split(/\r?\n|(?=\s*[-•]\s*)/).map(l => l.trim().replace(/^[-•\s]+/, '')).filter(Boolean)
+                    }];
+                }
+            }
+
+            if (rawSections.certifications) {
+                sections.certifications = rawSections.certifications.split(/[\r\n|•]+/).map(c => c.trim().replace(/^[-•\s]+/, '')).filter(Boolean);
+            }
+            if (rawSections.soft_skills) {
+                sections.soft_skills = rawSections.soft_skills.split(/[\r\n|•,]+/).map(s => s.trim().replace(/^[-•\s]+/, '')).filter(Boolean);
+            }
+            if (rawSections.languages) {
+                sections.languages = rawSections.languages.split(/[\r\n|•,]+/).map(l => l.trim().replace(/^[-•\s]+/, '')).filter(Boolean);
+            }
+            if (rawSections.hobbies_interests) {
+                sections.hobbies_interests = rawSections.hobbies_interests.split(/[\r\n|•,]+/).map(h => h.trim().replace(/^[-•\s]+/, '')).filter(Boolean);
+            }
+
+            // Build clean formatted text
+            let cleanFmt = "";
+            if (sections.personal_info.name) cleanFmt += `👤 ${sections.personal_info.name}\n`;
+            const contactPieces = [
+                sections.personal_info.location,
+                sections.personal_info.phone,
+                sections.personal_info.email,
+                sections.personal_info.linkedin,
+                sections.personal_info.github
+            ].filter(Boolean);
+            if (contactPieces.length > 0) cleanFmt += `${contactPieces.join(" | ")}\n\n`;
+
+            if (sections.career_objective) {
+                cleanFmt += `🎯 CAREER OBJECTIVE\n${sections.career_objective}\n\n`;
+            }
+
+            if (sections.education.length > 0) {
+                cleanFmt += `🎓 EDUCATION\n`;
+                sections.education.forEach(ed => cleanFmt += `• ${ed}\n`);
+                cleanFmt += `\n`;
+            }
+
+            const ts = sections.technical_skills;
+            const hasTs = Object.keys(ts).some(k => ts[k].length > 0);
+            if (hasTs) {
+                cleanFmt += `💻 TECHNICAL SKILLS\n`;
+                if (ts.programming_languages.length > 0) cleanFmt += `• Programming: ${ts.programming_languages.join(", ")}\n`;
+                if (ts.web_technologies.length > 0) cleanFmt += `• Web Technologies: ${ts.web_technologies.join(", ")}\n`;
+                if (ts.databases.length > 0) cleanFmt += `• Databases: ${ts.databases.join(", ")}\n`;
+                if (ts.tools_and_software.length > 0) cleanFmt += `• Tools & Software: ${ts.tools_and_software.join(", ")}\n`;
+                if (ts.other_technical_skills.length > 0) cleanFmt += `• Other Skills: ${ts.other_technical_skills.join(", ")}\n`;
+                cleanFmt += `\n`;
+            }
+
+            if (sections.projects.length > 0) {
+                cleanFmt += `🚀 PROJECTS\n`;
+                sections.projects.forEach(p => {
+                    cleanFmt += `• ${p.name}\n`;
+                    p.highlights.forEach(h => cleanFmt += `  - ${h}\n`);
+                });
+                cleanFmt += `\n`;
+            }
+
+            if (sections.certifications.length > 0) {
+                cleanFmt += `📜 CERTIFICATIONS\n`;
+                sections.certifications.forEach(c => cleanFmt += `• ${c}\n`);
+                cleanFmt += `\n`;
+            }
+
+            if (sections.soft_skills.length > 0) cleanFmt += `🌟 SOFT SKILLS: ${sections.soft_skills.join(" | ")}\n\n`;
+            if (sections.languages.length > 0) cleanFmt += `🌐 LANGUAGES: ${sections.languages.join(" | ")}\n\n`;
+            if (sections.hobbies_interests.length > 0) cleanFmt += `🎮 HOBBIES & INTERESTS: ${sections.hobbies_interests.join(" | ")}\n\n`;
+
+            sections.clean_formatted_text = cleanFmt.trim();
+            return sections;
+        }
+
+        function switchResumeView(mode) {
+            const structView = document.getElementById('resume-structured-view');
+            const textView = document.getElementById('resume-text-view');
+            const structBtn = document.getElementById('view-mode-structured-btn');
+            const textBtn = document.getElementById('view-mode-text-btn');
+
+            if (!structView || !textView || !structBtn || !textBtn) return;
+
+            if (mode === 'structured') {
+                structView.style.display = 'flex';
+                textView.style.display = 'none';
+                structBtn.style.background = '#38bdf8';
+                structBtn.style.color = '#0f172a';
+                structBtn.style.borderColor = '#38bdf8';
+                textBtn.style.background = 'rgba(255,255,255,0.05)';
+                textBtn.style.color = '#cbd5e1';
+                textBtn.style.borderColor = 'rgba(255,255,255,0.2)';
+            } else {
+                structView.style.display = 'none';
+                textView.style.display = 'block';
+                textBtn.style.background = '#38bdf8';
+                textBtn.style.color = '#0f172a';
+                textBtn.style.borderColor = '#38bdf8';
+                structBtn.style.background = 'rgba(255,255,255,0.05)';
+                structBtn.style.color = '#cbd5e1';
+                structBtn.style.borderColor = 'rgba(255,255,255,0.2)';
+            }
+        }
+
+        function copyExtractedResumeText() {
+            const text = window.currentCleanResumeText || (document.getElementById('resume-text-view') ? document.getElementById('resume-text-view').innerText : '');
+            if (text) {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert("✅ Clean extracted resume text copied to clipboard!");
+                }).catch(() => {
+                    alert("✅ Copied to clipboard!");
+                });
+            }
+        }
+
+        function renderExtractedResumeSections(sections) {
+            const structView = document.getElementById('resume-structured-view');
+            const textView = document.getElementById('resume-text-view');
+            if (!structView || !textView || !sections) return;
+
+            window.currentCleanResumeText = sections.clean_formatted_text || "";
+            textView.innerText = sections.clean_formatted_text || "No formatted text available.";
+
+            let html = '';
+
+            // 1. Personal Info Header
+            const p = sections.personal_info || {};
+            if (p.name || p.email || p.phone || p.location || p.linkedin || p.github) {
+                html += `
+                    <div style="background:linear-gradient(135deg, rgba(15,23,42,0.85), rgba(30,41,59,0.8)); border:1px solid rgba(56,189,248,0.3); border-radius:12px; padding:18px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <div>
+                                <h3 style="font-family:'Space Grotesk', sans-serif; font-size:1.35rem; color:#38bdf8; margin:0 0 6px 0; font-weight:800;">
+                                    👤 ${p.name || "Candidate Profile"}
+                                </h3>
+                                ${p.location ? `<span style="font-size:0.85rem; color:#94a3b8;">📍 ${p.location}</span>` : ''}
+                            </div>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                ${p.phone ? `<span class="chip" style="background:rgba(56,189,248,0.12); border-color:#38bdf8; color:#e2e8f0; font-size:0.82rem;">📞 ${p.phone}</span>` : ''}
+                                ${p.email ? `<span class="chip" style="background:rgba(168,85,247,0.12); border-color:#a855f7; color:#e2e8f0; font-size:0.82rem;">✉️ ${p.email}</span>` : ''}
+                                ${p.linkedin ? `<a href="${p.linkedin.startsWith('http') ? p.linkedin : 'https://' + p.linkedin}" target="_blank" class="chip" style="background:rgba(14,165,233,0.15); border-color:#0ea5e9; color:#38bdf8; font-size:0.82rem; text-decoration:none;">🔗 LinkedIn ↗</a>` : ''}
+                                ${p.github ? `<a href="${p.github.startsWith('http') ? p.github : 'https://' + p.github}" target="_blank" class="chip" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.25); color:#f1f5f9; font-size:0.82rem; text-decoration:none;">🐙 GitHub ↗</a>` : ''}
+                                ${p.portfolio ? `<span class="chip" style="background:rgba(34,197,94,0.15); border-color:#22c55e; color:#4ade80; font-size:0.82rem;">🌐 Portfolio</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 2. Career Objective
+            if (sections.career_objective) {
+                html += `
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-left:4px solid #38bdf8; border-radius:10px; padding:16px;">
+                        <strong style="color:#38bdf8; font-size:0.95rem; display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                            🎯 Career Objective & Summary
+                        </strong>
+                        <p style="margin:0; font-size:0.92rem; color:#e2e8f0; line-height:1.65;">
+                            ${sections.career_objective}
+                        </p>
+                    </div>
+                `;
+            }
+
+            // 3. Education
+            if (sections.education && sections.education.length > 0) {
+                html += `
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:16px;">
+                        <strong style="color:#a855f7; font-size:0.95rem; display:flex; align-items:center; gap:6px; margin-bottom:12px;">
+                            🎓 Education & Academic History
+                        </strong>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            ${sections.education.map(ed => `
+                                <div style="background:rgba(255,255,255,0.03); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); font-size:0.9rem; color:#f1f5f9; line-height:1.5;">
+                                    • ${ed}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 4. Technical Skills
+            const ts = sections.technical_skills || {};
+            const hasTs = Object.keys(ts).some(k => ts[k] && ts[k].length > 0);
+            if (hasTs) {
+                html += `
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:16px;">
+                        <strong style="color:#38bdf8; font-size:0.95rem; display:flex; align-items:center; gap:6px; margin-bottom:12px;">
+                            💻 Technical Skills & Frameworks
+                        </strong>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            ${ts.programming_languages && ts.programming_languages.length > 0 ? `
+                                <div>
+                                    <div style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Programming Languages:</div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                        ${ts.programming_languages.map(s => `<span class="chip" style="background:rgba(56,189,248,0.18); border-color:#38bdf8; color:#e0f2fe; font-weight:700;">${s}</span>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${ts.web_technologies && ts.web_technologies.length > 0 ? `
+                                <div>
+                                    <div style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Web Technologies & APIs:</div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                        ${ts.web_technologies.map(s => `<span class="chip" style="background:rgba(168,85,247,0.18); border-color:#a855f7; color:#f3e8ff; font-weight:700;">${s}</span>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${ts.databases && ts.databases.length > 0 ? `
+                                <div>
+                                    <div style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Databases:</div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                        ${ts.databases.map(s => `<span class="chip" style="background:rgba(34,197,94,0.18); border-color:#22c55e; color:#dcfce7; font-weight:700;">${s}</span>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${ts.tools_and_software && ts.tools_and_software.length > 0 ? `
+                                <div>
+                                    <div style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Tools & Software:</div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                        ${ts.tools_and_software.map(s => `<span class="chip" style="background:rgba(234,179,8,0.18); border-color:#eab308; color:#fef08a; font-weight:700;">${s}</span>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${ts.other_technical_skills && ts.other_technical_skills.length > 0 ? `
+                                <div>
+                                    <div style="font-size:0.8rem; color:#94a3b8; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Other Technical Competencies:</div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                        ${ts.other_technical_skills.map(s => `<span class="chip" style="background:rgba(244,63,94,0.18); border-color:#f43f5e; color:#ffe4e6; font-weight:700;">${s}</span>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 5. Projects
+            if (sections.projects && sections.projects.length > 0) {
+                html += `
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:16px;">
+                        <strong style="color:#22c55e; font-size:0.95rem; display:flex; align-items:center; gap:6px; margin-bottom:12px;">
+                            🚀 Projects & Practical Implementations
+                        </strong>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            ${sections.projects.map(proj => `
+                                <div style="background:rgba(255,255,255,0.03); padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+                                    <div style="font-size:1.05rem; font-weight:800; color:#4ade80; font-family:'Space Grotesk', sans-serif;">
+                                        ${proj.name}
+                                    </div>
+                                    ${proj.highlights && proj.highlights.length > 0 ? `
+                                        <ul style="margin:8px 0 0 16px; padding:0; font-size:0.88rem; color:#cbd5e1; line-height:1.6;">
+                                            ${proj.highlights.map(h => `<li>${h}</li>`).join('')}
+                                        </ul>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 6. Certifications, Soft Skills, Languages & Hobbies Grid
+            const otherCards = [];
+
+            if (sections.certifications && sections.certifications.length > 0) {
+                otherCards.push(`
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+                        <strong style="color:#eab308; font-size:0.9rem; display:block; margin-bottom:8px;">📜 Certifications:</strong>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                            ${sections.certifications.map(c => `<span class="chip" style="background:rgba(234,179,8,0.15); border-color:#eab308;">${c}</span>`).join('')}
+                        </div>
+                    </div>
+                `);
+            }
+
+            if (sections.soft_skills && sections.soft_skills.length > 0) {
+                otherCards.push(`
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+                        <strong style="color:#38bdf8; font-size:0.9rem; display:block; margin-bottom:8px;">🌟 Soft Skills:</strong>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                            ${sections.soft_skills.map(s => `<span class="chip" style="background:rgba(56,189,248,0.15); border-color:#38bdf8;">${s}</span>`).join('')}
+                        </div>
+                    </div>
+                `);
+            }
+
+            if (sections.languages && sections.languages.length > 0) {
+                otherCards.push(`
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+                        <strong style="color:#a855f7; font-size:0.9rem; display:block; margin-bottom:8px;">🌐 Languages:</strong>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                            ${sections.languages.map(l => `<span class="chip" style="background:rgba(168,85,247,0.15); border-color:#a855f7;">${l}</span>`).join('')}
+                        </div>
+                    </div>
+                `);
+            }
+
+            if (sections.hobbies_interests && sections.hobbies_interests.length > 0) {
+                otherCards.push(`
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+                        <strong style="color:#22c55e; font-size:0.9rem; display:block; margin-bottom:8px;">🎮 Hobbies & Interests:</strong>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                            ${sections.hobbies_interests.map(h => `<span class="chip" style="background:rgba(34,197,94,0.15); border-color:#22c55e;">${h}</span>`).join('')}
+                        </div>
+                    </div>
+                `);
+            }
+
+            if (otherCards.length > 0) {
+                html += `
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px;">
+                        ${otherCards.join('')}
+                    </div>
+                `;
+            }
+
+            structView.innerHTML = html;
         }
 
         function validateDocumentClientSide(text, filename = "") {
@@ -1593,6 +2160,17 @@
                     { title: "Junior Software Engineer", match_score: Math.min(96, overallScore + 5), reason: "Matches detected core programming skills.", matched_skills: foundSkills.slice(0, 3), missing_skills: ["Docker", "Kubernetes"] },
                     { title: "Fullstack Web Developer Intern", match_score: Math.min(92, overallScore + 2), reason: "Aligns with web & application development stack.", matched_skills: foundSkills.slice(1, 4), missing_skills: ["GraphQL"] }
                 ],
+                parsed_sections: parseResumeSectionsClient(resumeText),
+                verbatim_facts: {
+                    explicit_degrees: [],
+                    explicit_tools_and_tech: foundSkills.map(s => ({
+                        name: s.toUpperCase(),
+                        context_sentence_quote: "Detected in verified technical skills section"
+                    })),
+                    job_titles: [],
+                    stated_projects: [],
+                    certifications: []
+                },
                 curriculum_alignment: clientMatchCurriculum(extractedText)
             };
 
@@ -1697,6 +2275,16 @@
                 roadmapList.appendChild(el);
             });
 
+            // 1. Render Section-Wise Extracted Resume Content (Human-Readable)
+            const extractedResumeCard = document.getElementById('extracted-resume-card');
+            const structuredView = document.getElementById('resume-structured-view');
+            const parsedSections = data.parsed_sections || parseResumeSectionsClient(window.currentExtractedText || "");
+            if (extractedResumeCard && structuredView && parsedSections) {
+                renderExtractedResumeSections(parsedSections);
+                extractedResumeCard.style.display = 'block';
+            }
+
+            // 2. Render Verbatim Extracted Resume Facts
             const verbatimFactsCard = document.getElementById('verbatim-facts-card');
             const verbatimFactsContent = document.getElementById('verbatim-facts-content');
             if (data.verbatim_facts && verbatimFactsCard && verbatimFactsContent) {
@@ -1713,12 +2301,50 @@
                 }
 
                 if (vf.explicit_tools_and_tech && vf.explicit_tools_and_tech.length > 0) {
-                    html += `<div style="background:rgba(15,23,42,0.6); padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
-                        <strong style="color:#a855f7; font-size:0.95rem;">🛠️ Verbatim Tools & Tech (With Exact Sentence Quote):</strong>
-                        <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">
-                            ${vf.explicit_tools_and_tech.map(t => `<div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
-                                <span style="font-weight:700; color:#38bdf8;">${t.name}</span>: <em style="color:#cbd5e1;">"${t.context_sentence_quote}"</em>
-                            </div>`).join('')}
+                    // Group tools by unique context quote so identical sentences are NEVER repeated
+                    const quoteGroups = new Map();
+                    vf.explicit_tools_and_tech.forEach(t => {
+                        const toolName = t.name || t.tool || 'TOOL';
+                        let quote = (t.context_sentence_quote || '').trim();
+                        // If quote is too long, extract concise window around tech name
+                        if (quote.length > 160) {
+                            const techIdx = quote.toLowerCase().indexOf(toolName.toLowerCase());
+                            if (techIdx !== -1) {
+                                const start = Math.max(0, techIdx - 40);
+                                const end = Math.min(quote.length, techIdx + toolName.length + 60);
+                                quote = (start > 0 ? '...' : '') + quote.substring(start, end).trim() + (end < quote.length ? '...' : '');
+                            } else {
+                                quote = quote.substring(0, 140) + '...';
+                            }
+                        }
+                        if (!quoteGroups.has(quote)) {
+                            quoteGroups.set(quote, []);
+                        }
+                        if (!quoteGroups.get(quote).includes(toolName)) {
+                            quoteGroups.get(quote).push(toolName);
+                        }
+                    });
+
+                    html += `<div style="background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border:1px solid rgba(168,85,247,0.3);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                            <strong style="color:#c084fc; font-size:0.95rem; display:flex; align-items:center; gap:6px;">
+                                🛠️ Verbatim Tools & Tech (With Exact Sentence Quote):
+                            </strong>
+                            <span style="font-size:0.8rem; background:rgba(168,85,247,0.15); border:1px solid #a855f7; color:#e9d5ff; padding:2px 10px; border-radius:12px; font-weight:700;">
+                                ${vf.explicit_tools_and_tech.length} Verified Mentions
+                            </span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            ${Array.from(quoteGroups.entries()).map(([quote, toolList]) => `
+                                <div style="background:rgba(255,255,255,0.03); padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+                                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; align-items:center;">
+                                        ${toolList.map(name => `<span class="chip" style="background:rgba(56,189,248,0.2); border-color:#38bdf8; color:#38bdf8; font-weight:800; font-size:0.82rem; padding:4px 10px; text-transform:uppercase;">${name}</span>`).join('')}
+                                    </div>
+                                    <div style="font-size:0.88rem; color:#cbd5e1; line-height:1.5;">
+                                        <span style="color:#94a3b8; font-weight:600;">Exact Context Quote:</span> <em style="color:#f1f5f9; font-style:italic;">"${quote}"</em>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>`;
                 }

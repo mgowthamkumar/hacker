@@ -919,6 +919,7 @@ app.post(["/api/rag/analyze", "/analyzer", "/api/analyzer"], upload.single("file
                 competency_audit: pyResult.competency_audit || ragAnalysis.competency_audit,
                 precision_study_manual: pyResult.precision_study_manual || ragAnalysis.precision_study_manual,
                 compiled_typeset_manual: pyResult.compiled_typeset_manual || ragAnalysis.compiled_typeset_manual,
+                parsed_sections: pyResult.parsed_sections || ragAnalysis.parsed_sections,
                 feedback: Array.from(new Set([...(ragAnalysis.feedback || []), ...(pyResult.feedback ? pyResult.feedback.map(f => typeof f === 'string' ? f : f.text) : [])]))
             };
             return res.json(merged);

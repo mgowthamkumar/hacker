@@ -1099,6 +1099,7 @@ class RagEngine {
           competencyAudit
         )
       ),
+      parsed_sections: this.parseResumeSections(rawText),
       curriculum_alignment: curriculumAlignment
     };
   }
@@ -1452,9 +1453,287 @@ class RagEngine {
     };
   }
 
+  cleanResumeText(rawText) {
+    if (!rawText) return "";
+    let text = rawText;
+
+    // 1. Repair common PDF font ligature corruptions (fi, fl, ffi, ffl)
+    text = text.replace(/arti[\s\uFFFD]?cial/gi, "Artificial");
+    text = text.replace(/pro[\s\uFFFD]?les/gi, "profiles");
+    text = text.replace(/pro[\s\uFFFD]?le/gi, "profile");
+    text = text.replace(/certi[\s\uFFFD]?cations/gi, "Certifications");
+    text = text.replace(/certi[\s\uFFFD]?cation/gi, "Certification");
+    text = text.replace(/certi[\s\uFFFD]?cates/gi, "Certificates");
+    text = text.replace(/certi[\s\uFFFD]?cate/gi, "Certificate");
+    text = text.replace(/speci[\s\uFFFD]?c/gi, "specific");
+    text = text.replace(/identi[\s\uFFFD]?ed/gi, "identified");
+    text = text.replace(/quali[\s\uFFFD]?ed/gi, "qualified");
+    text = text.replace(/signi[\s\uFFFD]?cant/gi, "significant");
+    text = text.replace(/ef[\s\uFFFD]?cient/gi, "efficient");
+    text = text.replace(/im-\s*provement/gi, "improvement");
+
+    // Standard ligature unicode points
+    text = text.replace(/\uFB00/g, "ff")
+               .replace(/\uFB01/g, "fi")
+               .replace(/\uFB02/g, "fl")
+               .replace(/\uFB03/g, "ffi")
+               .replace(/\uFB04/g, "ffl");
+
+    // Replace box / corrupted bullets with standard bullet
+    text = text.replace(/[\uF0B7\u25CF\u2022\u25AA\u25BA]/g, " • ");
+    text = text.replace(/[\u2013\u2014]/g, " - ");
+    text = text.replace(/[\uFFFD\u0000]/g, " ");
+
+    // 2. Ensure standard section headers are separated by linebreaks if merged
+    const sectionHeaders = [
+      "Career Objective", "Profile Summary", "Professional Summary",
+      "Technical Skills", "Programming Language", "Web Technologies",
+      "Database", "Tools & Software", "Other Technical Skills",
+      "Certifications", "Soft Skills", "Languages", "Hobbies / Interests", "Hobbies", "Interests"
+    ];
+    for (const h of sectionHeaders) {
+      const reg = new RegExp(`([^\\n\\r])\\s*(${h})\\b`, 'gi');
+      text = text.replace(reg, '$1\n$2');
+    }
+    text = text.replace(/([^\n\r])\s*\b(Education)\b(?=\s+[A-Z])/g, '$1\n$2');
+    text = text.replace(/([^\n\r])\s*\b(Projects)\b(?=\s+[A-Z0-9\-])/g, '$1\n$2');
+
+    return text;
+  }
+
+  parseResumeSections(rawText) {
+    const cleaned = this.cleanResumeText(rawText);
+    const sections = {
+      personal_info: {
+        name: "",
+        location: "",
+        phone: "",
+        email: "",
+        linkedin: "",
+        github: "",
+        portfolio: ""
+      },
+      career_objective: "",
+      education: [],
+      technical_skills: {
+        programming_languages: [],
+        web_technologies: [],
+        databases: [],
+        tools_and_software: [],
+        other_technical_skills: []
+      },
+      projects: [],
+      certifications: [],
+      soft_skills: [],
+      languages: [],
+      hobbies_interests: [],
+      clean_formatted_text: ""
+    };
+
+    // 1. Extract Email
+    const emailMatch = cleaned.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/);
+    if (emailMatch) sections.personal_info.email = emailMatch[0];
+
+    // 2. Extract Phone
+    const phoneMatch = cleaned.match(/(?:\+?\d{1,3}[-\s]?)?\(?\d{3,5}\)?[-\s]?\d{3,5}[-\s]?\d{3,5}/);
+    if (phoneMatch && phoneMatch[0].replace(/\D/g, '').length >= 10) {
+      sections.personal_info.phone = phoneMatch[0].trim();
+    }
+
+    // 3. Extract Links
+    const linkedinMatch = cleaned.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[A-Za-z0-9_-]+/i);
+    if (linkedinMatch) sections.personal_info.linkedin = linkedinMatch[0];
+
+    const githubMatch = cleaned.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[A-Za-z0-9_-]+/i);
+    if (githubMatch) sections.personal_info.github = githubMatch[0];
+
+    if (/portfolio/i.test(cleaned)) sections.personal_info.portfolio = "Portfolio";
+
+    // 4. Candidate Name & Location from Header
+    const firstLines = cleaned.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (firstLines.length > 0) {
+      const topStr = firstLines[0];
+      const pipeParts = topStr.split('|').map(p => p.trim());
+      if (pipeParts.length > 0) {
+        const namePart = pipeParts[0];
+        const nameMatch = namePart.match(/^([A-Z\s]{3,30})(?:\s+([A-Za-z\s,]+))?$/);
+        if (nameMatch) {
+          sections.personal_info.name = nameMatch[1].trim();
+          if (nameMatch[2]) sections.personal_info.location = nameMatch[2].trim();
+        } else {
+          sections.personal_info.name = namePart.split(/\s{2,}/)[0].substring(0, 35);
+        }
+      }
+    }
+
+    // 5. Section Boundary Splitting
+    const sectionPatterns = [
+      { key: "career_objective", regex: /(?:^|[\r\n]|\s{2,})(?:career\s+objective|profile\s+summary|professional\s+summary|summary)\b/i },
+      { key: "education", regex: /(?:^|[\r\n]|\s{2,})(?:education|academic\s+background|academic\s+qualifications)\b(?!\s*\(1[02]th\))/i },
+      { key: "technical_skills", regex: /(?:^|[\r\n]|\s{2,})(?:technical\s+skills|skills\s*&?\s*tools|core\s+competencies|key\s+skills)\b/i },
+      { key: "projects", regex: /(?:^|[\r\n]|\s{2,})(?:projects|key\s+projects|academic\s+projects|work\s+experience)\b(?=\s+[A-Z0-9\-])/i },
+      { key: "certifications", regex: /(?:^|[\r\n]|\s{2,})(?:certifications|certificates|certification)\b/i },
+      { key: "soft_skills", regex: /(?:^|[\r\n]|\s{2,})(?:soft\s+skills|interpersonal\s+skills)\b/i },
+      { key: "languages", regex: /(?:^|[\r\n]|\s{2,})(?:languages|known\s+languages)\b/i },
+      { key: "hobbies_interests", regex: /(?:^|[\r\n]|\s{2,})(?:hobbies\s*(?:\/|&)?\s*interests|hobbies|interests)\b/i }
+    ];
+
+    // Find indices of all matched section headers
+    const sectionSpans = [];
+    sectionPatterns.forEach(sec => {
+      const match = sec.regex.exec(cleaned);
+      if (match) {
+        sectionSpans.push({ key: sec.key, index: match.index, length: match[0].length });
+      }
+    });
+    sectionSpans.sort((a, b) => a.index - b.index);
+
+    const rawSections = {};
+    for (let i = 0; i < sectionSpans.length; i++) {
+      const current = sectionSpans[i];
+      const start = current.index + current.length;
+      const end = (i + 1 < sectionSpans.length) ? sectionSpans[i + 1].index : cleaned.length;
+      rawSections[current.key] = cleaned.substring(start, end).trim();
+    }
+
+    // Process Career Objective
+    if (rawSections.career_objective) {
+      sections.career_objective = rawSections.career_objective.replace(/^[:\-\s]+/, '').trim();
+    }
+
+    // Process Education
+    if (rawSections.education) {
+      const eduText = rawSections.education;
+      const eduLines = eduText.split(/(?=(?:Bachelor\s+of|Master\s+of|Higher\s+Secondary\s+Education|(?<!Higher\s+)Secondary\s+Education|B\.Tech|BTech|B\.E|BCA|MCA)\b)/i).map(l => l.trim()).filter(Boolean);
+      sections.education = eduLines.length > 0 ? eduLines : [eduText];
+    }
+
+    // Process Technical Skills
+    if (rawSections.technical_skills) {
+      const tsText = rawSections.technical_skills;
+      const subCategories = [
+        { key: "programming_languages", regex: /programming\s+language[s]?\s*[:\-]([\s\S]*?)(?=(?:web\s+tech|database|tools|other|$))/i },
+        { key: "web_technologies", regex: /web\s+technologies\s*[:\-]([\s\S]*?)(?=(?:database|tools|other|programming|$))/i },
+        { key: "databases", regex: /database[s]?\s*[:\-]([\s\S]*?)(?=(?:tools|other|web|programming|$))/i },
+        { key: "tools_and_software", regex: /tools\s*&?\s*software\s*[:\-]([\s\S]*?)(?=(?:other|database|web|programming|$))/i },
+        { key: "other_technical_skills", regex: /other\s+technical\s+skills\s*[:\-]([\s\S]*?)(?=(?:tools|database|web|programming|$))/i }
+      ];
+
+      let anySubFound = false;
+      subCategories.forEach(sc => {
+        const m = sc.regex.exec(tsText);
+        if (m && m[1]) {
+          anySubFound = true;
+          sections.technical_skills[sc.key] = m[1].split(/[,|•\n]/).map(s => s.trim().replace(/^[-•\s]+|[-•\s]+$/g, '')).filter(Boolean);
+        }
+      });
+
+      if (!anySubFound) {
+        sections.technical_skills.programming_languages = tsText.split(/[,|•\n]/).map(s => s.trim().replace(/^[-•\s]+|[-•\s]+$/g, '')).filter(Boolean);
+      }
+    }
+
+    // Process Projects
+    if (rawSections.projects) {
+      const projText = rawSections.projects;
+      const parts = projText.split(/(?=\s*[-•]\s*)/).map(p => p.trim().replace(/^[-•\s]+/, '')).filter(Boolean);
+      const title = parts[0] || "Featured Project";
+      const highlights = parts.slice(1);
+      sections.projects = [{
+        name: title,
+        tech_stack: [],
+        highlights: highlights.length > 0 ? highlights : [projText]
+      }];
+    }
+
+    // Process Certifications
+    if (rawSections.certifications) {
+      sections.certifications = rawSections.certifications.split(/[\r\n|•]+/).map(c => c.trim().replace(/^[-•\s]+/, '')).filter(Boolean);
+    }
+
+    // Process Soft Skills
+    if (rawSections.soft_skills) {
+      sections.soft_skills = rawSections.soft_skills.split(/[\r\n|•,]+/).map(s => s.trim().replace(/^[-•\s]+/, '')).filter(Boolean);
+    }
+
+    // Process Languages
+    if (rawSections.languages) {
+      sections.languages = rawSections.languages.split(/[\r\n|•,]+/).map(l => l.trim().replace(/^[-•\s]+/, '')).filter(Boolean);
+    }
+
+    // Process Hobbies
+    if (rawSections.hobbies_interests) {
+      sections.hobbies_interests = rawSections.hobbies_interests.split(/[\r\n|•,]+/).map(h => h.trim().replace(/^[-•\s]+/, '')).filter(Boolean);
+    }
+
+    // Build human-readable formatted text
+    let cleanFormatted = "";
+    if (sections.personal_info.name) cleanFormatted += `👤 ${sections.personal_info.name}\n`;
+    const contactPieces = [
+      sections.personal_info.location,
+      sections.personal_info.phone,
+      sections.personal_info.email,
+      sections.personal_info.linkedin,
+      sections.personal_info.github
+    ].filter(Boolean);
+    if (contactPieces.length > 0) cleanFormatted += `${contactPieces.join(" | ")}\n\n`;
+
+    if (sections.career_objective) {
+      cleanFormatted += `🎯 CAREER OBJECTIVE\n${sections.career_objective}\n\n`;
+    }
+
+    if (sections.education.length > 0) {
+      cleanFormatted += `🎓 EDUCATION\n`;
+      sections.education.forEach(ed => cleanFormatted += `• ${ed}\n`);
+      cleanFormatted += `\n`;
+    }
+
+    const ts = sections.technical_skills;
+    const allTs = Object.keys(ts).some(k => ts[k].length > 0);
+    if (allTs) {
+      cleanFormatted += `💻 TECHNICAL SKILLS\n`;
+      if (ts.programming_languages.length > 0) cleanFormatted += `• Programming: ${ts.programming_languages.join(", ")}\n`;
+      if (ts.web_technologies.length > 0) cleanFormatted += `• Web Technologies: ${ts.web_technologies.join(", ")}\n`;
+      if (ts.databases.length > 0) cleanFormatted += `• Databases: ${ts.databases.join(", ")}\n`;
+      if (ts.tools_and_software.length > 0) cleanFormatted += `• Tools & Software: ${ts.tools_and_software.join(", ")}\n`;
+      if (ts.other_technical_skills.length > 0) cleanFormatted += `• Other Skills: ${ts.other_technical_skills.join(", ")}\n`;
+      cleanFormatted += `\n`;
+    }
+
+    if (sections.projects.length > 0) {
+      cleanFormatted += `🚀 PROJECTS\n`;
+      sections.projects.forEach(p => {
+        cleanFormatted += `• ${p.name}\n`;
+        p.highlights.forEach(h => cleanFormatted += `  - ${h}\n`);
+      });
+      cleanFormatted += `\n`;
+    }
+
+    if (sections.certifications.length > 0) {
+      cleanFormatted += `📜 CERTIFICATIONS\n`;
+      sections.certifications.forEach(c => cleanFormatted += `• ${c}\n`);
+      cleanFormatted += `\n`;
+    }
+
+    if (sections.soft_skills.length > 0) {
+      cleanFormatted += `🌟 SOFT SKILLS\n• ${sections.soft_skills.join(" | ")}\n\n`;
+    }
+
+    if (sections.languages.length > 0) {
+      cleanFormatted += `🌐 LANGUAGES\n• ${sections.languages.join(" | ")}\n\n`;
+    }
+
+    if (sections.hobbies_interests.length > 0) {
+      cleanFormatted += `🎮 HOBBIES & INTERESTS\n• ${sections.hobbies_interests.join(" | ")}\n\n`;
+    }
+
+    sections.clean_formatted_text = cleanFormatted.trim();
+    return sections;
+  }
+
   extractVerbatimFacts(rawText) {
-    const lines = (rawText || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const textLower = (rawText || "").toLowerCase();
+    const cleanedText = this.cleanResumeText(rawText);
+    const lines = cleanedText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
     const explicitDegrees = [];
     const degreePatterns = [
@@ -1462,7 +1741,8 @@ class RagEngine {
       { regex: /\b(b\.sc|bsc|m\.sc|msc)\b/i, major: "Science & Research" },
       { regex: /\b(b\.com|bcom|m\.com|mcom|bba|mba|b\.a|ba|m\.a|ma)\b/i, major: "Arts & Commerce" },
       { regex: /\b(mbbs|bds|b\.pharma|m\.pharma|nursing)\b/i, major: "Medical & Healthcare" },
-      { regex: /\b(b\.ed|m\.ed)\b/i, major: "Teaching & Education" }
+      { regex: /\b(b\.ed|m\.ed)\b/i, major: "Teaching & Education" },
+      { regex: /\b(bca|mca)\b/i, major: "Computer Applications" }
     ];
 
     lines.forEach(line => {
@@ -1472,14 +1752,40 @@ class RagEngine {
           explicitDegrees.push({
             degree_name: match[0].toUpperCase(),
             major_field: dp.major,
-            institution: line.includes("University") || line.includes("College") || line.includes("Institute") ? line : "Extracted from Resume"
+            institution: line.includes("University") || line.includes("College") || line.includes("Institute") || line.includes("School") ? line : "Extracted from Resume"
           });
         }
       });
     });
 
     const escapeRegExp = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const knownTech = ["python", "java", "javascript", "typescript", "c++", "c#", "html", "css", "sql", "react", "nodejs", "express", "fastapi", "django", "aws", "docker", "figma", "excel", "power bi", "tableau", "spss", "matlab", "bls", "acls", "mongodb"];
+    const knownTech = [
+      "python", "java", "javascript", "typescript", "c++", "c#", "html", "css", "sql", "react",
+      "nodejs", "express", "fastapi", "django", "flask", "aws", "docker", "kubernetes", "git",
+      "github", "figma", "photoshop", "illustrator", "excel", "power bi", "tableau", "spss",
+      "matlab", "autocad", "bls", "acls", "mongodb", "postgresql", "redis"
+    ];
+
+    // Helper to find concise clause or sentence for a tech word
+    const extractConciseClause = (fullText, tech) => {
+      const clauses = fullText.split(/(?:[\r\n]+|[•|;]|\s+-\s+|\.(?:\s+|$))/).map(c => c.trim()).filter(Boolean);
+      const pattern = new RegExp('(?:\\b|\\s)' + escapeRegExp(tech) + '(?:\\b|\\s|$)', 'i');
+      for (const clause of clauses) {
+        if (pattern.test(clause) && clause.length <= 160) {
+          return clause;
+        }
+      }
+      for (const clause of clauses) {
+        if (pattern.test(clause)) {
+          const idx = clause.toLowerCase().indexOf(tech.toLowerCase());
+          const start = Math.max(0, idx - 40);
+          const end = Math.min(clause.length, idx + tech.length + 60);
+          return (start > 0 ? "..." : "") + clause.substring(start, end).trim() + (end < clause.length ? "..." : "");
+        }
+      }
+      return tech.toUpperCase();
+    };
+
     const explicitTools = [];
     const seenTech = new Set();
 
@@ -1489,9 +1795,12 @@ class RagEngine {
         const pattern = new RegExp('(?:\\b|\\s)' + escapeRegExp(tech) + '(?:\\b|\\s|$)', 'i');
         if (!seenTech.has(tech) && pattern.test(lineLower)) {
           seenTech.add(tech);
+          const conciseQuote = extractConciseClause(line, tech);
+          const formattedTech = tech === "html" || tech === "css" || tech === "sql" || tech === "aws" ? tech.toUpperCase() : (tech.charAt(0).toUpperCase() + tech.slice(1));
           explicitTools.push({
-            name: tech.toUpperCase(),
-            context_sentence_quote: line
+            name: formattedTech,
+            tool: formattedTech,
+            context_sentence_quote: conciseQuote
           });
         }
       });
@@ -1519,7 +1828,7 @@ class RagEngine {
 
     return {
       explicit_degrees: explicitDegrees.slice(0, 4),
-      explicit_tools_and_tech: explicitTools.slice(0, 12),
+      explicit_tools_and_tech: explicitTools.slice(0, 15),
       job_titles: jobTitles.slice(0, 5),
       stated_projects: statedProjects.slice(0, 5),
       certifications: Array.from(new Set(certs)).slice(0, 5)

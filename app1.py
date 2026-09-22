@@ -144,6 +144,7 @@ class AnalysisResult(BaseModel):
     precision_study_manual: Optional[str] = None
     compiled_typeset_manual: Optional[str] = None
     curriculum_alignment: Optional[dict] = None
+    parsed_sections: Optional[dict] = None
 
 
 def check_personal_details_section(raw_text: str) -> bool:
@@ -269,12 +270,289 @@ def validate_resume_document(raw_text: str) -> tuple[bool, bool, str, list[str]]
     return True, True, "", []
 
 
+def clean_resume_text(raw_text: str) -> str:
+    if not raw_text:
+        return ""
+    text = raw_text
+
+    # 1. Repair common PDF font ligature corruptions (fi, fl, ffi, ffl)
+    text = re.sub(r'arti[\s\ufffd]?cial', 'Artificial', text, flags=re.IGNORECASE)
+    text = re.sub(r'pro[\s\ufffd]?les', 'profiles', text, flags=re.IGNORECASE)
+    text = re.sub(r'pro[\s\ufffd]?le', 'profile', text, flags=re.IGNORECASE)
+    text = re.sub(r'certi[\s\ufffd]?cations', 'Certifications', text, flags=re.IGNORECASE)
+    text = re.sub(r'certi[\s\ufffd]?cation', 'Certification', text, flags=re.IGNORECASE)
+    text = re.sub(r'certi[\s\ufffd]?cates', 'Certificates', text, flags=re.IGNORECASE)
+    text = re.sub(r'certi[\s\ufffd]?cate', 'Certificate', text, flags=re.IGNORECASE)
+    text = re.sub(r'speci[\s\ufffd]?c', 'specific', text, flags=re.IGNORECASE)
+    text = re.sub(r'identi[\s\ufffd]?ed', 'identified', text, flags=re.IGNORECASE)
+    text = re.sub(r'quali[\s\ufffd]?ed', 'qualified', text, flags=re.IGNORECASE)
+    text = re.sub(r'signi[\s\ufffd]?cant', 'significant', text, flags=re.IGNORECASE)
+    text = re.sub(r'ef[\s\ufffd]?cient', 'efficient', text, flags=re.IGNORECASE)
+    text = re.sub(r'im-\s*provement', 'improvement', text, flags=re.IGNORECASE)
+
+    # Standard ligature unicode points
+    text = text.replace('\ufb00', 'ff').replace('\ufb01', 'fi').replace('\ufb02', 'fl').replace('\ufb03', 'ffi').replace('\ufb04', 'ffl')
+
+    # Replace corrupted bullets with standard bullet
+    text = re.sub(r'[\uf0b7\u25cf\u2022\u25aa\u25ba]', ' • ', text)
+    text = re.sub(r'[\u2013\u2014]', ' - ', text)
+    text = re.sub(r'[\ufffd\x00]', ' ', text)
+
+    # 2. Ensure standard section headers are separated by linebreaks if merged
+    section_headers = [
+        "Career Objective", "Profile Summary", "Professional Summary",
+        "Education", "Higher Secondary Education", "Secondary Education",
+        "Technical Skills", "Programming Language", "Web Technologies",
+        "Database", "Tools & Software", "Other Technical Skills",
+        "Projects", "Work Experience", "Experience",
+        "Certifications", "Soft Skills", "Languages", "Hobbies / Interests", "Hobbies", "Interests"
+    ]
+    for h in section_headers:
+        text = re.sub(rf'([^\n\r])\s*({re.escape(h)})\b', r'\1\n\2', text, flags=re.IGNORECASE)
+
+    return text
+
+
+def parse_resume_sections(raw_text: str) -> dict:
+    cleaned = clean_resume_text(raw_text)
+    sections = {
+        "personal_info": {
+            "name": "",
+            "location": "",
+            "phone": "",
+            "email": "",
+            "linkedin": "",
+            "github": "",
+            "portfolio": ""
+        },
+        "career_objective": "",
+        "education": [],
+        "technical_skills": {
+            "programming_languages": [],
+            "web_technologies": [],
+            "databases": [],
+            "tools_and_software": [],
+            "other_technical_skills": []
+        },
+        "projects": [],
+        "certifications": [],
+        "soft_skills": [],
+        "languages": [],
+        "hobbies_interests": [],
+        "clean_formatted_text": ""
+    }
+
+    # 1. Email
+    email_m = re.search(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", cleaned)
+    if email_m:
+        sections["personal_info"]["email"] = email_m.group(0)
+
+    # 2. Phone
+    phone_m = re.search(r"(?:\+?\d{1,3}[-\s]?)?\(?\d{3,5}\)?[-\s]?\d{3,5}[-\s]?\d{3,5}", cleaned)
+    if phone_m and len(re.sub(r'\D', '', phone_m.group(0))) >= 10:
+        sections["personal_info"]["phone"] = phone_m.group(0).strip()
+
+    # 3. Links
+    li_m = re.search(r"(?:https?://)?(?:www\.)?linkedin\.com/in/[A-Za-z0-9_-]+", cleaned, re.IGNORECASE)
+    if li_m:
+        sections["personal_info"]["linkedin"] = li_m.group(0)
+
+    gh_m = re.search(r"(?:https?://)?(?:www\.)?github\.com/[A-Za-z0-9_-]+", cleaned, re.IGNORECASE)
+    if gh_m:
+        sections["personal_info"]["github"] = gh_m.group(0)
+
+    if re.search(r"\bportfolio\b", cleaned, re.IGNORECASE):
+        sections["personal_info"]["portfolio"] = "Portfolio"
+
+    # 4. Candidate Name & Location from Header
+    first_lines = [l.strip() for l in cleaned.splitlines() if l.strip()]
+    if first_lines:
+        top_str = first_lines[0]
+        pipe_parts = [p.strip() for p in top_str.split('|')]
+        if pipe_parts:
+            name_part = pipe_parts[0]
+            name_m = re.match(r"^([A-Z\s]{3,30})(?:\s+([A-Za-z\s,]+))?$", name_part)
+            if name_m:
+                sections["personal_info"]["name"] = name_m.group(1).strip()
+                if name_m.group(2):
+                    sections["personal_info"]["location"] = name_m.group(2).strip()
+            else:
+                sections["personal_info"]["name"] = name_part.split("  ")[0][:35]
+
+    # 5. Section Boundary Splitting
+    section_patterns = [
+        ("career_objective", r"(?:^|[\r\n]|\s{2,})(?:career\s+objective|profile\s+summary|professional\s+summary|summary)\b"),
+        ("education", r"(?:^|[\r\n]|\s{2,})(?:education|academic\s+background|academic\s+qualifications)\b(?!\s*\(1[02]th\))"),
+        ("technical_skills", r"(?:^|[\r\n]|\s{2,})(?:technical\s+skills|skills\s*&?\s*tools|core\s+competencies|key\s+skills)\b"),
+        ("projects", r"(?:^|[\r\n]|\s{2,})(?:projects|key\s+projects|academic\s+projects|work\s+experience)\b(?=\s+[A-Z0-9\-])"),
+        ("certifications", r"(?:^|[\r\n]|\s{2,})(?:certifications|certificates|certification)\b"),
+        ("soft_skills", r"(?:^|[\r\n]|\s{2,})(?:soft\s+skills|interpersonal\s+skills)\b"),
+        ("languages", r"(?:^|[\r\n]|\s{2,})(?:languages|known\s+languages)\b"),
+        ("hobbies_interests", r"(?:^|[\r\n]|\s{2,})(?:hobbies\s*(?:/|&)?\s*interests|hobbies|interests)\b")
+    ]
+
+    spans = []
+    for key, pat in section_patterns:
+        m = re.search(pat, cleaned, re.IGNORECASE)
+        if m:
+            spans.append((m.start(), m.end(), key))
+    spans.sort(key=lambda x: x[0])
+
+    raw_sections = {}
+    for i, (start_idx, end_idx, key) in enumerate(spans):
+        content_start = end_idx
+        content_end = spans[i + 1][0] if i + 1 < len(spans) else len(cleaned)
+        raw_sections[key] = cleaned[content_start:content_end].strip()
+
+    # Process Career Objective
+    if "career_objective" in raw_sections:
+        sections["career_objective"] = re.sub(r"^[:\-\s]+", "", raw_sections["career_objective"]).strip()
+
+    # Process Education
+    if "education" in raw_sections:
+        edu_text = raw_sections["education"]
+        edu_pats = r"\b(?:Bachelor\s+of|Master\s+of|Higher\s+Secondary\s+Education|Secondary\s+Education|B\.Tech|BTech|B\.E|BCA|MCA)\b"
+        matches = list(re.finditer(edu_pats, edu_text, flags=re.IGNORECASE))
+        filtered_matches = []
+        for m in matches:
+            if m.group(0).lower().startswith("secondary") and m.start() >= 7 and edu_text[m.start()-7:m.start()].lower() == "higher ":
+                continue
+            filtered_matches.append(m)
+
+        if filtered_matches:
+            edu_lines = []
+            for i, m in enumerate(filtered_matches):
+                start = m.start()
+                end = filtered_matches[i + 1].start() if i + 1 < len(filtered_matches) else len(edu_text)
+                chunk = edu_text[start:end].strip()
+                if chunk:
+                    edu_lines.append(chunk)
+            sections["education"] = edu_lines
+        else:
+            sections["education"] = [edu_text]
+
+    # Process Technical Skills
+    if "technical_skills" in raw_sections:
+        ts_text = raw_sections["technical_skills"]
+        sub_cats = [
+            ("programming_languages", r"programming\s+language[s]?\s*[:\-]([\s\S]*?)(?=(?:web\s+tech|database|tools|other|$))"),
+            ("web_technologies", r"web\s+technologies\s*[:\-]([\s\S]*?)(?=(?:database|tools|other|programming|$))"),
+            ("databases", r"database[s]?\s*[:\-]([\s\S]*?)(?=(?:tools|other|web|programming|$))"),
+            ("tools_and_software", r"tools\s*&?\s*software\s*[:\-]([\s\S]*?)(?=(?:other|database|web|programming|$))"),
+            ("other_technical_skills", r"other\s+technical\s+skills\s*[:\-]([\s\S]*?)(?=(?:tools|database|web|programming|$))")
+        ]
+        any_found = False
+        for sub_key, sub_pat in sub_cats:
+            m = re.search(sub_pat, ts_text, re.IGNORECASE)
+            if m and m.group(1):
+                any_found = True
+                skills = [re.sub(r"^[-•\s]+|[-•\s]+$", "", s).strip() for s in re.split(r"[,|•\n]", m.group(1)) if s.strip()]
+                sections["technical_skills"][sub_key] = [s for s in skills if s]
+
+        if not any_found:
+            skills = [re.sub(r"^[-•\s]+|[-•\s]+$", "", s).strip() for s in re.split(r"[,|•\n]", ts_text) if s.strip()]
+            sections["technical_skills"]["programming_languages"] = [s for s in skills if s]
+
+    # Process Projects
+    # Process Projects
+    if "projects" in raw_sections:
+        proj_text = raw_sections["projects"]
+        parts = [re.sub(r"^[-•\s]+", "", p).strip() for p in re.split(r"(?=\s*[-•]\s*)", proj_text) if p.strip()]
+        title = parts[0] if parts else "Featured Project"
+        highlights = parts[1:] if len(parts) > 1 else [proj_text]
+        sections["projects"] = [{
+            "name": title,
+            "tech_stack": [],
+            "highlights": highlights
+        }]
+
+    # Process Certifications
+    if "certifications" in raw_sections:
+        sections["certifications"] = [re.sub(r"^[-•\s]+", "", c).strip() for c in re.split(r"[\r\n|•]+", raw_sections["certifications"]) if c.strip()]
+
+    # Process Soft Skills
+    if "soft_skills" in raw_sections:
+        sections["soft_skills"] = [re.sub(r"^[-•\s]+", "", s).strip() for s in re.split(r"[\r\n|•,]+", raw_sections["soft_skills"]) if s.strip()]
+
+    # Process Languages
+    if "languages" in raw_sections:
+        sections["languages"] = [re.sub(r"^[-•\s]+", "", l).strip() for l in re.split(r"[\r\n|•,]+", raw_sections["languages"]) if l.strip()]
+
+    # Process Hobbies
+    if "hobbies_interests" in raw_sections:
+        sections["hobbies_interests"] = [re.sub(r"^[-•\s]+", "", h).strip() for h in re.split(r"[\r\n|•,]+", raw_sections["hobbies_interests"]) if h.strip()]
+
+    # Build human-readable formatted text
+    lines = []
+    p = sections["personal_info"]
+    if p["name"]:
+        lines.append(f"👤 {p['name']}")
+    contacts = [p["location"], p["phone"], p["email"], p["linkedin"], p["github"]]
+    contacts = [c for c in contacts if c]
+    if contacts:
+        lines.append(" | ".join(contacts))
+        lines.append("")
+
+    if sections["career_objective"]:
+        lines.append("🎯 CAREER OBJECTIVE")
+        lines.append(sections["career_objective"])
+        lines.append("")
+
+    if sections["education"]:
+        lines.append("🎓 EDUCATION")
+        for ed in sections["education"]:
+            lines.append(f"• {ed}")
+        lines.append("")
+
+    ts = sections["technical_skills"]
+    if any(ts[k] for k in ts):
+        lines.append("💻 TECHNICAL SKILLS")
+        if ts["programming_languages"]:
+            lines.append(f"• Programming: {', '.join(ts['programming_languages'])}")
+        if ts["web_technologies"]:
+            lines.append(f"• Web Technologies: {', '.join(ts['web_technologies'])}")
+        if ts["databases"]:
+            lines.append(f"• Databases: {', '.join(ts['databases'])}")
+        if ts["tools_and_software"]:
+            lines.append(f"• Tools & Software: {', '.join(ts['tools_and_software'])}")
+        if ts["other_technical_skills"]:
+            lines.append(f"• Other Skills: {', '.join(ts['other_technical_skills'])}")
+        lines.append("")
+
+    if sections["projects"]:
+        lines.append("🚀 PROJECTS")
+        for proj in sections["projects"]:
+            lines.append(f"• {proj['name']}")
+            for h in proj["highlights"]:
+                lines.append(f"  - {h}")
+        lines.append("")
+
+    if sections["certifications"]:
+        lines.append("📜 CERTIFICATIONS")
+        for c in sections["certifications"]:
+            lines.append(f"• {c}")
+        lines.append("")
+
+    if sections["soft_skills"]:
+        lines.append(f"🌟 SOFT SKILLS: {' | '.join(sections['soft_skills'])}\n")
+
+    if sections["languages"]:
+        lines.append(f"🌐 LANGUAGES: {' | '.join(sections['languages'])}\n")
+
+    if sections["hobbies_interests"]:
+        lines.append(f"🎮 HOBBIES & INTERESTS: {' | '.join(sections['hobbies_interests'])}\n")
+
+    sections["clean_formatted_text"] = "\n".join(lines).strip()
+    return sections
+
+
 def extract_verbatim_facts(raw_text: str) -> dict:
     """
     Extract verbatim facts from resume text with zero hallucination.
-    Every extracted tool/technology includes its exact context sentence quote.
+    Every extracted tool/technology includes its concise context sentence quote.
     """
-    lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+    cleaned_text = clean_resume_text(raw_text)
+    lines = [line.strip() for line in cleaned_text.splitlines() if line.strip()]
 
     # 1. Explicit Degrees
     explicit_degrees = []
@@ -311,6 +589,22 @@ def extract_verbatim_facts(raw_text: str) -> dict:
         "matlab", "autocad", "bls", "acls", "mongodb", "postgresql", "redis"
     ]
 
+    def extract_concise_clause(full_text: str, tech: str) -> str:
+        clauses = [c.strip() for c in re.split(r"(?:[\r\n]+|[•|;]|\s+-\s+|\.(?:\s+|$))", full_text) if c.strip()]
+        pat = re.compile(rf'(?:\b|\s){re.escape(tech)}(?:\b|\s|$)', re.IGNORECASE)
+        for clause in clauses:
+            if pat.search(clause) and len(clause) <= 160:
+                return clause
+        for clause in clauses:
+            if pat.search(clause):
+                idx = clause.lower().find(tech.lower())
+                start = max(0, idx - 40)
+                end = min(len(clause), idx + len(tech) + 60)
+                prefix = "..." if start > 0 else ""
+                suffix = "..." if end < len(clause) else ""
+                return f"{prefix}{clause[start:end].strip()}{suffix}"
+        return tech.upper()
+
     explicit_tools_and_tech = []
     seen_tech = set()
 
@@ -319,9 +613,12 @@ def extract_verbatim_facts(raw_text: str) -> dict:
         for tech in known_tech:
             if tech not in seen_tech and re.search(r"\b" + re.escape(tech) + r"\b", line_lower):
                 seen_tech.add(tech)
+                concise_quote = extract_concise_clause(line, tech)
+                formatted_name = tech.title() if tech not in ["css", "html", "sql", "aws", "dsa", "ui/ux", "bls", "acls"] else tech.upper()
                 explicit_tools_and_tech.append({
-                    "name": tech.title() if tech not in ["css", "html", "sql", "aws", "dsa", "ui/ux", "bls", "acls"] else tech.upper(),
-                    "context_sentence_quote": line
+                    "name": formatted_name,
+                    "tool": formatted_name,
+                    "context_sentence_quote": concise_quote
                 })
 
     # 3. Job Titles & Experience
@@ -359,7 +656,7 @@ def extract_verbatim_facts(raw_text: str) -> dict:
 
     return {
         "explicit_degrees": explicit_degrees[:4],
-        "explicit_tools_and_tech": explicit_tools_and_tech[:12],
+        "explicit_tools_and_tech": explicit_tools_and_tech[:15],
         "job_titles": job_titles[:5],
         "stated_projects": stated_projects[:5],
         "certifications": list(set(certifications))[:5]
@@ -1394,7 +1691,8 @@ async def analyze_resume(
         competency_audit=competency_result,
         precision_study_manual=precision_manual,
         compiled_typeset_manual=typeset_manual,
-        curriculum_alignment=curriculum_alignment
+        curriculum_alignment=curriculum_alignment,
+        parsed_sections=parse_resume_sections(raw_text)
     )
 
 @app.get("/api/courses")
@@ -1455,29 +1753,30 @@ async def audit_custom_course(
 def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
     ext = os.path.splitext(filename)[1].lower()
 
+    extracted = ""
     if ext == ".txt":
-        return file_bytes.decode("utf-8", errors="ignore")
-
-    if ext == ".pdf":
+        extracted = file_bytes.decode("utf-8", errors="ignore")
+    elif ext == ".pdf":
         try:
             from pypdf import PdfReader
+            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
+                temp_file.write(file_bytes)
+                temp_path = temp_file.name
+
+            try:
+                reader = PdfReader(temp_path)
+                pages = [page.extract_text() or "" for page in reader.pages]
+                extracted = "\n".join(pages)
+            finally:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
         except Exception:
             clean = re.sub(r"[^\x20-\x7E\n\r\t]", " ", file_bytes.decode("latin1", errors="ignore"))
-            return clean if len(clean) > 50 else filename
+            extracted = clean if len(clean) > 50 else filename
+    else:
+        extracted = file_bytes.decode("utf-8", errors="ignore")
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
-            temp_file.write(file_bytes)
-            temp_path = temp_file.name
-
-        try:
-            reader = PdfReader(temp_path)
-            pages = [page.extract_text() or "" for page in reader.pages]
-            return "\n".join(pages)
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-
-    return file_bytes.decode("utf-8", errors="ignore")
+    return clean_resume_text(extracted)
 
 
 @app.get("/api/jobs")
