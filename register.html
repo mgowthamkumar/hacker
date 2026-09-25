@@ -352,6 +352,276 @@
             .form-card { padding: 28px 20px; }
             h2 { font-size: 1.9rem; }
         }
+
+        /* ── GitHub & LinkedIn Interactive Verification & Repos Styles ── */
+        .input-with-action {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .input-with-action input {
+            flex: 1;
+        }
+        .btn-verify {
+            padding: 13px 18px;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(168, 85, 247, 0.2));
+            color: var(--cyan);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 12px;
+            font: 700 0.85rem "Inter", sans-serif;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.25s var(--ease-out);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-verify:hover {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(168, 85, 247, 0.35));
+            border-color: var(--cyan);
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .verification-status-box {
+            margin-top: 10px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            display: none;
+            transition: all 0.3s;
+        }
+        .verification-status-box.active {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .verification-status-box.loading {
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            color: var(--cyan);
+        }
+        .verification-status-box.verified {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            color: #4ade80;
+        }
+        .verification-status-box.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #f87171;
+        }
+
+        .verified-user-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid var(--green);
+            object-fit: cover;
+            flex-shrink: 0;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+        .verified-user-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .verified-user-name {
+            font-weight: 700;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+        .verified-user-stats {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .social-direct-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.25s;
+            margin-top: 8px;
+        }
+        .social-direct-link.github-link {
+            background: rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .social-direct-link.github-link:hover {
+            background: rgba(255, 255, 255, 0.16);
+            border-color: var(--cyan);
+            color: var(--cyan);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+            transform: translateY(-1px);
+        }
+        .social-direct-link.linkedin-link {
+            background: rgba(10, 102, 194, 0.18);
+            color: #38bdf8;
+            border: 1px solid rgba(10, 102, 194, 0.4);
+        }
+        .social-direct-link.linkedin-link:hover {
+            background: rgba(10, 102, 194, 0.32);
+            color: #fff;
+            box-shadow: 0 0 12px rgba(10, 102, 194, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* ── Project Selection / Repositories Picker ── */
+        .repos-container {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.12);
+            display: none;
+        }
+        .repos-container.active {
+            display: block;
+            animation: fadeIn 0.4s ease-out;
+        }
+        .repos-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .repos-count-badge {
+            font-size: 0.78rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(0, 255, 65, 0.15);
+            color: var(--green);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            font-weight: 700;
+        }
+        .repos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+        .repos-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+        .repos-grid::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        .repo-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.25s var(--ease-out);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+        .repo-card:hover {
+            border-color: var(--cyan);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        .repo-card.selected {
+            border-color: var(--green);
+            background: rgba(0, 255, 65, 0.06);
+            box-shadow: 0 0 18px rgba(0, 255, 65, 0.15);
+        }
+        .repo-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .repo-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #f8fafc;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            word-break: break-all;
+        }
+        .repo-link-external {
+            color: var(--cyan);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: opacity 0.2s;
+        }
+        .repo-link-external:hover {
+            text-decoration: underline;
+            color: #7dd3fc;
+        }
+        .repo-checkbox {
+            accent-color: var(--green);
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .repo-desc {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            line-height: 1.45;
+            margin-bottom: 14px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .repo-meta {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            padding-top: 10px;
+        }
+        .repo-lang {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .lang-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .show-password-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+            font-size: 0.84rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        .show-password-wrap input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--green);
+            margin: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 
@@ -379,7 +649,7 @@
             <form id="registrationForm" enctype="multipart/form-data">
 
                 <div class="form-section">
-                    <div class="form-section-title">Personal Information</div>
+                    <div class="form-section-title">Personal Information &amp; Account Security</div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="fullName">Full Name</label>
@@ -400,6 +670,19 @@
                             <input type="date" id="dob" name="dob" required>
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="accountPassword">Create Password</label>
+                            <input type="password" id="accountPassword" name="password" placeholder="Create your account password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <input type="password" id="confirmPassword" placeholder="Repeat your password" required>
+                        </div>
+                    </div>
+                    <label class="show-password-wrap">
+                        <input type="checkbox" id="showPasswordToggle"> Show passwords
+                    </label>
                 </div>
 
                 <div class="form-section">
@@ -450,20 +733,41 @@
                 </div>
 
                 <div class="form-section">
-                    <div class="form-section-title">Online Presence</div>
+                    <div class="form-section-title">Online Presence &amp; Verification</div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="githubProfile">GitHub Profile</label>
-                            <input type="url" id="githubProfile" name="githubProfile" placeholder="https://github.com/username">
+                            <label for="githubProfile">GitHub Profile / Username</label>
+                            <div class="input-with-action">
+                                <input type="text" id="githubProfile" name="githubProfile" placeholder="https://github.com/username or @username">
+                                <button type="button" class="btn-verify" id="btnVerifyGitHub">🔍 Verify</button>
+                            </div>
+                            <!-- Live Verification Status Box -->
+                            <div class="verification-status-box" id="githubStatusBox"></div>
+                            <div id="githubLinkContainer"></div>
                         </div>
                         <div class="form-group">
                             <label for="linkedinProfile">LinkedIn Profile</label>
-                            <input type="url" id="linkedinProfile" name="linkedinProfile" placeholder="https://linkedin.com/in/username">
+                            <input type="text" id="linkedinProfile" name="linkedinProfile" placeholder="https://linkedin.com/in/username">
+                            <div id="linkedinLinkContainer"></div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="resumeFile">Upload Resume</label>
-                        <input type="file" id="resumeFile" name="resumeFile" accept=".pdf,.doc,.docx">
+                    <div class="form-group" style="margin-top:16px;">
+                        <label for="resumeFile">Upload Resume (Optional)</label>
+                        <input type="file" id="resumeFile" name="resumeFile" accept=".pdf,.doc,.docx,.txt">
+                    </div>
+                </div>
+
+                <!-- Featured Projects Selection (from GitHub) -->
+                <div class="form-section repos-container" id="reposSection">
+                    <div class="repos-header">
+                        <div class="form-section-title" style="margin-bottom:0;">Featured Projects from GitHub</div>
+                        <span class="repos-count-badge" id="selectedReposCount">0 Projects Selected</span>
+                    </div>
+                    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:14px;">
+                        Select repositories from your GitHub account to showcase as projects in your portfolio:
+                    </p>
+                    <div class="repos-grid" id="reposGrid">
+                        <!-- Dynamically populated from GitHub API -->
                     </div>
                 </div>
 
@@ -482,91 +786,338 @@
     </div>
 
     <script src="api-config.js"></script>
+    <script src="github-profile-service.js"></script>
     <script>
         const apiOrigin = window.AUTOHIRE_API_ORIGIN;
+        let verifiedGitHubData = null;
+        let loadedRepositories = [];
+        let selectedProjects = [];
 
-        fetch(`${apiOrigin}/api/profile`, { credentials: "include" })
-            .then(response => response.ok ? response.json() : null)
-            .then(data => {
-                const profile = data && data.profile;
-                if (!profile) return;
+        // Show/hide passwords
+        document.getElementById("showPasswordToggle").addEventListener("change", function () {
+            const type = this.checked ? "text" : "password";
+            document.getElementById("accountPassword").type = type;
+            document.getElementById("confirmPassword").type = type;
+        });
 
-                const fields = {
-                    fullName: profile.fullName,
-                    emailAddress: profile.emailAddress,
-                    mobileNumber: profile.mobileNumber,
-                    userType: profile.userType,
-                    dob: profile.dob,
-                    preferredDomain: profile.preferredDomain,
-                    experienceLevel: profile.experienceLevel,
-                    githubProfile: profile.githubProfile,
-                    linkedinProfile: profile.linkedinProfile
-                };
+        // 1. Live LinkedIn URL Formatting & Direct Clickable Link
+        const linkedinInput = document.getElementById("linkedinProfile");
+        const linkedinLinkContainer = document.getElementById("linkedinLinkContainer");
 
-                Object.entries(fields).forEach(([id, value]) => {
-                    if (value !== undefined && value !== null) {
-                        const field = document.getElementById(id);
-                        if (field) field.value = value;
-                    }
+        function updateLinkedInDisplay() {
+            const rawVal = linkedinInput.value.trim();
+            if (!rawVal) {
+                linkedinLinkContainer.innerHTML = "";
+                return;
+            }
+            const canonicalUrl = AutoHireGitHub.formatLinkedInUrl(rawVal);
+            const username = AutoHireGitHub.extractLinkedInUsername(rawVal);
+            if (canonicalUrl && username) {
+                linkedinLinkContainer.innerHTML = `
+                    <a href="${canonicalUrl}" target="_blank" rel="noopener noreferrer" class="social-direct-link linkedin-link" title="Open LinkedIn profile directly">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9h2.77v8.37H6.46v-8.37M7.85 6.4a1.63 1.63 0 1 0 0 3.26 1.63 1.63 0 0 0 0-3.26z"/></svg>
+                        <span>View LinkedIn (${username}) ↗</span>
+                    </a>
+                `;
+            } else {
+                linkedinLinkContainer.innerHTML = "";
+            }
+        }
+        linkedinInput.addEventListener("input", updateLinkedInDisplay);
+        linkedinInput.addEventListener("blur", updateLinkedInDisplay);
+
+        // 2. Live GitHub Username Extraction, Live API Verification & Repos Fetching
+        const githubInput = document.getElementById("githubProfile");
+        const btnVerifyGitHub = document.getElementById("btnVerifyGitHub");
+        const githubStatusBox = document.getElementById("githubStatusBox");
+        const githubLinkContainer = document.getElementById("githubLinkContainer");
+        const reposSection = document.getElementById("reposSection");
+        const reposGrid = document.getElementById("reposGrid");
+        const selectedReposCountBadge = document.getElementById("selectedReposCount");
+
+        async function verifyGitHubAccount() {
+            const rawVal = githubInput.value.trim();
+            if (!rawVal) {
+                githubStatusBox.className = "verification-status-box";
+                githubStatusBox.style.display = "none";
+                githubLinkContainer.innerHTML = "";
+                reposSection.classList.remove("active");
+                return;
+            }
+
+            const username = AutoHireGitHub.extractGitHubUsername(rawVal);
+            if (!username) {
+                showGitHubError("Please enter a valid GitHub username or profile URL.");
+                return;
+            }
+
+            // Normalise input value to clean URL
+            githubInput.value = `https://github.com/${username}`;
+
+            // Show loading state
+            githubStatusBox.className = "verification-status-box loading active";
+            githubStatusBox.style.display = "flex";
+            githubStatusBox.innerHTML = `
+                <div style="display:inline-block; width:18px; height:18px; border:2px solid var(--cyan); border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+                <span>Checking GitHub for <strong>@${username}</strong>...</span>
+            `;
+
+            const result = await AutoHireGitHub.verifyGitHubUser(username);
+
+            if (result.success && result.exists) {
+                verifiedGitHubData = result;
+
+                // Show verified status box with avatar and live GitHub link
+                githubStatusBox.className = "verification-status-box verified active";
+                githubStatusBox.innerHTML = `
+                    <img src="${result.avatar}" class="verified-user-avatar" alt="${result.username}">
+                    <div class="verified-user-info">
+                        <div class="verified-user-name">✅ Verified: ${result.name} (@${result.username})</div>
+                        <div class="verified-user-stats">
+                            <span>📦 ${result.publicRepos} public repos</span> • <span>👥 ${result.followers} followers</span>
+                            ${result.bio ? ` • <span style="font-style:italic;">"${result.bio.slice(0, 45)}${result.bio.length > 45 ? "..." : ""}"</span>` : ""}
+                        </div>
+                    </div>
+                `;
+
+                // Render direct clickable GitHub link that opens user profile directly
+                githubLinkContainer.innerHTML = `
+                    <a href="${result.profileUrl}" target="_blank" rel="noopener noreferrer" class="social-direct-link github-link" title="Open ${result.username} on GitHub directly">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
+                        <span>Open GitHub Profile (@${result.username}) ↗</span>
+                    </a>
+                `;
+
+                // Auto-fill full name if not yet provided
+                const fullNameInput = document.getElementById("fullName");
+                if (fullNameInput && !fullNameInput.value.trim() && result.name) {
+                    fullNameInput.value = result.name;
+                }
+
+                // Fetch Repositories for project showcase selection
+                loadRepositoriesForSelection(result.username);
+            } else {
+                showGitHubError(result.error || `GitHub user "@${username}" was not found.`);
+            }
+        }
+
+        function showGitHubError(msg) {
+            verifiedGitHubData = null;
+            githubStatusBox.className = "verification-status-box error active";
+            githubStatusBox.style.display = "flex";
+            githubStatusBox.innerHTML = `
+                <span style="font-size:1.2rem;">⚠️</span>
+                <span>${msg}</span>
+            `;
+            githubLinkContainer.innerHTML = "";
+            reposSection.classList.remove("active");
+        }
+
+        async function loadRepositoriesForSelection(username) {
+            reposSection.classList.add("active");
+            reposGrid.innerHTML = `
+                <div style="grid-column: 1 / -1; padding: 20px; text-align: center; color: var(--cyan);">
+                    <div style="display:inline-block; width:22px; height:22px; border:2px solid var(--cyan); border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:8px;"></div>
+                    <div>Fetching public repositories for <strong>@${username}</strong>...</div>
+                </div>
+            `;
+
+            loadedRepositories = await AutoHireGitHub.fetchGitHubRepos(username);
+
+            if (loadedRepositories.length === 0) {
+                reposGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; padding: 18px; text-align: center; color: var(--text-muted); background: rgba(255,255,255,0.03); border-radius: 12px;">
+                        No public repositories found for this account. You can still create your profile and add custom projects later!
+                    </div>
+                `;
+                return;
+            }
+
+            // Default: Select top 3 updated non-fork repositories
+            const defaultSelected = loadedRepositories
+                .filter(r => !r.isFork)
+                .slice(0, 3)
+                .map(r => r.url);
+
+            selectedProjects = loadedRepositories.filter(r => defaultSelected.includes(r.url));
+            renderRepoCards();
+        }
+
+        function renderRepoCards() {
+            selectedReposCountBadge.textContent = `${selectedProjects.length} Projects Selected`;
+
+            reposGrid.innerHTML = loadedRepositories.map(repo => {
+                const isSelected = selectedProjects.some(p => p.url === repo.url);
+                return `
+                    <div class="repo-card ${isSelected ? 'selected' : ''}" data-url="${repo.url}">
+                        <div class="repo-card-header">
+                            <div class="repo-title">
+                                <span>📦</span>
+                                <a href="${repo.url}" target="_blank" rel="noopener noreferrer" class="repo-link-external" onclick="event.stopPropagation();" title="View repository on GitHub">
+                                    ${repo.name} ↗
+                                </a>
+                            </div>
+                            <input type="checkbox" class="repo-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleRepoSelection('${repo.url}');">
+                        </div>
+                        <p class="repo-desc">${repo.description || "No description provided."}</p>
+                        <div class="repo-meta">
+                            <span class="repo-lang">
+                                <span class="lang-dot" style="background:${repo.languageColor};"></span>
+                                <span>${repo.language}</span>
+                            </span>
+                            <span>⭐ ${repo.stars}</span>
+                            <span>🍴 ${repo.forks}</span>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            // Add click listener to repo card
+            reposGrid.querySelectorAll(".repo-card").forEach(card => {
+                card.addEventListener("click", () => {
+                    const url = card.getAttribute("data-url");
+                    if (url) toggleRepoSelection(url);
                 });
-            })
-            .catch(() => { });
+            });
+        }
 
+        window.toggleRepoSelection = function(repoUrl) {
+            const repo = loadedRepositories.find(r => r.url === repoUrl);
+            if (!repo) return;
+
+            const existingIdx = selectedProjects.findIndex(p => p.url === repoUrl);
+            if (existingIdx >= 0) {
+                selectedProjects.splice(existingIdx, 1);
+            } else {
+                selectedProjects.push(repo);
+            }
+            renderRepoCards();
+        };
+
+        btnVerifyGitHub.addEventListener("click", verifyGitHubAccount);
+        githubInput.addEventListener("blur", () => {
+            if (githubInput.value.trim() && !verifiedGitHubData) {
+                verifyGitHubAccount();
+            }
+        });
+
+        // 3. Pre-populate existing profile data if available
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedProfile = JSON.parse(localStorage.getItem("autoHireProfile") || localStorage.getItem("loggedInUser") || "null");
+            const profile = savedProfile ? (savedProfile.profile || savedProfile) : null;
+
+            if (profile) {
+                if (profile.fullName) document.getElementById("fullName").value = profile.fullName;
+                if (profile.emailAddress) document.getElementById("emailAddress").value = profile.emailAddress;
+                if (profile.mobileNumber) document.getElementById("mobileNumber").value = profile.mobileNumber;
+                if (profile.dob) document.getElementById("dob").value = profile.dob;
+                if (profile.userType) document.getElementById("userType").value = profile.userType;
+                if (profile.experienceLevel) document.getElementById("experienceLevel").value = profile.experienceLevel;
+                if (profile.preferredDomain) document.getElementById("preferredDomain").value = profile.preferredDomain;
+                if (profile.githubProfile) {
+                    document.getElementById("githubProfile").value = profile.githubProfile;
+                    verifyGitHubAccount();
+                }
+                if (profile.linkedinProfile) {
+                    document.getElementById("linkedinProfile").value = profile.linkedinProfile;
+                    updateLinkedInDisplay();
+                }
+            }
+        });
+
+        // 4. Form Submission: Automatic Registration with Zero-Backend Resilience
         document.getElementById('registrationForm').addEventListener('submit', async function (event) {
             event.preventDefault();
 
             const termsCheckbox = document.getElementById('termsAgreement');
             const submitBtn = document.getElementById('submitBtn');
+            const password = document.getElementById('accountPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPassword) {
+                alert("Passwords do not match! Please check your password fields.");
+                document.getElementById('confirmPassword').focus();
+                return;
+            }
 
             if (!termsCheckbox.checked) {
                 alert('Please accept the Terms & Conditions and Privacy Policy to proceed.');
                 return;
             }
 
-            submitBtn.innerText = "Indexing Profile into RAG Memory...";
+            submitBtn.innerText = "Saving Profile & Synchronizing...";
             submitBtn.disabled = true;
 
-            // Collect form data including file upload
+            const fullName = document.getElementById("fullName").value.trim();
+            const emailAddress = document.getElementById("emailAddress").value.trim().toLowerCase();
+            const mobileNumber = document.getElementById("mobileNumber").value.trim();
+            const dob = document.getElementById("dob").value;
+            const userType = document.getElementById("userType").value;
+            const experienceLevel = document.getElementById("experienceLevel").value;
+            const preferredDomain = document.getElementById("preferredDomain").value;
+            const githubVal = document.getElementById("githubProfile").value.trim();
+            const linkedinVal = document.getElementById("linkedinProfile").value.trim();
+
+            const githubUsername = AutoHireGitHub.extractGitHubUsername(githubVal);
+            const linkedinUsername = AutoHireGitHub.extractLinkedInUsername(linkedinVal);
+            const canonicalGithubUrl = AutoHireGitHub.formatGitHubUrl(githubVal);
+            const canonicalLinkedinUrl = AutoHireGitHub.formatLinkedInUrl(linkedinVal);
+
+            const userPicture = (verifiedGitHubData && verifiedGitHubData.avatar) ? verifiedGitHubData.avatar : "";
+
+            const profileData = {
+                fullName,
+                emailAddress,
+                mobileNumber,
+                dob,
+                userType,
+                experienceLevel,
+                preferredDomain,
+                githubProfile: canonicalGithubUrl,
+                githubUsername,
+                linkedinProfile: canonicalLinkedinUrl,
+                linkedinUsername,
+                picture: userPicture,
+                projects: selectedProjects
+            };
+
+            const userAccount = {
+                id: crypto.randomUUID(),
+                name: fullName,
+                email: emailAddress,
+                password,
+                picture: userPicture,
+                githubProfile: canonicalGithubUrl,
+                githubUsername,
+                linkedinProfile: canonicalLinkedinUrl,
+                linkedinUsername,
+                projects: selectedProjects,
+                profile: profileData
+            };
+
+            // 1. Immediately save into client-side storage & accounts list (100% resilient)
+            AutoHireGitHub.saveAccount(userAccount, profileData);
+
+            // 2. Dispatch background sync to server if running
             const formData = new FormData(this);
+            formData.append("githubUsername", githubUsername);
+            formData.append("linkedinUsername", linkedinUsername);
+            formData.append("projects", JSON.stringify(selectedProjects));
 
             try {
-                const response = await fetch(`${apiOrigin}/submit-registration`, {
+                await fetch(`${apiOrigin}/submit-registration`, {
                     method: "POST",
                     body: formData
                 });
-
-                const contentType = response.headers.get("content-type") || "";
-                const data = contentType.includes("application/json")
-                    ? await response.json()
-                    : { message: await response.text() };
-
-                if (response.ok) {
-                    localStorage.setItem("loggedInUser", JSON.stringify(data.user));
-                    window.location.assign("index.html");
-                } else {
-                    alert("Error: " + (data.detail || data.message || "Registration failed."));
-                }
-            } catch (error) {
-                console.error("Connection Error:", error);
-                const profile = Object.fromEntries(formData.entries());
-                delete profile.resumeFile;
-                profile.resume = document.getElementById("resumeFile").files[0]?.name || null;
-                const user = {
-                    id: crypto.randomUUID(),
-                    name: profile.fullName || profile.emailAddress.split("@")[0],
-                    email: profile.emailAddress.toLowerCase(),
-                    profile
-                };
-                localStorage.setItem("loggedInUser", JSON.stringify(user));
-                localStorage.setItem("autoHireProfile", JSON.stringify(user));
-                alert("Your profile was saved in this browser. Start the backend later to enable server storage and resume uploads.");
-                window.location.assign("index.html");
-            } finally {
-                submitBtn.innerText = "Register & Index Profile";
-                submitBtn.disabled = false;
+            } catch (err) {
+                console.log("Server sync notice: Saved in local workspace storage automatically.");
             }
+
+            // 3. User feedback and workspace launch
+            alert(`🎉 Profile Created Successfully!\n\nWelcome ${fullName}! Your profile, verified GitHub account (@${githubUsername || "candidate"}), and ${selectedProjects.length} selected project(s) have been configured. You can also sign in anytime directly from the login page!`);
+
+            window.location.assign("dashboard.html");
         });
     </script>
 </body>
-
 </html>

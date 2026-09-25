@@ -289,6 +289,225 @@
                 font-size: 22px;
             }
         }
+
+        /* ── Social Badges & GitHub Integration ── */
+        .social-badges-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .social-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 15px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.25s var(--ease-out);
+            backdrop-filter: blur(10px);
+        }
+        .github-badge {
+            background: rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .github-badge:hover {
+            background: rgba(255, 255, 255, 0.16);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 0 16px var(--primary-glow);
+            transform: translateY(-2px);
+        }
+        .linkedin-badge {
+            background: rgba(10, 102, 194, 0.18);
+            color: #38bdf8;
+            border: 1px solid rgba(10, 102, 194, 0.4);
+        }
+        .linkedin-badge:hover {
+            background: rgba(10, 102, 194, 0.32);
+            color: #fff;
+            box-shadow: 0 0 16px rgba(10, 102, 194, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .input-with-action {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .input-with-action input {
+            flex: 1;
+        }
+        .btn-verify-sm {
+            padding: 6px 14px;
+            background: rgba(56, 189, 248, 0.2);
+            color: var(--primary);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .btn-verify-sm:hover {
+            background: rgba(56, 189, 248, 0.35);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .verification-status-box {
+            margin-top: 8px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            text-align: left;
+        }
+        .verification-status-box.active {
+            display: flex;
+        }
+        .verification-status-box.verified {
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            color: #4ade80;
+        }
+        .verification-status-box.error {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #f87171;
+        }
+
+        /* ── Featured Projects Section ── */
+        .projects-section {
+            margin-top: 24px;
+            text-align: left;
+            border-top: 1px solid var(--card-border);
+            padding-top: 20px;
+        }
+        .projects-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .projects-title {
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-pick-repos {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-pick-repos:hover {
+            background: rgba(56, 189, 248, 0.25);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+        .projects-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .project-card-item {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .project-card-item:hover {
+            border-color: var(--primary);
+            transform: translateX(2px);
+        }
+        .project-card-left {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .project-card-name {
+            font-weight: 700;
+            font-size: 14px;
+            color: #fff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .project-card-name:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+        .project-card-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            max-width: 380px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .project-card-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        /* ── Expandable Repo Picker Container ── */
+        .repo-picker-box {
+            display: none;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 16px;
+            margin-top: 14px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        .repo-picker-box.active {
+            display: block;
+        }
+        .repo-pick-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .repo-pick-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .repo-pick-item.selected {
+            background: rgba(0, 255, 65, 0.08);
+            border-color: rgba(0, 255, 65, 0.2);
+        }
     </style>
 </head>
 
@@ -300,7 +519,7 @@
     <div class="ambient-glow glow-1"></div>
     <div class="ambient-glow glow-2"></div>
 
-    <div class="profile-container 3d-card">
+    <div class="profile-container 3d-card" style="max-width: 620px;">
         <div class="status-badge" id="status-badge">
             <span id="status-dot">🟢</span> <span id="status-text">Auto Sync Active (Mobile Ready)</span>
         </div>
@@ -309,6 +528,18 @@
 
         <h2 id="display-name">Candidate User</h2>
         <p class="role-tag" id="display-domain">💻 Engineering & Computer Science</p>
+
+        <!-- Clickable Social Badges (Direct navigation to GitHub & LinkedIn profiles) -->
+        <div class="social-badges-bar" id="social-badges-bar">
+            <a id="badge-github" href="#" target="_blank" rel="noopener noreferrer" class="social-badge github-badge" style="display:none;" title="Click to view GitHub profile in new tab">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
+                <span id="badge-github-text">@username</span> ↗
+            </a>
+            <a id="badge-linkedin" href="#" target="_blank" rel="noopener noreferrer" class="social-badge linkedin-badge" style="display:none;" title="Click to view LinkedIn profile in new tab">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9h2.77v8.37H6.46v-8.37M7.85 6.4a1.63 1.63 0 1 0 0 3.26 1.63 1.63 0 0 0 0-3.26z"/></svg>
+                <span id="badge-linkedin-text">LinkedIn Profile</span> ↗
+            </a>
+        </div>
 
         <form id="profile-form" onsubmit="saveProfile(event)">
             <div class="info-group">
@@ -337,6 +568,49 @@
                     <label>Technical Skills</label>
                     <input type="text" id="input-skills" placeholder="e.g. Python, React, SQL, Git">
                 </div>
+
+                <!-- GitHub Profile Verification Input -->
+                <div class="info-card">
+                    <label>GitHub Profile / Username</label>
+                    <div class="input-with-action">
+                        <input type="text" id="input-github" placeholder="https://github.com/username or @username">
+                        <button type="button" class="btn-verify-sm" id="btn-verify-profile-gh" onclick="verifyGitHubInProfile()">🔍 Verify</button>
+                    </div>
+                    <div class="verification-status-box" id="profile-gh-status"></div>
+                </div>
+
+                <!-- LinkedIn Profile Input -->
+                <div class="info-card">
+                    <label>LinkedIn Profile URL</label>
+                    <input type="text" id="input-linkedin" placeholder="https://linkedin.com/in/username" oninput="updateProfileLinkedInDisplay()">
+                    <div id="profile-li-preview" style="margin-top:6px;"></div>
+                </div>
+            </div>
+
+            <!-- Featured Projects & Repositories Showcase -->
+            <div class="projects-section">
+                <div class="projects-header">
+                    <div class="projects-title">
+                        <span>🚀</span> Featured Projects &amp; Repositories
+                    </div>
+                    <button type="button" class="btn-pick-repos" id="btn-toggle-picker" onclick="toggleRepoPicker()">
+                        📦 Select from GitHub Repos
+                    </button>
+                </div>
+
+                <div class="projects-list" id="profile-projects-list">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Expandable Repo Picker Grid -->
+                <div class="repo-picker-box" id="profile-repo-picker">
+                    <div style="font-size:13px; font-weight:700; color:var(--primary); margin-bottom:10px;">
+                        Click a repository to add or remove it from your featured projects:
+                    </div>
+                    <div id="repo-picker-items">
+                        <!-- Loaded from GitHub API -->
+                    </div>
+                </div>
             </div>
 
             <div class="btn-stack">
@@ -360,8 +634,9 @@
     </div>
 
     <!-- TRUSTED DEVICES MANAGEMENT DASHBOARD -->
-    <div id="trusted-devices-container" style="width: 100%; max-width: 540px; margin-top: 24px; z-index:1; position:relative;"></div>
+    <div id="trusted-devices-container" style="width: 100%; max-width: 620px; margin-top: 24px; z-index:1; position:relative;"></div>
 
+    <script src="github-profile-service.js"></script>
     <script>
         // 1. Canvas 3D Particle Mesh
         (function init3DCanvas() {
@@ -446,38 +721,53 @@
             });
         }
 
-        // 3. Profile Initialization & Sync Logic
+        // 3. Profile State & Initialization Logic
         const apiUrl = window.AUTOHIRE_API_URL || "http://127.0.0.1:8800/api/auth";
+        let currentProfileProjects = [];
+        let fetchedGitHubRepos = [];
 
         function loadProfileData() {
-            const localProfile = JSON.parse(localStorage.getItem("autoHireProfile") || localStorage.getItem("loggedInUser") || "null") || {
-                name: "Candidate User",
-                email: "candidate@autohire.ai",
-                domain: "Engineering & Computer Science",
-                skills: "Python, SQL, React, Git"
-            };
+            const localUser = JSON.parse(localStorage.getItem("autoHireProfile") || localStorage.getItem("loggedInUser") || "null") || {};
+            const profile = localUser.profile || localUser;
 
-            document.getElementById("input-name").value = localProfile.name || "Candidate User";
-            document.getElementById("input-email").value = localProfile.email || "candidate@autohire.ai";
-            document.getElementById("input-domain").value = localProfile.domain || "Engineering & Computer Science";
-            document.getElementById("input-skills").value = localProfile.skills || "Python, SQL, React, Git";
+            document.getElementById("input-name").value = profile.fullName || profile.name || "Candidate User";
+            document.getElementById("input-email").value = profile.emailAddress || profile.email || "candidate@autohire.ai";
+            document.getElementById("input-domain").value = profile.domain || profile.preferredDomain || "Engineering & Computer Science";
+            document.getElementById("input-skills").value = profile.skills || "Python, SQL, React, Git";
 
-            updateHeader(localProfile);
+            if (profile.githubProfile) {
+                document.getElementById("input-github").value = profile.githubProfile;
+            }
+            if (profile.linkedinProfile) {
+                document.getElementById("input-linkedin").value = profile.linkedinProfile;
+            }
+
+            currentProfileProjects = Array.isArray(profile.projects) ? profile.projects : [];
+
+            updateHeader(profile);
+            updateSocialBadges(profile);
+            updateProfileLinkedInDisplay();
+            renderProfileProjects();
+
+            if (profile.githubProfile) {
+                verifyGitHubInProfile(false);
+            }
 
             if (window.AutoHireDeviceAuth) {
                 window.AutoHireDeviceAuth.renderTrustedDevicesSection();
             }
 
+            // Sync from backend if running
             fetch(`${apiUrl}/me`, { credentials: "include" })
                 .then(async res => {
                     if (res.ok) {
                         const data = await res.json();
                         if (data && data.user) {
-                            const merged = { ...localProfile, ...data.user };
-                            document.getElementById("input-name").value = merged.name || merged.email;
-                            document.getElementById("input-email").value = merged.email || "";
+                            const merged = { ...profile, ...data.user };
+                            document.getElementById("input-name").value = merged.name || merged.fullName || merged.email;
+                            document.getElementById("input-email").value = merged.email || merged.emailAddress || "";
                             updateHeader(merged);
-                            localStorage.setItem("autoHireProfile", JSON.stringify(merged));
+                            updateSocialBadges(merged);
                         }
                     }
                 })
@@ -489,8 +779,7 @@
         }
 
         function updateHeader(user) {
-            const name = user.name || user.fullName || user.email || "Candidate User";
-            const email = user.email || user.emailAddress || "";
+            const name = user.fullName || user.name || user.email || "Candidate User";
             const picture = user.picture || user.userAvatar || user.profilePic || (user.profile && user.profile.picture) || localStorage.getItem("userAvatar") || localStorage.getItem("profilePic") || "";
 
             document.getElementById("display-name").innerText = name;
@@ -504,23 +793,271 @@
                     avatarEl.innerHTML = googleSvg;
                 }
             }
-            document.getElementById("display-domain").innerText = user.domain ? user.domain : "💻 Engineering & Computer Science";
+            document.getElementById("display-domain").innerText = user.domain || user.preferredDomain || "💻 Engineering & Computer Science";
         }
 
+        // 4. Update Clickable Social Badges (Direct navigation to GitHub & LinkedIn profiles)
+        function updateSocialBadges(profile) {
+            const ghBadge = document.getElementById("badge-github");
+            const ghText = document.getElementById("badge-github-text");
+            const liBadge = document.getElementById("badge-linkedin");
+            const liText = document.getElementById("badge-linkedin-text");
+
+            const rawGh = profile.githubProfile || document.getElementById("input-github").value.trim();
+            const ghUsername = AutoHireGitHub.extractGitHubUsername(rawGh);
+            if (ghUsername) {
+                ghBadge.href = `https://github.com/${ghUsername}`;
+                ghText.textContent = `@${ghUsername}`;
+                ghBadge.style.display = "inline-flex";
+            } else {
+                ghBadge.style.display = "none";
+            }
+
+            const rawLi = profile.linkedinProfile || document.getElementById("input-linkedin").value.trim();
+            const liUsername = AutoHireGitHub.extractLinkedInUsername(rawLi);
+            const canonicalLi = AutoHireGitHub.formatLinkedInUrl(rawLi);
+            if (canonicalLi && liUsername) {
+                liBadge.href = canonicalLi;
+                liText.textContent = `LinkedIn (${liUsername})`;
+                liBadge.style.display = "inline-flex";
+            } else {
+                liBadge.style.display = "none";
+            }
+        }
+
+        function updateProfileLinkedInDisplay() {
+            const raw = document.getElementById("input-linkedin").value.trim();
+            const previewEl = document.getElementById("profile-li-preview");
+            const canonical = AutoHireGitHub.formatLinkedInUrl(raw);
+            const username = AutoHireGitHub.extractLinkedInUsername(raw);
+
+            if (canonical && username) {
+                previewEl.innerHTML = `
+                    <a href="${canonical}" target="_blank" rel="noopener noreferrer" style="color:var(--primary); font-size:12px; font-weight:700; text-decoration:none;">
+                        💼 Open Profile (in/${username}) ↗
+                    </a>
+                `;
+            } else {
+                previewEl.innerHTML = "";
+            }
+            updateSocialBadges({ linkedinProfile: raw });
+        }
+
+        // 5. Live GitHub Verification inside Profile
+        async function verifyGitHubInProfile(showLoading = true) {
+            const input = document.getElementById("input-github");
+            const statusBox = document.getElementById("profile-gh-status");
+            const rawVal = input.value.trim();
+
+            if (!rawVal) {
+                statusBox.className = "verification-status-box";
+                statusBox.style.display = "none";
+                updateSocialBadges({});
+                return;
+            }
+
+            const username = AutoHireGitHub.extractGitHubUsername(rawVal);
+            if (!username) {
+                statusBox.className = "verification-status-box error active";
+                statusBox.innerHTML = `<span>⚠️ Please enter a valid GitHub username or URL.</span>`;
+                return;
+            }
+
+            input.value = `https://github.com/${username}`;
+
+            if (showLoading) {
+                statusBox.className = "verification-status-box active";
+                statusBox.style.background = "rgba(56, 189, 248, 0.1)";
+                statusBox.style.color = "var(--primary)";
+                statusBox.innerHTML = `<span>⏳ Verifying GitHub @${username}...</span>`;
+            }
+
+            const result = await AutoHireGitHub.verifyGitHubUser(username);
+
+            if (result.success && result.exists) {
+                statusBox.className = "verification-status-box verified active";
+                statusBox.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span>✅</span>
+                        <div>
+                            <strong>@${result.username}</strong> verified (${result.publicRepos} repos, ${result.followers} followers)
+                            <a href="${result.profileUrl}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; margin-left:6px; font-weight:700;">Open Profile ↗</a>
+                        </div>
+                    </div>
+                `;
+
+                // Update Avatar if currently default
+                if (result.avatar) {
+                    const avatarEl = document.getElementById("avatar");
+                    if (avatarEl && !avatarEl.querySelector("img")) {
+                        avatarEl.innerHTML = `<img src="${result.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="Profile">`;
+                    }
+                }
+
+                updateSocialBadges({ githubProfile: result.profileUrl });
+            } else {
+                statusBox.className = "verification-status-box error active";
+                statusBox.innerHTML = `<span>❌ ${result.error || `User "@${username}" not found on GitHub.`}</span>`;
+            }
+        }
+
+        // 6. Featured Projects Display & Interactive GitHub Repos Picker
+        function renderProfileProjects() {
+            const listEl = document.getElementById("profile-projects-list");
+            if (!listEl) return;
+
+            if (currentProfileProjects.length === 0) {
+                listEl.innerHTML = `
+                    <div style="padding:14px; background:rgba(255,255,255,0.03); border:1px dashed var(--card-border); border-radius:10px; color:var(--text-muted); font-size:13px; text-align:center;">
+                        No featured GitHub projects selected yet. Click <strong>"Select from GitHub Repos"</strong> above to showcase your repositories!
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = currentProfileProjects.map((p, idx) => {
+                const color = p.languageColor || AutoHireGitHub.LANGUAGE_COLORS[p.language] || "#38bdf8";
+                return `
+                    <div class="project-card-item">
+                        <div class="project-card-left">
+                            <a href="${p.url}" target="_blank" rel="noopener noreferrer" class="project-card-name" title="Click to view repository on GitHub">
+                                <span>📦</span> ${p.name} ↗
+                            </a>
+                            <div class="project-card-desc">${p.description || "GitHub Repository"}</div>
+                        </div>
+                        <div class="project-card-meta">
+                            <span style="display:inline-flex; align-items:center; gap:5px;">
+                                <span style="width:8px; height:8px; border-radius:50%; background:${color};"></span>
+                                ${p.language || "Code"}
+                            </span>
+                            <span>⭐ ${p.stars || 0}</span>
+                            <button type="button" onclick="removeProject(${idx})" style="background:none; border:none; color:#f87171; font-size:14px; cursor:pointer; padding:2px 6px;" title="Remove from featured">✕</button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        window.removeProject = function(idx) {
+            currentProfileProjects.splice(idx, 1);
+            renderProfileProjects();
+        };
+
+        async function toggleRepoPicker() {
+            const pickerBox = document.getElementById("profile-repo-picker");
+            const btn = document.getElementById("btn-toggle-picker");
+
+            if (pickerBox.classList.contains("active")) {
+                pickerBox.classList.remove("active");
+                btn.textContent = "📦 Select from GitHub Repos";
+                return;
+            }
+
+            const rawGh = document.getElementById("input-github").value.trim();
+            const username = AutoHireGitHub.extractGitHubUsername(rawGh);
+
+            if (!username) {
+                alert("Please enter and verify your GitHub username above before selecting repositories.");
+                document.getElementById("input-github").focus();
+                return;
+            }
+
+            pickerBox.classList.add("active");
+            btn.textContent = "✕ Close Repo Picker";
+
+            const container = document.getElementById("repo-picker-items");
+            container.innerHTML = `<div style="text-align:center; padding:12px; color:var(--primary); font-size:13px;">Fetching public repositories from GitHub for @${username}...</div>`;
+
+            fetchedGitHubRepos = await AutoHireGitHub.fetchGitHubRepos(username);
+
+            if (fetchedGitHubRepos.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:13px;">No public repositories found for @${username}.</div>`;
+                return;
+            }
+
+            renderPickerItems();
+        }
+
+        function renderPickerItems() {
+            const container = document.getElementById("repo-picker-items");
+            container.innerHTML = fetchedGitHubRepos.map(repo => {
+                const isSelected = currentProfileProjects.some(p => p.url === repo.url);
+                return `
+                    <div class="repo-pick-item ${isSelected ? 'selected' : ''}" onclick="togglePickerRepo('${repo.url}')">
+                        <div>
+                            <div style="font-weight:700; font-size:13px; color:#fff; display:flex; align-items:center; gap:6px;">
+                                <span>📦</span> ${repo.name}
+                                <span style="font-size:11px; color:var(--primary);">${repo.language}</span>
+                            </div>
+                            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">${(repo.description || "").slice(0, 70)}</div>
+                        </div>
+                        <div style="font-size:12px; font-weight:700; color:${isSelected ? '#4ade80' : 'var(--text-muted)'};">
+                            ${isSelected ? '✅ Added' : '+ Add'}
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        window.togglePickerRepo = function(url) {
+            const repo = fetchedGitHubRepos.find(r => r.url === url);
+            if (!repo) return;
+
+            const existingIdx = currentProfileProjects.findIndex(p => p.url === url);
+            if (existingIdx >= 0) {
+                currentProfileProjects.splice(existingIdx, 1);
+            } else {
+                currentProfileProjects.push(repo);
+            }
+
+            renderPickerItems();
+            renderProfileProjects();
+        };
+
+        // 7. Save Profile Handler with Full Account Synchronization
         function saveProfile(event) {
             event.preventDefault();
+
+            const rawGh = document.getElementById("input-github").value.trim();
+            const rawLi = document.getElementById("input-linkedin").value.trim();
+
+            const ghUsername = AutoHireGitHub.extractGitHubUsername(rawGh);
+            const canonicalGh = AutoHireGitHub.formatGitHubUrl(rawGh);
+            const liUsername = AutoHireGitHub.extractLinkedInUsername(rawLi);
+            const canonicalLi = AutoHireGitHub.formatLinkedInUrl(rawLi);
+
             const profileData = {
+                fullName: document.getElementById("input-name").value.trim(),
                 name: document.getElementById("input-name").value.trim(),
-                email: document.getElementById("input-email").value.trim(),
+                emailAddress: document.getElementById("input-email").value.trim().toLowerCase(),
+                email: document.getElementById("input-email").value.trim().toLowerCase(),
                 domain: document.getElementById("input-domain").value,
-                skills: document.getElementById("input-skills").value.trim()
+                preferredDomain: document.getElementById("input-domain").value,
+                skills: document.getElementById("input-skills").value.trim(),
+                githubProfile: canonicalGh,
+                githubUsername: ghUsername,
+                linkedinProfile: canonicalLi,
+                linkedinUsername: liUsername,
+                projects: currentProfileProjects
             };
 
-            localStorage.setItem("autoHireProfile", JSON.stringify(profileData));
-            localStorage.setItem("loggedInUser", JSON.stringify(profileData));
-            updateHeader(profileData);
+            // Save in unified local storage and accounts list
+            AutoHireGitHub.saveAccount(profileData, profileData);
 
-            alert("✅ Profile updated successfully!");
+            updateHeader(profileData);
+            updateSocialBadges(profileData);
+            renderProfileProjects();
+
+            // Background sync with server if online
+            const apiOrigin = window.AUTOHIRE_API_ORIGIN;
+            fetch(`${apiOrigin}/api/profile`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(profileData)
+            }).catch(() => { });
+
+            alert("✅ Profile updated successfully!\nYour verified GitHub account, LinkedIn profile, and featured project repositories have been synchronized.");
         }
 
         function goDashboard() {
@@ -556,5 +1093,4 @@
         window.addEventListener("DOMContentLoaded", loadProfileData);
     </script>
 </body>
-
 </html>

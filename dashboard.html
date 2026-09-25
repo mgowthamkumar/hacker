@@ -7,6 +7,7 @@
     <meta name="description" content="AutoHire AI Command Dashboard — Live AI Job Search, Hackathons, Internships & Resume Intelligence.">
     <title>AI Career Dashboard | AutoHire AI</title>
     <script src="api-config.js"></script>
+    <script src="github-profile-service.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -743,6 +744,136 @@
             .stats-grid, .launchpad-grid, .opp-cards-grid { grid-template-columns: 1fr; }
             .footer-content { grid-template-columns: 1fr; gap: 24px; }
         }
+
+        /* ── Verified Social Badges & GitHub Projects Showcase ── */
+        .dash-social-badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+        .dash-social-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.25s var(--ease-out);
+            border: 1px solid var(--card-border);
+            cursor: pointer;
+        }
+        .dash-social-github {
+            background: rgba(15, 23, 42, 0.9);
+            color: #f8fafc;
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+        }
+        .dash-social-github:hover {
+            border-color: var(--primary);
+            background: rgba(56, 189, 248, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(56, 189, 248, 0.35);
+        }
+        .dash-social-linkedin {
+            background: rgba(10, 102, 194, 0.15);
+            color: #60a5fa;
+            border-color: rgba(10, 102, 194, 0.4);
+        }
+        .dash-social-linkedin:hover {
+            border-color: #3b82f6;
+            background: rgba(10, 102, 194, 0.28);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+        }
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .project-card {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-md);
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.25s var(--ease-out);
+            backdrop-filter: blur(12px);
+        }
+        .project-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 25px rgba(56, 189, 248, 0.2);
+        }
+        .project-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .project-card-title {
+            font-family: "Space Grotesk", sans-serif;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #fff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .project-card-title:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+        .project-card-desc {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .project-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 0.8rem;
+        }
+        .project-card-lang {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+        .project-card-lang-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #38bdf8;
+        }
+        .project-card-link-btn {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: gap 0.2s;
+        }
+        .project-card-link-btn:hover {
+            gap: 7px;
+            text-decoration: underline;
+        }
     </style>
 </head>
 
@@ -786,15 +917,54 @@
             <div class="dash-hero-text">
                 <h1 id="welcomeUserHeading">Welcome back, <span>Candidate!</span> 🚀</h1>
                 <p id="welcomeUserSub">Your AI Career Launchpad is fully synchronized. Browse vector-matched jobs, register for live global hackathons, and audit your CV score.</p>
-                <div class="dash-badges">
+                <div class="dash-badges" id="dashUserBadges">
                     <span class="dash-badge">💻 Engineering Candidate</span>
                     <span class="dash-badge" style="border-color:rgba(168,85,247,0.4); color:#c084fc;">⚡ ATS Score Grade A+</span>
                     <span class="dash-badge" style="border-color:rgba(34,197,94,0.4); color:#4ade80;">🟢 Active Job Seeker</span>
                 </div>
+
+                <!-- Verified Social Badges: Direct clickable links to GitHub / LinkedIn -->
+                <div class="dash-social-badges" id="dashSocialBadges" style="margin-bottom: 20px;">
+                    <a id="heroGithubLink" href="#" target="_blank" rel="noopener noreferrer" class="dash-social-btn dash-social-github" style="display:none;" title="Open GitHub Profile directly">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                        <span id="heroGithubUser">@username</span>
+                        <span style="font-size:0.75rem; color:var(--primary); font-weight:700;">↗</span>
+                    </a>
+                    <a id="heroLinkedinLink" href="#" target="_blank" rel="noopener noreferrer" class="dash-social-btn dash-social-linkedin" style="display:none;" title="Open LinkedIn Profile directly">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                        <span id="heroLinkedinText">LinkedIn Profile</span>
+                        <span style="font-size:0.75rem; color:#93c5fd; font-weight:700;">↗</span>
+                    </a>
+                </div>
+
                 <div class="dash-action-btns">
                     <a href="chatbot.html" class="btn-dash-primary">🤖 Ask AutoHire AI Agent</a>
                     <a href="analyzer.html" class="btn-dash-secondary">📄 Analyze CV & ATS Score</a>
                 </div>
+            </div>
+        </div>
+
+        <!-- FEATURED PROJECTS FROM GITHUB -->
+        <div id="dashProjectsSection" class="reveal">
+            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <div>
+                    <h2 class="section-title">Verified <span>GitHub Projects</span></h2>
+                    <p style="color:var(--text-muted); font-size:0.88rem; margin-top:4px;">Repositories showcased from your verified GitHub portfolio.</p>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <a id="dashGithubDirectLink" href="#" target="_blank" rel="noopener noreferrer" class="dash-badge" style="display:none; text-decoration:none;">
+                        <span>🐙</span> <span id="dashGithubDirectUser">GitHub Profile</span> ↗
+                    </a>
+                    <a id="dashLinkedinDirectLink" href="#" target="_blank" rel="noopener noreferrer" class="dash-badge" style="display:none; text-decoration:none; border-color:rgba(10,102,194,0.4); color:#60a5fa; background:rgba(10,102,194,0.15);">
+                        <span>💼</span> <span>LinkedIn</span> ↗
+                    </a>
+                    <a href="profile.html" class="dash-badge" style="text-decoration:none; border-color:rgba(168,85,247,0.4); color:#c084fc; background:rgba(168,85,247,0.12);">
+                        <span>⚙️</span> <span>Manage Repos</span>
+                    </a>
+                </div>
+            </div>
+            <div class="projects-grid" id="dashProjectsGrid">
+                <!-- Dynamically populated from user.projects or AutoHireGitHub -->
             </div>
         </div>
 
@@ -1462,6 +1632,142 @@
                 }
                 if (userEmail) {
                     profileBtn.setAttribute('title', `${username} (${userEmail})`);
+                }
+            }
+
+            // 6. Social Profiles (GitHub & LinkedIn) and Verified Projects Rendering
+            const ghRaw = (userObj && (userObj.githubProfile || userObj.github)) || (profileObj && (profileObj.githubProfile || profileObj.github)) || localStorage.getItem('userGithub') || '';
+            const liRaw = (userObj && (userObj.linkedinProfile || userObj.linkedin)) || (profileObj && (profileObj.linkedinProfile || profileObj.linkedin)) || localStorage.getItem('userLinkedin') || '';
+
+            const ghUser = window.AutoHireGitHub ? window.AutoHireGitHub.extractGitHubUsername(ghRaw) : (ghRaw.replace(/^.*github\.com\//, '').replace(/^@/, '').split('/')[0] || '');
+            const liUser = window.AutoHireGitHub ? window.AutoHireGitHub.extractLinkedInUsername(liRaw) : (liRaw.replace(/^.*linkedin\.com\/in\//, '').split('/')[0] || '');
+
+            const heroGh = document.getElementById('heroGithubLink');
+            const heroGhUser = document.getElementById('heroGithubUser');
+            const dashGhLink = document.getElementById('dashGithubDirectLink');
+            const dashGhUser = document.getElementById('dashGithubDirectUser');
+
+            if (ghUser) {
+                const ghUrl = `https://github.com/${ghUser}`;
+                if (heroGh) {
+                    heroGh.href = ghUrl;
+                    heroGh.style.display = 'inline-flex';
+                    if (heroGhUser) heroGhUser.textContent = `@${ghUser}`;
+                }
+                if (dashGhLink) {
+                    dashGhLink.href = ghUrl;
+                    dashGhLink.style.display = 'inline-flex';
+                    if (dashGhUser) dashGhUser.textContent = `@${ghUser}`;
+                }
+            }
+
+            const heroLi = document.getElementById('heroLinkedinLink');
+            const heroLiText = document.getElementById('heroLinkedinText');
+            const dashLiLink = document.getElementById('dashLinkedinDirectLink');
+
+            if (liUser) {
+                const liUrl = `https://linkedin.com/in/${liUser}`;
+                if (heroLi) {
+                    heroLi.href = liUrl;
+                    heroLi.style.display = 'inline-flex';
+                    if (heroLiText) heroLiText.textContent = `in/${liUser}`;
+                }
+                if (dashLiLink) {
+                    dashLiLink.href = liUrl;
+                    dashLiLink.style.display = 'inline-flex';
+                }
+            }
+
+            // Render Featured Projects
+            const projectsGrid = document.getElementById('dashProjectsGrid');
+            const userProjects = (userObj && userObj.projects) || (profileObj && profileObj.projects) || [];
+
+            function renderEmptyProjectsNotice() {
+                if (!projectsGrid) return;
+                projectsGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; background: rgba(30, 41, 59, 0.4); border: 1px dashed var(--card-border); border-radius: var(--radius-md); padding: 32px 20px; text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 8px;">🐙</div>
+                        <h4 style="font-family:'Space Grotesk',sans-serif; color:#fff; margin-bottom:6px;">Showcase Your GitHub Repositories</h4>
+                        <p style="color:var(--text-muted); font-size:0.88rem; max-width:500px; margin:0 auto 16px;">Connect and verify your GitHub profile to showcase your best repositories and open source contributions directly here.</p>
+                        <a href="profile.html" class="btn-dash-primary" style="padding:10px 20px; font-size:0.88rem;">⚙️ Connect & Select Repositories</a>
+                    </div>
+                `;
+            }
+
+            if (projectsGrid) {
+                if (userProjects && userProjects.length > 0) {
+                    projectsGrid.innerHTML = '';
+                    userProjects.forEach((proj) => {
+                        const card = document.createElement('div');
+                        card.className = 'project-card 3d-card';
+                        const repoUrl = proj.url || (ghUser && proj.name ? `https://github.com/${ghUser}/${proj.name}` : '#');
+                        const langDotColor = proj.language === 'JavaScript' ? '#f1e05a' : (proj.language === 'Python' ? '#3572A5' : (proj.language === 'TypeScript' ? '#3178c6' : (proj.language === 'HTML' ? '#e34c26' : '#38bdf8')));
+                        
+                        card.innerHTML = `
+                            <div>
+                                <div class="project-card-header">
+                                    <a href="${repoUrl}" target="_blank" rel="noopener noreferrer" class="project-card-title">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                                        <span>${proj.name || 'Project'}</span>
+                                    </a>
+                                    <span style="font-size:0.75rem; color:#facc15; font-weight:700;">★ ${proj.stars || 0}</span>
+                                </div>
+                                <p class="project-card-desc">${proj.description || 'Verified repository showcase linked directly to candidate GitHub.'}</p>
+                            </div>
+                            <div class="project-card-footer">
+                                <div class="project-card-lang">
+                                    <span class="project-card-lang-dot" style="background:${langDotColor};"></span>
+                                    <span>${proj.language || 'Code'}</span>
+                                </div>
+                                <a href="${repoUrl}" target="_blank" rel="noopener noreferrer" class="project-card-link-btn">
+                                    <span>View on GitHub</span> <span>↗</span>
+                                </a>
+                            </div>
+                        `;
+                        projectsGrid.appendChild(card);
+                    });
+                } else if (ghUser && window.AutoHireGitHub) {
+                    // Automatically fetch repos if user has verified GitHub
+                    projectsGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:30px; color:var(--text-muted);"><span style="display:inline-block;">⚡</span> Loading your GitHub repositories...</div>`;
+                    window.AutoHireGitHub.fetchGitHubRepos(ghUser).then((repos) => {
+                        projectsGrid.innerHTML = '';
+                        const topRepos = (repos || []).slice(0, 4);
+                        if (topRepos.length === 0) {
+                            renderEmptyProjectsNotice();
+                            return;
+                        }
+                        topRepos.forEach((repo) => {
+                            const card = document.createElement('div');
+                            card.className = 'project-card 3d-card';
+                            const langDotColor = repo.language === 'JavaScript' ? '#f1e05a' : (repo.language === 'Python' ? '#3572A5' : (repo.language === 'TypeScript' ? '#3178c6' : '#38bdf8'));
+                            card.innerHTML = `
+                                <div>
+                                    <div class="project-card-header">
+                                        <a href="${repo.html_url}" target="_blank" rel="noopener noreferrer" class="project-card-title">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                                            <span>${repo.name}</span>
+                                        </a>
+                                        <span style="font-size:0.75rem; color:#facc15; font-weight:700;">★ ${repo.stargazers_count || 0}</span>
+                                    </div>
+                                    <p class="project-card-desc">${repo.description || 'Public GitHub repository linked directly to verified profile.'}</p>
+                                </div>
+                                <div class="project-card-footer">
+                                    <div class="project-card-lang">
+                                        <span class="project-card-lang-dot" style="background:${langDotColor};"></span>
+                                        <span>${repo.language || 'Code'}</span>
+                                    </div>
+                                    <a href="${repo.html_url}" target="_blank" rel="noopener noreferrer" class="project-card-link-btn">
+                                        <span>View on GitHub</span> <span>↗</span>
+                                    </a>
+                                </div>
+                            `;
+                            projectsGrid.appendChild(card);
+                        });
+                    }).catch(() => {
+                        renderEmptyProjectsNotice();
+                    });
+                } else {
+                    renderEmptyProjectsNotice();
                 }
             }
 

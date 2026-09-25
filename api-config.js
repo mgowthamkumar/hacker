@@ -231,6 +231,45 @@
                 if (accountButton) accountButton.classList.add("visible");
                 if (profileCard) profileCard.classList.add("visible");
 
+                // Populate direct clickable GitHub and LinkedIn links in dropdown
+                const ghRaw = user.githubProfile || user.github || localStorage.getItem("userGithub") || "";
+                const ghUser = (window.AutoHireGitHub ? window.AutoHireGitHub.extractGitHubUsername(ghRaw) : ghRaw.replace(/^.*github\.com\//, '').replace(/^@/, '').split('/')[0]) || "";
+                const githubLink = document.getElementById("githubLink");
+                if (githubLink && ghUser) {
+                    githubLink.href = `https://github.com/${ghUser}`;
+                    githubLink.target = "_blank";
+                    githubLink.rel = "noopener noreferrer";
+                    githubLink.hidden = false;
+                    githubLink.style.display = "inline-flex";
+                    githubLink.style.alignItems = "center";
+                    githubLink.style.gap = "6px";
+                    githubLink.style.color = "#38bdf8";
+                    githubLink.style.fontWeight = "700";
+                    githubLink.style.padding = "6px 12px";
+                    githubLink.style.background = "rgba(56, 189, 248, 0.1)";
+                    githubLink.style.borderRadius = "6px";
+                    githubLink.innerHTML = `🐙 @${ghUser} ↗`;
+                }
+
+                const liRaw = user.linkedinProfile || user.linkedin || localStorage.getItem("userLinkedin") || "";
+                const liUser = (window.AutoHireGitHub ? window.AutoHireGitHub.extractLinkedInUsername(liRaw) : liRaw.replace(/^.*linkedin\.com\/in\//, '').split('/')[0]) || "";
+                const linkedinLink = document.getElementById("linkedinLink");
+                if (linkedinLink && liUser) {
+                    linkedinLink.href = `https://linkedin.com/in/${liUser}`;
+                    linkedinLink.target = "_blank";
+                    linkedinLink.rel = "noopener noreferrer";
+                    linkedinLink.hidden = false;
+                    linkedinLink.style.display = "inline-flex";
+                    linkedinLink.style.alignItems = "center";
+                    linkedinLink.style.gap = "6px";
+                    linkedinLink.style.color = "#60a5fa";
+                    linkedinLink.style.fontWeight = "700";
+                    linkedinLink.style.padding = "6px 12px";
+                    linkedinLink.style.background = "rgba(10, 102, 194, 0.15)";
+                    linkedinLink.style.borderRadius = "6px";
+                    linkedinLink.innerHTML = `💼 in/${liUser} ↗`;
+                }
+
                 if (window.AutoHireWaitlist) {
                     window.AutoHireWaitlist.requestPermission();
                 }
