@@ -372,6 +372,173 @@
             .shell { padding: 28px 20px; }
         }
 
+        /* ── Google Sign-in Multi-Profile Aesthetics ── */
+        .google-account-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 18px 0 16px;
+        }
+        .google-account-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 13px 16px;
+            border-radius: var(--radius-md);
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid var(--card-border);
+            cursor: pointer;
+            transition: all 0.22s var(--ease-out);
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+        .google-account-item:hover {
+            border-color: var(--primary);
+            background: rgba(56, 189, 248, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(56, 189, 248, 0.2);
+        }
+        .google-avatar-wrap {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.15rem;
+            color: #fff;
+            background: linear-gradient(135deg, #0284c7, #a855f7);
+            border: 2px solid rgba(56, 189, 248, 0.5);
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+        }
+        .google-avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .google-account-meta {
+            flex: 1;
+            margin-left: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
+        }
+        .google-account-name {
+            font-weight: 700;
+            font-size: 0.96rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .google-account-email {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .google-account-arrow {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            transition: transform 0.2s, color 0.2s;
+        }
+        .google-account-item:hover .google-account-arrow {
+            transform: translateX(3px);
+            color: var(--primary);
+        }
+        .google-action-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            border: 1px dashed rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-muted);
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .google-action-item:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(56, 189, 248, 0.06);
+        }
+        .google-action-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            font-size: 1.05rem;
+            flex-shrink: 0;
+        }
+
+        /* ── Selected Account Chip in Password Step ── */
+        .google-account-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 14px 6px 8px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--card-border);
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 0 auto 20px;
+            max-width: 100%;
+        }
+        .google-account-chip:hover {
+            border-color: var(--primary);
+            background: rgba(56, 189, 248, 0.1);
+        }
+        .google-chip-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #fff;
+            background: #0284c7;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .google-chip-name {
+            font-weight: 600;
+            font-size: 0.86rem;
+            color: var(--text-main);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .google-chip-email {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+        .google-chip-chevron {
+            font-size: 0.75rem;
+            color: var(--primary);
+            margin-left: 2px;
+        }
+
         /* OTP 6-Digit Modal Styles */
         .otp-modal-overlay {
             position: fixed;
@@ -485,50 +652,98 @@
 
     <main class="shell 3d-card">
         <a class="brand" href="index.html">🤖 Auto<span>Hire AI</span></a>
-        <h1>Sign in</h1>
-        <p class="intro">Continue to your career workspace.</p>
 
-        <!-- Auth Mode Choice Tabs: Sign In / Create Profile -->
-        <div class="auth-mode-tabs">
-            <button type="button" class="auth-tab-btn active" id="tabSignIn">🔑 Sign In</button>
-            <a href="register.html" class="auth-tab-btn" id="tabCreateAccount">➕ Create Profile</a>
+        <!-- VIEW 1: GOOGLE-STYLE ACCOUNT CHOOSER -->
+        <div id="viewAccountChooser" style="display:none;">
+            <h1 style="margin:20px 0 6px;">Choose an account</h1>
+            <p class="intro">to continue to AutoHire AI</p>
+
+            <div class="google-account-list" id="googleAccountList">
+                <!-- Dynamically populated from saved candidate profiles -->
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                <div class="google-action-item" id="btnChooseUseAnother">
+                    <div class="google-action-icon">➕</div>
+                    <span>Use another account</span>
+                </div>
+                <a href="register.html" class="google-action-item" id="btnChooseCreateNew">
+                    <div class="google-action-icon">📄</div>
+                    <span>Create profile from resume</span>
+                </a>
+            </div>
         </div>
 
-        <!-- Saved Profiles on this Device (Auto-added once profile created) -->
-        <div class="saved-accounts-section" id="savedAccountsSection" style="display:none;">
-            <div class="saved-accounts-title">
-                <span>Select Your Profile</span>
-                <span id="savedAccountsCount"></span>
+        <!-- VIEW 2: GOOGLE-STYLE PASSWORD PROMPT -->
+        <div id="viewPasswordPrompt" style="display:none; text-align:center;">
+            <div class="google-account-chip" id="googleAccountChip" title="Click to choose a different profile">
+                <div class="google-chip-avatar" id="promptChipAvatar">G</div>
+                <div class="google-chip-name" id="promptChipName">Candidate Name</div>
+                <span class="google-chip-email" id="promptChipEmail">email@example.com</span>
+                <span class="google-chip-chevron">▼</span>
             </div>
-            <div class="saved-accounts-list" id="savedAccountsList">
-                <!-- Dynamically populated from AutoHireGitHub.getSavedAccounts() -->
-            </div>
-            <div style="text-align:center; margin-top:14px; margin-bottom:8px;">
-                <span style="font-size:0.78rem; color:var(--text-muted);">──────── or sign in with credentials ────────</span>
-            </div>
+
+            <h1 id="pwdScreenTitle" style="margin:10px 0 6px;">Hi, Candidate</h1>
+            <p class="intro" id="pwdScreenSubtitle">To continue, enter your permanent password</p>
+
+            <form id="passwordPromptForm" style="text-align:left;">
+                <label for="promptPasswordInput">Password</label>
+                <input id="promptPasswordInput" type="password" autocomplete="current-password" required placeholder="Enter your permanent password">
+                
+                <label class="show-password-wrap" style="margin-top:10px; display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:0.85rem; color:var(--text-muted);">
+                    <input type="checkbox" id="showPromptPasswordToggle"> Show password
+                </label>
+
+                <button id="btnSubmitPasswordPrompt" type="submit" style="margin-top:20px;">Sign In ➔</button>
+                <div class="message" id="promptPasswordMessage" role="status"></div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:22px;">
+                    <button type="button" id="btnPromptSwitchAccount" style="background:none; border:none; color:var(--primary); font-size:0.88rem; cursor:pointer; font-weight:600; padding:0;">Choose another account</button>
+                    <a href="register.html" style="color:var(--text-muted); font-size:0.85rem; text-decoration:none;">New profile</a>
+                </div>
+            </form>
         </div>
 
-        <form id="loginForm">
-            <label for="emailInput">Email address</label>
-            <input id="emailInput" type="email" autocomplete="email" required placeholder="you@example.com">
-            <label for="passInput">Password</label>
-            <input id="passInput" type="password" autocomplete="current-password" required placeholder="••••••••">
-            <button id="loginButton" type="submit">Sign In</button>
-            <div class="message" id="loginMessage" role="status"></div>
-        </form>
+        <!-- VIEW 3: STANDARD MANUAL LOGIN FORM -->
+        <div id="viewManualLogin">
+            <h1 id="manualTitle">Sign in</h1>
+            <p class="intro" id="manualIntro">Continue to your career workspace.</p>
 
-        <div class="divider">──────── OR ────────</div>
+            <!-- Auth Mode Choice Tabs: Sign In / Create Profile -->
+            <div class="auth-mode-tabs">
+                <button type="button" class="auth-tab-btn active" id="tabSignIn">🔑 Sign In</button>
+                <a href="register.html" class="auth-tab-btn" id="tabCreateAccount">➕ Create Profile</a>
+            </div>
 
-        <div id="g_id_onload"
-            data-client_id="869568422226-14fcbs1j1esdl1f0phijfhoude5il7qk.apps.googleusercontent.com"
-            data-callback="handleCredentialResponse"
-            data-auto_select="false"></div>
-        <div class="google-button">
-            <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"
-                data-text="continue_with"></div>
+            <!-- Back to Saved Accounts Button (Visible if saved accounts exist) -->
+            <div id="backToChooserWrap" style="display:none; margin-bottom:14px;">
+                <button type="button" id="btnBackToChooserTop" class="google-action-item" style="width:100%; justify-content:center; padding:10px 14px; border-style:solid; border-color:rgba(56,189,248,0.4); color:var(--primary); background:rgba(56,189,248,0.08);">
+                    <span>👤 Select from saved profiles (<span id="savedCountBadge">0</span>)</span>
+                </button>
+            </div>
+
+            <form id="loginForm">
+                <label for="emailInput">Email address</label>
+                <input id="emailInput" type="email" autocomplete="email" required placeholder="you@example.com">
+                <label for="passInput">Password</label>
+                <input id="passInput" type="password" autocomplete="current-password" required placeholder="••••••••">
+                <button id="loginButton" type="submit">Sign In</button>
+                <div class="message" id="loginMessage" role="status"></div>
+            </form>
+
+            <div class="divider">──────── OR ────────</div>
+
+            <div id="g_id_onload"
+                data-client_id="869568422226-14fcbs1j1esdl1f0phijfhoude5il7qk.apps.googleusercontent.com"
+                data-callback="handleCredentialResponse"
+                data-auto_select="false"></div>
+            <div class="google-button">
+                <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"
+                    data-text="continue_with"></div>
+            </div>
+
+            <p class="footer">New to AutoHire? <a href="register.html" style="font-weight:700; color:var(--primary);">Create an account / Profile ➔</a></p>
         </div>
-
-        <p class="footer">New to AutoHire? <a href="register.html" style="font-weight:700; color:var(--primary);">Create an account / Profile ➔</a></p>
     </main>
 
     <script>
@@ -622,7 +837,16 @@
 
         function processUserLogin(userObj, redirectUrl = "dashboard.html") {
             if (!userObj) return;
-            if (window.AutoHireAuth) window.AutoHireAuth.saveUser(userObj);
+            const candidateName = userObj.name || (userObj.profile && userObj.profile.fullName) || (userObj.email ? userObj.email.split("@")[0] : "Candidate");
+            localStorage.setItem("username", candidateName);
+            localStorage.setItem("user", candidateName);
+            localStorage.setItem("loggedInUser", JSON.stringify(userObj));
+            if (userObj.profile) {
+                localStorage.setItem("autoHireProfile", JSON.stringify(userObj.profile));
+            } else {
+                localStorage.setItem("autoHireProfile", JSON.stringify({ fullName: candidateName, emailAddress: userObj.email }));
+            }
+            if (window.AutoHireAuth) window.AutoHireAuth.saveUser(userObj, userObj.profile);
             window.location.href = redirectUrl;
         }
 
@@ -1017,89 +1241,271 @@
             }
         }
 
-        // 4. Saved Accounts Management (Zero-Backend Support)
-        function renderSavedAccounts() {
-            const section = document.getElementById("savedAccountsSection");
-            const list = document.getElementById("savedAccountsList");
-            const countEl = document.getElementById("savedAccountsCount");
-            if (!section || !list || !window.AutoHireGitHub) return;
+        // 4. Google-Style Multi-Profile Chooser & Password Verification
+        let currentSelectedAccount = null;
 
-            const accounts = window.AutoHireGitHub.getSavedAccounts();
-            if (!accounts || accounts.length === 0) {
-                section.style.display = "none";
-                return;
-            }
-
-            section.style.display = "block";
-            if (countEl) countEl.textContent = `${accounts.length} found`;
-            list.innerHTML = "";
-
-            accounts.forEach((acc) => {
-                const item = document.createElement("div");
-                item.className = "account-card-item";
-                item.title = `Click to sign in with ${acc.name || acc.email}`;
-
-                const avatarSrc = acc.picture || (acc.githubUsername ? `https://avatars.githubusercontent.com/${acc.githubUsername}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(acc.name || 'User')}&background=0284c7&color=fff`);
-
-                const githubTag = acc.githubUsername ? `<span class="account-card-badge">🐙 @${acc.githubUsername}</span>` : "";
-                const linkedinTag = acc.linkedinUsername ? `<span class="account-card-badge" style="color:#38bdf8; border-color:rgba(10,102,194,0.4); background:rgba(10,102,194,0.18);">💼 in/${acc.linkedinUsername}</span>` : "";
-                const roleTag = acc.role ? `<span class="account-card-badge" style="color:#a855f7; border-color:rgba(168,85,247,0.3); background:rgba(168,85,247,0.1);">${acc.role}</span>` : "";
-
-                item.innerHTML = `
-                    <div style="display:flex; align-items:center; overflow:hidden;">
-                        <img class="account-card-avatar" src="${avatarSrc}" alt="${acc.name || 'User'}" onerror="this.src='https://ui-avatars.com/api/?name=User&background=0284c7&color=fff'">
-                        <div class="account-card-details">
-                            <div class="account-card-name">
-                                <span>${acc.name || 'User'}</span>
-                                ${githubTag}
-                                ${linkedinTag}
-                                ${roleTag}
-                            </div>
-                            <div class="account-card-email">${acc.email || ''}</div>
-                        </div>
-                    </div>
-                    <div class="account-card-arrow">Select ➔</div>
-                `;
-
-                item.addEventListener("click", () => {
-                    selectSavedAccount(acc);
-                });
-
-                list.appendChild(item);
+        function showView(viewId) {
+            ["viewAccountChooser", "viewPasswordPrompt", "viewManualLogin"].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = (id === viewId) ? "block" : "none";
             });
         }
 
-        function selectSavedAccount(acc) {
-            if (!acc) return;
-            const emailInput = document.getElementById("emailInput");
-            const passInput = document.getElementById("passInput");
-            if (emailInput) emailInput.value = acc.email || "";
+        async function fetchAllProfiles() {
+            let accounts = (window.AutoHireGitHub && window.AutoHireGitHub.getSavedAccounts)
+                ? window.AutoHireGitHub.getSavedAccounts()
+                : [];
 
-            // If account has password saved locally, perform instant one-click login
-            if (acc.password) {
-                if (passInput) passInput.value = acc.password;
-                loginMessage.style.color = "#38bdf8";
-                loginMessage.textContent = `⚡ Logging in as ${acc.name || acc.email}...`;
-                
-                const loggedUser = window.AutoHireGitHub ? window.AutoHireGitHub.quickLoginAccount(acc.email) : null;
-                if (loggedUser) {
-                    loginMessage.style.color = "#4ade80";
-                    loginMessage.textContent = `✅ Welcome back, ${loggedUser.name}! Opening workspace...`;
-                    setTimeout(() => {
-                        processUserLogin(loggedUser, "dashboard.html");
-                    }, 350);
-                    return;
+            // Attempt to merge profiles from Python FastAPI backend
+            try {
+                const fastApiUrl = `${window.AUTOHIRE_FASTAPI_ORIGIN || "http://127.0.0.1:5501"}/api/auth/profiles`;
+                const res = await fetch(fastApiUrl);
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json && json.profiles && Array.isArray(json.profiles)) {
+                        json.profiles.forEach(p => {
+                            if (p.email && !accounts.some(a => (a.email || "").toLowerCase() === p.email.toLowerCase())) {
+                                accounts.push({
+                                    id: p.id || crypto.randomUUID(),
+                                    name: p.name,
+                                    email: p.email,
+                                    picture: p.picture || "",
+                                    githubUsername: p.githubUsername || "",
+                                    linkedinUsername: p.linkedinUsername || "",
+                                    role: p.role || "student",
+                                    preferredDomain: p.preferredDomain || "ai",
+                                    profile: {
+                                        fullName: p.name,
+                                        emailAddress: p.email,
+                                        picture: p.picture || "",
+                                        userType: p.role || "student",
+                                        preferredDomain: p.preferredDomain || "ai"
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+            } catch (err) {
+                // Backend sync notice
+            }
+
+            return accounts;
+        }
+
+        async function renderSavedAccounts() {
+            const listEl = document.getElementById("googleAccountList");
+            const countBadge = document.getElementById("savedCountBadge");
+            const backWrap = document.getElementById("backToChooserWrap");
+
+            const accounts = await fetchAllProfiles();
+
+            if (!accounts || accounts.length === 0) {
+                showView("viewManualLogin");
+                if (backWrap) backWrap.style.display = "none";
+                return;
+            }
+
+            if (countBadge) countBadge.textContent = accounts.length;
+            if (backWrap) backWrap.style.display = "block";
+
+            // If query params say switch=true, show chooser view
+            const urlParams = new URLSearchParams(window.location.search);
+            const forceManual = urlParams.get("manual") === "true";
+
+            if (forceManual) {
+                showView("viewManualLogin");
+            } else {
+                showView("viewAccountChooser");
+            }
+
+            listEl.innerHTML = "";
+
+            const AVATAR_GRADIENTS = [
+                "linear-gradient(135deg, #0284c7, #38bdf8)",
+                "linear-gradient(135deg, #7c3aed, #c084fc)",
+                "linear-gradient(135deg, #059669, #34d399)",
+                "linear-gradient(135deg, #ea580c, #fb923c)",
+                "linear-gradient(135deg, #db2777, #f472b6)"
+            ];
+
+            accounts.forEach((acc, idx) => {
+                const card = document.createElement("div");
+                card.className = "google-account-item";
+                card.title = `Click to sign in as ${acc.name || acc.email}`;
+
+                const initial = (acc.name || acc.email || "U").trim().charAt(0).toUpperCase();
+                const avatarGradient = AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length];
+                const avatarSrc = acc.picture || (acc.githubUsername ? `https://avatars.githubusercontent.com/${acc.githubUsername}` : "");
+
+                const githubBadge = acc.githubUsername ? `<span class="google-account-badge">🐙 @${acc.githubUsername}</span>` : "";
+                const domainBadge = (acc.profile && acc.profile.preferredDomain) ? `<span class="google-account-badge" style="background:rgba(168,85,247,0.15); color:#c084fc; border-color:rgba(168,85,247,0.3);">${acc.profile.preferredDomain.toUpperCase()}</span>` : "";
+
+                card.innerHTML = `
+                    <div style="display:flex; align-items:center; overflow:hidden; flex:1;">
+                        <div class="google-avatar-wrap" style="background:${avatarGradient};">
+                            ${avatarSrc ? `<img class="google-avatar-img" src="${avatarSrc}" alt="${acc.name || 'User'}" onerror="this.parentElement.innerHTML='${initial}'">` : `<span>${initial}</span>`}
+                        </div>
+                        <div class="google-account-meta">
+                            <div class="google-account-name">
+                                <span>${acc.name || acc.email}</span>
+                                ${githubBadge}
+                                ${domainBadge}
+                            </div>
+                            <div class="google-account-email">${acc.email}</div>
+                        </div>
+                    </div>
+                    <div class="google-account-arrow">➔</div>
+                `;
+
+                // CLICKING THE ACCOUNT ASKS FOR PASSWORD (Google Sign-In Style)
+                card.addEventListener("click", () => {
+                    promptPasswordForAccount(acc);
+                });
+
+                listEl.appendChild(card);
+            });
+        }
+
+        function promptPasswordForAccount(acc) {
+            currentSelectedAccount = acc;
+
+            const chipAvatar = document.getElementById("promptChipAvatar");
+            const chipName = document.getElementById("promptChipName");
+            const chipEmail = document.getElementById("promptChipEmail");
+            const pwdTitle = document.getElementById("pwdScreenTitle");
+            const pwdSub = document.getElementById("pwdScreenSubtitle");
+            const pwdInput = document.getElementById("promptPasswordInput");
+            const msgEl = document.getElementById("promptPasswordMessage");
+
+            const initial = (acc.name || acc.email || "U").trim().charAt(0).toUpperCase();
+            const avatarSrc = acc.picture || (acc.githubUsername ? `https://avatars.githubusercontent.com/${acc.githubUsername}` : "");
+
+            if (avatarSrc) {
+                chipAvatar.innerHTML = `<img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.parentElement.innerHTML='${initial}'">`;
+            } else {
+                chipAvatar.textContent = initial;
+            }
+
+            chipName.textContent = acc.name || acc.email;
+            chipEmail.textContent = acc.email;
+
+            const firstName = (acc.name || "Candidate").split(" ")[0];
+            pwdTitle.textContent = `Hi, ${firstName}`;
+            pwdSub.textContent = "To continue, enter your permanent password";
+
+            pwdInput.value = "";
+            msgEl.textContent = "";
+            pwdInput.style.borderColor = "";
+
+            showView("viewPasswordPrompt");
+            setTimeout(() => pwdInput.focus(), 100);
+        }
+
+        // Navigation between Google views
+        document.getElementById("btnChooseUseAnother").addEventListener("click", () => {
+            showView("viewManualLogin");
+        });
+
+        document.getElementById("btnBackToChooserTop").addEventListener("click", () => {
+            showView("viewAccountChooser");
+        });
+
+        document.getElementById("btnPromptSwitchAccount").addEventListener("click", () => {
+            showView("viewAccountChooser");
+        });
+
+        document.getElementById("googleAccountChip").addEventListener("click", () => {
+            showView("viewAccountChooser");
+        });
+
+        document.getElementById("showPromptPasswordToggle").addEventListener("change", function () {
+            document.getElementById("promptPasswordInput").type = this.checked ? "text" : "password";
+        });
+
+        // Submit Google Password View
+        document.getElementById("passwordPromptForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            if (!currentSelectedAccount) return;
+
+            const pwdInput = document.getElementById("promptPasswordInput");
+            const password = pwdInput.value;
+            const submitBtn = document.getElementById("btnSubmitPasswordPrompt");
+            const msgEl = document.getElementById("promptPasswordMessage");
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Verifying...";
+            msgEl.style.color = "#38bdf8";
+            msgEl.textContent = "Checking credentials...";
+
+            let isAuthenticated = false;
+            let authenticatedUser = null;
+            let lastError = "";
+
+            // 1. Check with Python FastAPI backend
+            try {
+                const res = await fetch(`${window.AUTOHIRE_FASTAPI_ORIGIN || "http://127.0.0.1:5501"}/api/auth/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: currentSelectedAccount.email, password: password })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.success) {
+                        isAuthenticated = true;
+                        authenticatedUser = data.user || currentSelectedAccount;
+                    }
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    lastError = errData.detail || errData.message || "Incorrect password.";
+                }
+            } catch (err) {
+                console.log("FastAPI backend connection note: Checking local profile store...");
+            }
+
+            // 2. Client-side resilience check
+            if (!isAuthenticated && window.AutoHireGitHub) {
+                const localRes = window.AutoHireGitHub.authenticateLocal(currentSelectedAccount.email, password);
+                if (localRes && localRes.success) {
+                    isAuthenticated = true;
+                    authenticatedUser = localRes.user || currentSelectedAccount;
+                } else if (localRes && !localRes.success) {
+                    lastError = localRes.message || lastError;
                 }
             }
 
-            if (passInput) {
-                passInput.focus();
-                loginMessage.style.color = "#38bdf8";
-                loginMessage.textContent = `Profile selected for ${acc.name || acc.email}. Enter your password to continue.`;
+            // 3. Fallback: If permanent password was stored with account
+            if (!isAuthenticated && currentSelectedAccount.password && currentSelectedAccount.password === password) {
+                isAuthenticated = true;
+                authenticatedUser = currentSelectedAccount;
             }
-        }
 
-        // METHOD 1: Email Address + Password Auth Form Handler
+            if (isAuthenticated) {
+                msgEl.style.color = "#4ade80";
+                const candidateName = authenticatedUser.name || currentSelectedAccount.name || "Candidate";
+                msgEl.textContent = `✅ Password verified! Welcome back, ${candidateName}! Opening dashboard...`;
+
+                // Save active login session
+                if (window.AutoHireGitHub) {
+                    window.AutoHireGitHub.quickLoginAccount(currentSelectedAccount.email);
+                }
+                localStorage.setItem("username", candidateName);
+                localStorage.setItem("user", candidateName);
+
+                setTimeout(() => {
+                    processUserLogin(authenticatedUser, "dashboard.html");
+                }, 400);
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Sign In ➔";
+                msgEl.style.color = "#f87171";
+                msgEl.textContent = lastError || "Incorrect password. Please try again or switch account.";
+                pwdInput.style.borderColor = "#f87171";
+                pwdInput.focus();
+            }
+        });
+
+        // METHOD 1: Manual Email Address + Password Auth Form Handler
         document.getElementById("loginForm").addEventListener("submit", async (event) => {
             event.preventDefault();
             const loginButton = document.getElementById("loginButton");
@@ -1120,8 +1526,11 @@
                 return;
             }
 
-            // 2. Candidate URLs to support local server and network environments
-            const candidateUrls = getAuthCandidateUrls();
+            // 2. Candidate URLs to support local Python FastAPI, Node server, and network environments
+            const candidateUrls = [
+                `${window.AUTOHIRE_FASTAPI_ORIGIN || "http://127.0.0.1:5501"}/api/auth`,
+                ...getAuthCandidateUrls()
+            ];
 
             let serverSuccess = false;
             let lastErrorMsg = "";
@@ -1142,7 +1551,7 @@
                     const data = await response.json();
 
                     if (!response.ok) {
-                        lastErrorMsg = data.message || "Invalid email or password.";
+                        lastErrorMsg = data.detail || data.message || "Invalid email or password.";
                         continue;
                     }
 
@@ -1167,7 +1576,7 @@
                 const localAuth = window.AutoHireGitHub ? window.AutoHireGitHub.authenticateLocal(email, password) : null;
                 if (localAuth && localAuth.success) {
                     loginMessage.style.color = "#4ade80";
-                    loginMessage.textContent = "✅ Signed in successfully! Opening dashboard...";
+                    loginMessage.textContent = `✅ Signed in successfully! Welcome back, ${localAuth.user.name || 'Candidate'}! Opening dashboard...`;
                     setTimeout(() => {
                         processUserLogin(localAuth.user, "dashboard.html");
                     }, 400);
@@ -1191,8 +1600,7 @@
 
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get("switch") === "true") {
-                loginMessage.style.color = "#38bdf8";
-                loginMessage.textContent = "🔄 Account reset. Select or sign in with another account below:";
+                showView("viewAccountChooser");
                 if (window.google && window.google.accounts && window.google.accounts.id) {
                     window.google.accounts.id.disableAutoSelect();
                 }

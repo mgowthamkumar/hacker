@@ -1,26 +1,58 @@
 [
   {
+    "id": "568dda5ce4a26bba63e4f08ff67ff015",
+    "name": "Gowtham Kumar M",
+    "email": "gowtham.test.profile@example.com",
+    "passwordSalt": "2c7179328a641051a6635189fb3a3a9d",
+    "passwordHash": "a4ee23b8c1b13e8f5b8a9800229f6313c8743b064a07ccf0ec8dfdc764eadd9be581feefc6bb9b8a6195d0e7d8084cd6f6dd883adadea826374dfd1ad4f0ee15",
+    "password": "PermanentSecretPass123!",
+    "picture": "",
+    "githubProfile": "https://github.com/mgowthamkumar",
+    "githubUsername": "mgowthamkumar",
+    "linkedinProfile": "https://linkedin.com/in/mgowthamkumar",
+    "linkedinUsername": "mgowthamkumar",
+    "projects": [],
+    "profile": {
+      "fullName": "Gowtham Kumar M",
+      "emailAddress": "gowtham.test.profile@example.com",
+      "mobileNumber": "260 1103 740",
+      "dob": "2008-07-04",
+      "userType": "student",
+      "experienceLevel": "fresher",
+      "preferredDomain": "ai",
+      "githubProfile": "https://github.com/mgowthamkumar",
+      "githubUsername": "mgowthamkumar",
+      "linkedinProfile": "https://linkedin.com/in/mgowthamkumar",
+      "linkedinUsername": "mgowthamkumar",
+      "picture": "",
+      "projects": []
+    },
+    "isVerified": true,
+    "emailVerified": true
+  },
+  {
     "id": "92a31615-3ead-4f82-a31b-cec94b628ddd",
-    "name": "Gowtham Kumar",
+    "name": "Gowtham Kumar M",
     "email": "mgowthamkumar472008@gmail.com",
-    "passwordSalt": "",
-    "passwordHash": "",
+    "passwordSalt": "870e7b855074a238c6521bbad6916b1d",
+    "passwordHash": "0d9cb8952be821a8b8266325673ff8dbdd61b72f2893479d4c5df2b017b03a4f887a404d5b6c8e38a605af88b720cfcfe470184cc4e22165efa7e21bae36c472",
     "isVerified": true,
     "emailVerified": true,
     "verifiedAt": "2026-09-05T20:13:08.001Z",
     "profile": {
-      "fullName": "Gowtham Kumar",
+      "fullName": "Gowtham Kumar M",
       "emailAddress": "mgowthamkumar472008@gmail.com",
-      "mobileNumber": "+91 9363681672",
+      "mobileNumber": "260 1103 740",
+      "dob": "2004-05-14",
       "userType": "student",
-      "dob": "2008-07-04",
-      "preferredDomain": "ai",
       "experienceLevel": "fresher",
+      "preferredDomain": "ai",
       "githubProfile": "https://github.com/mgowthamkumar",
-      "linkedinProfile": "https://linkedin.com/gowthamkumar",
-      "termsAgreement": "on",
-      "resume": null,
-      "picture": "https://lh3.googleusercontent.com/a/ACg8ocJBRlNnIY5DzhMAxcsAnoHD8HXM3i7JQVtivxXyyHW-ySvkCFIg=s96-c"
+      "githubUsername": "",
+      "linkedinProfile": "https://www.linkedin.com/in/mgowthamkumar",
+      "linkedinUsername": "",
+      "picture": "",
+      "projects": []
     },
     "trustedDevices": [
       {
@@ -30,7 +62,14 @@
         "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
         "ip": "127.0.0.1"
       }
-    ]
+    ],
+    "password": "PermanentPassword@2026",
+    "picture": "",
+    "githubProfile": "https://github.com/mgowthamkumar",
+    "githubUsername": "",
+    "linkedinProfile": "https://www.linkedin.com/in/mgowthamkumar",
+    "linkedinUsername": "",
+    "projects": []
   },
   {
     "id": "3782344b-27ac-4f11-b19a-95acbe6e81a8",

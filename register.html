@@ -1506,11 +1506,24 @@
             if (parsedResult && parsedResult.data) {
                 const d = parsedResult.data;
 
-                // 1. Auto-fill text fields
+                // 1. Auto-fill text fields from analyzed resume
                 if (d.fullName) autoFillInput("fullName", d.fullName);
                 if (d.emailAddress) autoFillInput("emailAddress", d.emailAddress);
                 if (d.mobileNumber) autoFillInput("mobileNumber", d.mobileNumber);
                 if (d.dob) autoFillInput("dob", d.dob);
+
+                // CRITICAL: Explicitly NEVER auto-fill password and confirm password!
+                // Candidate must choose their own permanent password for this profile
+                const accountPasswordInput = document.getElementById("accountPassword");
+                const confirmPasswordInput = document.getElementById("confirmPassword");
+                if (accountPasswordInput) {
+                    accountPasswordInput.value = "";
+                    accountPasswordInput.placeholder = "Enter your permanent password (required)";
+                }
+                if (confirmPasswordInput) {
+                    confirmPasswordInput.value = "";
+                    confirmPasswordInput.placeholder = "Confirm your permanent password";
+                }
 
                 // 2. Auto-fill select options
                 if (d.userType) {
@@ -1607,22 +1620,38 @@
             const emailMatch = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
             const emailAddress = emailMatch ? emailMatch[0].toLowerCase() : "";
 
-            // Extract phone
-            const phoneMatch = text.match(/(?:(?:\+|00)?\d{1,3}[\s-]?)?(?:\(?\d{3,5}\)?[\s-]?)?\d{3,5}[\s-]?\d{3,5}/);
-            const mobileNumber = phoneMatch ? phoneMatch[0].trim() : "";
+            // Extract phone (e.g. 260 1103 740, +91 9876543210, etc.)
+            let mobileNumber = "";
+            const phonePatterns = [
+                /\b\d{3}[\s.-]\d{4}[\s.-]\d{3}\b/,
+                /\b\d{3}[\s.-]\d{3}[\s.-]\d{4}\b/,
+                /(?:(?:\+|00)?\d{1,3}[\s-]?)?(?:\(?\d{2,5}\)?[\s-]?)?\d{3,5}[\s-]?\d{3,5}/
+            ];
+            for (const pat of phonePatterns) {
+                const match = text.match(pat);
+                if (match) {
+                    const digits = match[0].replace(/\D/g, "");
+                    if (digits.length >= 10 && digits.length <= 13) {
+                        mobileNumber = match[0].trim();
+                        break;
+                    }
+                }
+            }
 
-            // Extract name
+            // Extract name (supports all-caps names like GOWTHAM KUMAR M and title-case names)
             let fullName = "";
-            const nameLabel = text.match(/(?:full\s*name|candidate\s*name|name)\s*[:\-]\s*([A-Za-z .'-]{2,50})/i);
+            const nameLabel = text.match(/(?:full\s*name|candidate\s*name|candidate|name)\s*[:\-]\s*([A-Za-z .'-]{2,50})/i);
             if (nameLabel) {
-                fullName = nameLabel[1].trim();
+                const words = nameLabel[1].trim().split(/\s+/).filter(Boolean);
+                fullName = words.map(w => (w.length === 1 || w.endsWith(".")) ? w.toUpperCase() : (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())).join(" ");
             } else {
                 const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-                for (const line of lines.slice(0, 5)) {
-                    const words = line.replace(/[^A-Za-z\s.'-]/g, "").trim().split(/\s+/);
+                for (const line of lines.slice(0, 8)) {
+                    const clean = line.replace(/[^A-Za-z\s.'-]/g, "").trim();
+                    const words = clean.split(/\s+/).filter(Boolean);
                     if (words.length >= 2 && words.length <= 4) {
-                        if (!/resume|curriculum|vitae|profile|email|phone|github|linkedin/i.test(line)) {
-                            fullName = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+                        if (!/resume|curriculum|vitae|profile|email|phone|github|linkedin|objective|summary|experience|education|skills|projects/i.test(line)) {
+                            fullName = words.map(w => (w.length === 1 || w.endsWith(".")) ? w.toUpperCase() : (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())).join(" ");
                             break;
                         }
                     }
@@ -1806,19 +1835,27 @@
             // 1. Immediately save into client-side storage & accounts list (100% resilient)
             AutoHireGitHub.saveAccount(userAccount, profileData);
 
-            // 2. Dispatch background sync to server if running
+            // 2. Dispatch background sync to Python FastAPI backend & Web server
             const formData = new FormData(this);
             formData.append("githubUsername", githubUsername);
             formData.append("linkedinUsername", linkedinUsername);
             formData.append("projects", JSON.stringify(selectedProjects));
 
-            try {
-                await fetch(`${apiOrigin}/submit-registration`, {
-                    method: "POST",
-                    body: formData
-                });
-            } catch (err) {
-                console.log("Server sync notice: Saved in local workspace storage automatically.");
+            const apiOrigin = window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800";
+            const candidateServerUrls = [
+                `${window.AUTOHIRE_FASTAPI_ORIGIN || "http://127.0.0.1:5501"}/submit-registration`,
+                `${window.AUTOHIRE_FASTAPI_ORIGIN || "http://127.0.0.1:5501"}/api/auth/register`,
+                `${apiOrigin}/submit-registration`
+            ];
+            for (const sUrl of candidateServerUrls) {
+                try {
+                    await fetch(sUrl, {
+                        method: "POST",
+                        body: formData
+                    });
+                } catch (err) {
+                    console.log(`Server sync notice for ${sUrl}: Saved in local workspace storage.`);
+                }
             }
 
             // 3. User feedback and workspace launch
@@ -1827,7 +1864,7 @@
             if (linkedinUsername) verifiedAccountsList.push(`LinkedIn (in/${linkedinUsername})`);
             const accountsMsg = verifiedAccountsList.length ? `verified ${verifiedAccountsList.join(" & ")}` : "profile credentials";
 
-            alert(`🎉 Profile Created Successfully!\n\nWelcome ${fullName}! Your profile, ${accountsMsg}, and ${selectedProjects.length} selected project(s) have been configured. You can also sign in anytime directly from the login page!`);
+            alert(`🎉 Profile Created Successfully!\n\nWelcome ${fullName}! Your profile, permanent password, ${accountsMsg}, and ${selectedProjects.length} selected project(s) have been saved. You can now sign in using your account credentials anytime!`);
 
             window.location.assign("dashboard.html");
         });

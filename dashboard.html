@@ -1619,6 +1619,11 @@
                 if (heading) {
                     heading.innerHTML = `Welcome back, <span>${username}!</span> 🚀`;
                 }
+                const sub = document.getElementById('welcomeUserSub');
+                if (sub) {
+                    sub.textContent = `Welcome back ${username}! Your AI Career Launchpad is fully synchronized. Browse vector-matched jobs, register for live global hackathons, and audit your CV score.`;
+                }
+                document.title = `Dashboard | AutoHire AI - ${username}`;
             }
 
             const profileBtn = document.getElementById('profile-logo-btn');

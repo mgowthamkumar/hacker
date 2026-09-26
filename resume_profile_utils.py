@@ -7,35 +7,48 @@ def _extract_name_from_resume(raw_text: str) -> str:
         return ""
 
     ignore_titles = {
-        "resume", "curriculum vitae", "cv", "profile", "contact", "summary",
+        "resume", "curriculum vitae", "cv", "profile", "contact", "summary", "objective",
+        "career objective", "professional summary", "about me", "personal statement",
         "software engineer", "developer", "full stack", "full stack developer",
         "frontend developer", "backend developer", "engineer", "designer",
-        "data scientist", "machine learning engineer", "intern", "student"
+        "data scientist", "machine learning engineer", "intern", "student", "candidate",
+        "education", "experience", "projects", "skills", "certifications", "achievements",
+        "personal details", "contact information", "bio-data", "biodata", "portfolio",
+        "technical skills", "work experience", "academic projects", "coursework"
     }
 
-    # 1. Explicit name patterns
-    patterns = [
-        r"\b(?:full\s*name|candidate\s*name|name)\b\s*[:\-]\s*([A-Za-z .'-]{2,50})",
-        r"^([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+){1,3})$",
-    ]
+    # 1. Check explicit name labels (e.g. Full Name: Gowtham Kumar M)
+    label_match = re.search(r"\b(?:full\s*name|candidate\s*name|candidate|name)\b\s*[:\-]\s*([A-Za-z .'-]{2,50})", raw_text, re.IGNORECASE)
+    if label_match:
+        candidate = label_match.group(1).strip()
+        clean_cand = re.sub(r"[^A-Za-z\s.'-]", "", candidate).strip()
+        if clean_cand.lower() not in ignore_titles:
+            words = clean_cand.split()
+            if 1 <= len(words) <= 4:
+                return " ".join([w if (len(w) == 1 or w.endswith(".")) else w.capitalize() for w in words])
 
-    for pattern in patterns:
-        match = re.search(pattern, raw_text, re.IGNORECASE | re.MULTILINE)
-        if match:
-            candidate = match.group(1).strip()
-            if candidate.lower() not in ignore_titles and not any(candidate.lower() == t for t in ignore_titles):
-                return candidate
-
-    # 2. Check top non-empty lines for candidate name
+    # 2. Check top non-empty lines (lines 1 to 8) - this is where 99% of resumes place the candidate's name
     lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
-    ignore_headers = {"resume", "curriculum vitae", "cv", "bio-data", "biodata", "profile", "portfolio"}
-    for line in lines[:5]:
+    for line in lines[:8]:
         clean = re.sub(r"[^A-Za-z\s.'-]", "", line).strip()
         words = clean.split()
         if 2 <= len(words) <= 4:
-            if clean.lower() not in ignore_headers and not any(h in clean.lower() for h in ignore_headers):
-                if not any(k in clean.lower() for k in ["email", "phone", "mobile", "github", "linkedin", "address", "developer", "engineer"]):
-                    return clean
+            clean_lower = clean.lower()
+            if clean_lower not in ignore_titles and not any(clean_lower.startswith(t) for t in ignore_titles):
+                if not any(k in clean_lower for k in ["email", "phone", "mobile", "github", "linkedin", "address", "developer", "engineer", "designer", "university", "college", "school", "http", "www", ".com"]):
+                    if not any(w in clean_lower.split() for w in ["in", "at", "for", "with", "and", "the", "of", "to", "on", "by", "is", "an", "a"]):
+                        return " ".join([w if (len(w) == 1 or w.endswith(".")) else w.capitalize() for w in words])
+
+    # 3. Fallback: derive name from email prefix if candidate has standard email
+    email = _extract_email_from_resume(raw_text)
+    if email:
+        prefix = email.split("@")[0]
+        clean_prefix = re.sub(r"\d+", "", prefix)
+        clean_prefix = re.sub(r"^[a-z]\b", "", clean_prefix)
+        parts = re.split(r"[._\-]", clean_prefix)
+        parts = [p for p in parts if len(p) >= 2]
+        if 2 <= len(parts) <= 3:
+            return " ".join([p.capitalize() for p in parts])
 
     return ""
 
@@ -50,13 +63,18 @@ def _extract_email_from_resume(raw_text: str) -> str:
 def _extract_phone_from_resume(raw_text: str) -> str:
     if not raw_text:
         return ""
-    # Matches patterns like +91 9876543210, +1 (555) 019-2834, 98765-43210, 9876543210
-    pattern = r"(?:(?:\+|00)?\d{1,3}[\s-]?)?(?:\(?\d{3,5}\)?[\s-]?)?\d{3,5}[\s-]?\d{3,5}"
-    matches = re.findall(pattern, raw_text)
-    for m in matches:
-        digits = re.sub(r"\D", "", m)
-        if 10 <= len(digits) <= 13:
-            return m.strip()
+    # Matches patterns like +91 9876543210, 260 1103 740, +1 (555) 019-2834, 98765-43210, 9876543210
+    patterns = [
+        r"\b\d{3}[\s.-]\d{4}[\s.-]\d{3}\b",
+        r"\b\d{3}[\s.-]\d{3}[\s.-]\d{4}\b",
+        r"(?:(?:\+|00)?\d{1,3}[\s-]?)?(?:\(?\d{2,5}\)?[\s-]?)?\d{3,5}[\s-]?\d{3,5}"
+    ]
+    for pattern in patterns:
+        matches = re.findall(pattern, raw_text)
+        for m in matches:
+            digits = re.sub(r"\D", "", m)
+            if 10 <= len(digits) <= 13:
+                return m.strip()
     return ""
 
 
@@ -182,6 +200,13 @@ def _extract_domain_from_resume(raw_text: str) -> str:
                 # Give higher weight to exact domain names
                 weight = 3 if kw == domain.replace("_", " ") else 1
                 scores[domain] += weight
+
+    if re.search(r"\bai\b", lower):
+        scores["ai"] += 5
+    if "artificial intelligence" in lower:
+        scores["ai"] += 8
+    if "machine learning" in lower:
+        scores["ml"] += 6
 
     best_domain = max(scores, key=scores.get)
     return best_domain if scores[best_domain] > 0 else "ai"

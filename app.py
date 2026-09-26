@@ -94,12 +94,14 @@ async def app_parse_autofill_resume(
 # STEP 3: API Endpoint - Submit & Index Registration Data
 # ---------------------------------------------------------
 @app.post("/submit-registration")
+@app.post("/api/auth/register")
 async def submit_registration(
     fullName: str = Form(...),
     emailAddress: str = Form(...),
     mobileNumber: str = Form(...),
     userType: str = Form(...),
     dob: str = Form(...),
+    password: Optional[str] = Form(""),
     preferredDomain: str = Form("Not Specified"),
     experienceLevel: str = Form("Not Specified"),
     githubProfile: str = Form("Not Provided"),
@@ -153,6 +155,52 @@ async def submit_registration(
         # 4. Ingest and Index into FAISS Vector Database (RAG Memory)
         vector_db.add_documents(chunks)
         print(f"[RAG INDEXED] Added profile for: {fullName} ({emailAddress})")
+
+        # 5. Persist to users.json with permanent password
+        try:
+            import json
+            from pathlib import Path
+            import secrets
+            import hashlib
+            users_file = Path(__file__).resolve().parent / "users.json"
+            users = []
+            if users_file.exists():
+                with open(users_file, "r", encoding="utf-8") as f:
+                    users = json.load(f)
+            
+            clean_email = emailAddress.strip().lower()
+            idx = next((i for i, u in enumerate(users) if (u.get("email") or "").lower() == clean_email), -1)
+            
+            salt = secrets.token_hex(16)
+            p_hash = hashlib.scrypt(password.encode("utf-8"), salt=bytes.fromhex(salt), n=16384, r=8, p=1, dklen=64).hex() if password else ""
+            
+            user_entry = {
+                "id": users[idx].get("id") if idx >= 0 else secrets.token_hex(16),
+                "name": resolved_full_name,
+                "email": clean_email,
+                "passwordSalt": salt,
+                "passwordHash": p_hash,
+                "password": password,
+                "profile": {
+                    "fullName": resolved_full_name,
+                    "emailAddress": clean_email,
+                    "mobileNumber": mobileNumber,
+                    "dob": resolved_dob,
+                    "userType": userType,
+                    "preferredDomain": preferredDomain,
+                    "experienceLevel": experienceLevel,
+                    "githubProfile": githubProfile,
+                    "linkedinProfile": linkedinProfile
+                }
+            }
+            if idx >= 0:
+                users[idx].update(user_entry)
+            else:
+                users.insert(0, user_entry)
+            with open(users_file, "w", encoding="utf-8") as f:
+                json.dump(users, f, indent=2)
+        except Exception as file_err:
+            print("[USER SAVE WARNING]:", file_err)
 
         return {
             "status": "success",

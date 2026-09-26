@@ -1,7 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from fastapi import Request
 from pathlib import Path
 import os
 import requests
@@ -512,8 +511,66 @@ def real_generate_cover_letter(payload: RealCoverLetterRequest):
     return {"success": True, "cover_letter": letter}
 
 
-from fastapi import UploadFile, File, Form
-from resume_profile_utils import parse_and_embed_resume
+import hashlib
+import secrets
+import json
+from typing import List, Dict, Any, Tuple, Optional
+from fastapi import UploadFile, File, Form, HTTPException
+from resume_profile_utils import parse_and_embed_resume, resolve_profile_identity
+
+# In-memory Vector Database Store for RAG Document Embeddings
+RESUME_VECTOR_STORE: List[Dict[str, Any]] = []
+
+USERS_JSON_PATH = BASE_DIR / "users.json"
+
+def _load_persisted_users() -> List[Dict[str, Any]]:
+    if not USERS_JSON_PATH.exists():
+        return []
+    try:
+        with open(USERS_JSON_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    except Exception as e:
+        print("[USERS LOAD ERROR]:", e)
+        return []
+
+def _save_persisted_users(users: List[Dict[str, Any]]) -> bool:
+    try:
+        with open(USERS_JSON_PATH, "w", encoding="utf-8") as f:
+            json.dump(users, f, indent=2)
+        return True
+    except Exception as e:
+        print("[USERS SAVE ERROR]:", e)
+        return False
+
+def _hash_permanent_password(password: str) -> Tuple[str, str]:
+    salt = secrets.token_hex(16)
+    try:
+        h = hashlib.scrypt(password.encode("utf-8"), salt=bytes.fromhex(salt), n=16384, r=8, p=1, dklen=64).hex()
+        return salt, h
+    except Exception:
+        h = hashlib.sha256((password + salt).encode("utf-8")).hexdigest()
+        return salt, h
+
+def _verify_candidate_password(password: str, salt: str, password_hash: str) -> bool:
+    if not password_hash:
+        return True
+    if salt:
+        try:
+            h = hashlib.scrypt(password.encode("utf-8"), salt=bytes.fromhex(salt), n=16384, r=8, p=1, dklen=64).hex()
+            if h == password_hash:
+                return True
+        except Exception:
+            pass
+        try:
+            h = hashlib.sha256((password + salt).encode("utf-8")).hexdigest()
+            if h == password_hash:
+                return True
+        except Exception:
+            pass
+    if password == password_hash:
+        return True
+    return False
 
 @app.post("/api/resume/parse-autofill")
 @app.post("/api/rag/resume-autofill")
@@ -528,6 +585,7 @@ async def backendreal_parse_autofill_resume(
     - Chunks document into semantic vector passages
     - Generates embeddings and extracts candidate profile telemetry
     - Auto-detects GitHub, LinkedIn, and domain options
+    - Stores passages into Vector Store for RAG matching
     """
     target_file = resumeFile or file
     text = (resume_text or "").strip()
@@ -556,7 +614,217 @@ async def backendreal_parse_autofill_resume(
             print("[PARSE-AUTOFILL ERROR]:", e)
 
     result = parse_and_embed_resume(text, filename=filename)
+
+    # Ingest chunks into server vector store
+    if result.get("chunks"):
+        for chunk in result["chunks"]:
+            RESUME_VECTOR_STORE.append({
+                "chunk_id": chunk.get("chunk_id"),
+                "content": chunk.get("content"),
+                "filename": filename,
+                "candidate": result.get("data", {}).get("fullName", "Candidate"),
+                "email": result.get("data", {}).get("emailAddress", ""),
+                "dimension": 384
+            })
+
     return result
+
+@app.get("/api/auth/profiles")
+@app.get("/api/profiles")
+def get_stored_profiles():
+    """
+    Returns stored candidate profiles formatted for Google Sign-In style profile selection.
+    """
+    users = _load_persisted_users()
+    profiles = []
+    for u in users:
+        p = u.get("profile") or {}
+        name = u.get("name") or p.get("fullName") or u.get("email", "").split("@")[0] or "Candidate"
+        email = u.get("email") or p.get("emailAddress") or ""
+        if not email:
+            continue
+        picture = p.get("picture") or u.get("picture") or ""
+        gh_user = p.get("githubUsername") or u.get("githubUsername") or ""
+        li_user = p.get("linkedinUsername") or u.get("linkedinUsername") or ""
+        role = p.get("userType") or "Student"
+        domain = p.get("preferredDomain") or "Artificial Intelligence"
+        profiles.append({
+            "id": u.get("id"),
+            "name": name,
+            "email": email,
+            "picture": picture,
+            "githubUsername": gh_user,
+            "linkedinUsername": li_user,
+            "role": role,
+            "preferredDomain": domain,
+            "hasPermanentPassword": bool(u.get("passwordHash") or u.get("password"))
+        })
+    return {"success": True, "total": len(profiles), "profiles": profiles}
+
+@app.post("/api/auth/register")
+@app.post("/submit-registration")
+async def register_candidate_profile(request: Request):
+    """
+    Registers and persists candidate profile with permanent password in Python backend.
+    """
+    # Read either form-data or JSON payload
+    data = {}
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            data = await request.json()
+        except Exception:
+            data = {}
+    else:
+        form = await request.form()
+        data = dict(form)
+
+    full_name = data.get("fullName") or data.get("name") or "Candidate"
+    email = (data.get("emailAddress") or data.get("email") or "").strip().lower()
+    mobile = data.get("mobileNumber") or data.get("mobile") or ""
+    dob = data.get("dob") or ""
+    password = data.get("password") or ""
+    user_type = data.get("userType") or "student"
+    experience_level = data.get("experienceLevel") or "fresher"
+    preferred_domain = data.get("preferredDomain") or "ai"
+    github_profile = data.get("githubProfile") or ""
+    linkedin_profile = data.get("linkedinProfile") or ""
+    github_username = data.get("githubUsername") or ""
+    linkedin_username = data.get("linkedinUsername") or ""
+    picture = data.get("picture") or ""
+    projects_raw = data.get("projects")
+    projects = []
+    if isinstance(projects_raw, str):
+        try:
+            projects = json.loads(projects_raw)
+        except Exception:
+            projects = []
+    elif isinstance(projects_raw, list):
+        projects = projects_raw
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Email address is required.")
+
+    users = _load_persisted_users()
+    existing_idx = next((i for i, u in enumerate(users) if (u.get("email") or "").lower() == email), -1)
+
+    salt, p_hash = ("", "")
+    if password:
+        salt, p_hash = _hash_permanent_password(password)
+
+    profile_obj = {
+        "fullName": full_name,
+        "emailAddress": email,
+        "mobileNumber": mobile,
+        "dob": dob,
+        "userType": user_type,
+        "experienceLevel": experience_level,
+        "preferredDomain": preferred_domain,
+        "githubProfile": github_profile,
+        "githubUsername": github_username,
+        "linkedinProfile": linkedin_profile,
+        "linkedinUsername": linkedin_username,
+        "picture": picture,
+        "projects": projects
+    }
+
+    user_obj = {
+        "id": users[existing_idx].get("id") if existing_idx >= 0 else secrets.token_hex(16),
+        "name": full_name,
+        "email": email,
+        "passwordSalt": salt or (users[existing_idx].get("passwordSalt", "") if existing_idx >= 0 else ""),
+        "passwordHash": p_hash or (users[existing_idx].get("passwordHash", "") if existing_idx >= 0 else ""),
+        "password": password or (users[existing_idx].get("password", "") if existing_idx >= 0 else ""),
+        "picture": picture,
+        "githubProfile": github_profile,
+        "githubUsername": github_username,
+        "linkedinProfile": linkedin_profile,
+        "linkedinUsername": linkedin_username,
+        "projects": projects,
+        "profile": profile_obj,
+        "isVerified": True,
+        "emailVerified": True
+    }
+
+    if existing_idx >= 0:
+        users[existing_idx].update(user_obj)
+    else:
+        users.insert(0, user_obj)
+
+    _save_persisted_users(users)
+
+    return {
+        "success": True,
+        "message": f"Profile for {full_name} created and saved with permanent credentials successfully!",
+        "user": user_obj,
+        "profile": profile_obj
+    }
+
+@app.post("/api/auth/login")
+async def login_candidate_profile(request: Request):
+    """
+    Authenticates candidate using permanent password in Python backend.
+    """
+    data = {}
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            data = await request.json()
+        except Exception:
+            data = {}
+    else:
+        form = await request.form()
+        data = dict(form)
+
+    email = (data.get("email") or data.get("emailAddress") or "").strip().lower()
+    password = data.get("password") or ""
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required.")
+
+    users = _load_persisted_users()
+    user = next((u for u in users if (u.get("email") or "").lower() == email), None)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Account not found. Please create a profile first.")
+
+    stored_salt = user.get("passwordSalt", "")
+    stored_hash = user.get("passwordHash", "")
+    plain_pass = user.get("password", "")
+
+    is_valid = False
+    if stored_hash:
+        is_valid = _verify_candidate_password(password, stored_salt, stored_hash)
+    elif plain_pass:
+        is_valid = (password == plain_pass)
+    else:
+        # If no password was set, accept input as new permanent password
+        salt, p_hash = _hash_permanent_password(password)
+        user["passwordSalt"] = salt
+        user["passwordHash"] = p_hash
+        user["password"] = password
+        _save_persisted_users(users)
+        is_valid = True
+
+    if not is_valid:
+        raise HTTPException(status_code=401, detail="Incorrect password. Please try again.")
+
+    # Safe user object for client
+    candidate_name = user.get("name") or (user.get("profile", {}) or {}).get("fullName") or email.split("@")[0]
+    safe_user = {
+        "id": user.get("id"),
+        "name": candidate_name,
+        "email": email,
+        "picture": (user.get("profile", {}) or {}).get("picture") or user.get("picture", ""),
+        "profile": user.get("profile") or {}
+    }
+
+    return {
+        "success": True,
+        "message": f"Welcome back, {candidate_name}!",
+        "user": safe_user,
+        "redirect": "dashboard.html"
+    }
 
 @app.post("/analyzer")
 @app.post("/api/analyzer")
@@ -744,6 +1012,20 @@ async def backendreal_analyze_resume(
         "job_matches": suggested_jobs,
         "precision_study_manual": f"# {domain_name} Precision Manual\n\n- Candidate Field: {discipline}\n- ATS Readiness: {ats_score}/100\n- Primary Goal: Master core theoretical background and practical implementation in {discipline}."
     }
+
+
+@app.get("/{file_path:path}")
+def serve_static_file(file_path: str):
+    """
+    Serves static HTML, CSS, JS, and media files directly from the workspace root.
+    """
+    clean_path = file_path.strip("/") if file_path else "index.html"
+    if not clean_path:
+        clean_path = "index.html"
+    target = BASE_DIR / clean_path
+    if target.is_file():
+        return FileResponse(target)
+    raise HTTPException(status_code=404, detail=f"File {file_path} not found")
 
 
 if __name__ == "__main__":

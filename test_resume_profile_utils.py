@@ -75,6 +75,31 @@ class ResumeProfileUtilsTests(unittest.TestCase):
         self.assertEqual(result["data"]["experienceLevel"], "intermediate")
         self.assertEqual(result["data"]["userType"], "professional")
 
+    def test_gowtham_profile_with_initial_and_no_password(self):
+        sample = """
+        GOWTHAM KUMAR M
+        mgowthamkumar472008@gmail.com
+        Mobile: 260 1103 740
+        Date of Birth: 2008-07-04
+        GitHub: https://github.com/mgowthamkumar
+        LinkedIn: https://linkedin.com/in/mgowthamkumar
+
+        Objective:
+        Passionate AI & Machine Learning student building Generative AI, RAG architectures and Python applications.
+        """
+        result = parse_and_embed_resume(sample, "gowtham_profile.pdf")
+        self.assertTrue(result["success"])
+        self.assertEqual(result["data"]["fullName"], "Gowtham Kumar M")
+        self.assertEqual(result["data"]["emailAddress"], "mgowthamkumar472008@gmail.com")
+        self.assertEqual(result["data"]["mobileNumber"], "260 1103 740")
+        self.assertEqual(result["data"]["dob"], "2008-07-04")
+        self.assertEqual(result["data"]["githubProfile"], "https://github.com/mgowthamkumar")
+        self.assertEqual(result["data"]["linkedinProfile"], "https://www.linkedin.com/in/mgowthamkumar")
+        self.assertEqual(result["data"]["preferredDomain"], "ai")
+        # Ensure password is NOT autofilled
+        self.assertNotIn("password", result["data"])
+        self.assertNotIn("confirmPassword", result["data"])
+
 
 if __name__ == "__main__":
     unittest.main()
