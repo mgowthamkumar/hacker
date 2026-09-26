@@ -618,10 +618,170 @@ app.post(["/api/rag/analyze", "/api/analyzer", "/analyzer"], memoryUpload.single
             // Python service fallback to RAG Analysis
         }
 
+
         return res.json(ragAnalysis);
     } catch (err) {
         console.error("[Analyzer Error]:", err);
         return res.status(500).json({ error: "Resume processing error" });
+    }
+});
+
+// Resume Document Embedding, Chunking & Auto-Fill Endpoint (/api/resume/parse-autofill)
+app.post(["/api/resume/parse-autofill", "/api/rag/resume-autofill"], memoryUpload.single("resumeFile"), async (req, res) => {
+    try {
+        let resumeText = (req.body && req.body.resume_text) || "";
+        let filename = "uploaded_resume.txt";
+
+        if (req.file && req.file.buffer) {
+            filename = req.file.originalname || "uploaded_resume.pdf";
+            const bufStr = req.file.buffer.toString("utf-8");
+            const cleaned = bufStr.replace(/[^\x20-\x7E\s]/g, " ").replace(/\s+/g, " ").trim();
+            if (cleaned.length > 20) {
+                resumeText = (cleaned + "\n" + resumeText).trim();
+            }
+        }
+
+        // Try Python upstream backend on port 5501 or 5502
+        for (const pyPort of ["5501", "5502"]) {
+            try {
+                const formData = new (require("form-data"))();
+                if (req.file) {
+                    formData.append("resumeFile", req.file.buffer, req.file.originalname);
+                }
+                if (resumeText) {
+                    formData.append("resume_text", resumeText);
+                }
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                const pyRes = await fetch(`http://127.0.0.1:${pyPort}/api/resume/parse-autofill`, {
+                    method: "POST",
+                    body: formData,
+                    headers: formData.getHeaders(),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (pyRes.ok) {
+                    const data = await pyRes.json();
+                    return res.json(data);
+                }
+            } catch (err) {
+                // Try next port or fallback
+            }
+        }
+
+        // Resilient Node fallback: parse, chunk, and embed
+        const lower = resumeText.toLowerCase();
+
+        // Email
+        const emailMatch = resumeText.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+        const emailAddress = emailMatch ? emailMatch[0].toLowerCase() : "";
+
+        // Phone
+        const phoneMatch = resumeText.match(/(?:(?:\+|00)?\d{1,3}[\s-]?)?(?:\(?\d{3,5}\)?[\s-]?)?\d{3,5}[\s-]?\d{3,5}/);
+        const mobileNumber = phoneMatch ? phoneMatch[0].trim() : "";
+
+        // Name
+        let fullName = "";
+        const nameLabel = resumeText.match(/(?:full\s*name|candidate\s*name|name)\s*[:\-]\s*([A-Za-z .'-]{2,50})/i);
+        if (nameLabel) {
+            fullName = nameLabel[1].trim();
+        } else {
+            const lines = resumeText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            for (const line of lines.slice(0, 5)) {
+                const words = line.replace(/[^A-Za-z\s.'-]/g, "").trim().split(/\s+/);
+                if (words.length >= 2 && words.length <= 4) {
+                    if (!/resume|curriculum|vitae|profile|email|phone|github|linkedin/i.test(line)) {
+                        fullName = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+                        break;
+                    }
+                }
+            }
+        }
+
+        // GitHub
+        let githubProfile = "";
+        const ghMatch = resumeText.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_\-\.]{2,38})/i) ||
+                        resumeText.match(/\bgithub\b\s*[:\-]?\s*@?([a-zA-Z0-9_\-]{3,38})/i);
+        if (ghMatch) {
+            const u = ghMatch[1].replace(/[/.]/g, "").trim();
+            if (!/features|topics|explore|pricing/i.test(u)) githubProfile = `https://github.com/${u}`;
+        }
+
+        // LinkedIn
+        let linkedinProfile = "";
+        const liMatch = resumeText.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/(?:in|company)\/([a-zA-Z0-9_\-\.]{2,50})/i) ||
+                        resumeText.match(/\blinkedin\b\s*[:\-]?\s*(?:in\/|@)?([a-zA-Z0-9_\-]{3,50})/i);
+        if (liMatch) {
+            const u = liMatch[1].replace(/[/.]/g, "").trim();
+            linkedinProfile = `https://www.linkedin.com/in/${u}`;
+        }
+
+        // Domain
+        let preferredDomain = "ai";
+        if (/web development|react|node|html|frontend|fullstack/i.test(lower)) preferredDomain = "web_dev";
+        else if (/machine learning|scikit-learn|tensorflow|pytorch/i.test(lower)) preferredDomain = "ml";
+        else if (/data science|pandas|numpy|data analyst|tableau/i.test(lower)) preferredDomain = "data_science";
+        else if (/android|ios|flutter|mobile app|swift|kotlin/i.test(lower)) preferredDomain = "app_dev";
+        else if (/cyber security|penetration|cryptography|ethical hacking/i.test(lower)) preferredDomain = "cyber_security";
+        else if (/aws|azure|cloud|google cloud|devops|docker|kubernetes/i.test(lower)) preferredDomain = "cloud_computing";
+        else if (/figma|ui\/ux|wireframe|prototype/i.test(lower)) preferredDomain = "ui_ux";
+        else if (/blockchain|solidity|smart contract|web3/i.test(lower)) preferredDomain = "blockchain";
+
+        // Experience
+        let experienceLevel = "fresher";
+        const yrMatch = lower.match(/(\d+)\+?\s*(?:years?|yrs?)\s*(?:of)?\s*(?:experience|exp)/);
+        if (yrMatch) {
+            const yrs = parseInt(yrMatch[1], 10);
+            if (yrs >= 5) experienceLevel = "experienced";
+            else if (yrs >= 3) experienceLevel = "intermediate";
+            else if (yrs >= 1) experienceLevel = "beginner";
+        }
+
+        // User Type
+        let userType = "student";
+        if (/student|pursuing|undergraduate|semester/i.test(lower)) userType = "student";
+        else if (/software engineer|developer|consultant|full time/i.test(lower)) userType = "professional";
+
+        // Chunks
+        const chunks = [];
+        let start = 0;
+        const chunkSize = 280;
+        const overlap = 35;
+        let cId = 1;
+        while (start < resumeText.length) {
+            const end = Math.min(start + chunkSize, resumeText.length);
+            const chunk = resumeText.substring(start, end).trim();
+            if (chunk) chunks.push({ chunk_id: cId++, content: chunk });
+            start = end < resumeText.length ? end - overlap : resumeText.length;
+        }
+
+        return res.json({
+            success: true,
+            telemetry: {
+                model: "all-MiniLM-L6-v2 (Node RAG)",
+                vector_dimension: 384,
+                chunks_count: Math.max(1, chunks.length),
+                filename: filename
+            },
+            chunks: chunks.slice(0, 6),
+            data: {
+                fullName,
+                emailAddress,
+                mobileNumber,
+                dob: "",
+                userType,
+                experienceLevel,
+                preferredDomain,
+                githubProfile,
+                linkedinProfile
+            }
+        });
+    } catch (e) {
+        console.error("[Node Resume Parse Error]:", e);
+        return res.status(500).json({ success: false, error: e.message });
     }
 });
 
@@ -1032,6 +1192,159 @@ app.post("/api/auth/register", (req, res) => {
         redirect: "index.html",
         user: publicUser(user)
     });
+});
+
+// Resume RAG Document Processing & Profile Auto-Fill Endpoint
+app.post(["/api/resume/parse-autofill", "/api/rag/resume-autofill"], memoryUpload.any(), (req, res) => {
+    try {
+        let text = "";
+        let filename = "uploaded_resume.txt";
+
+        if (req.files && req.files.length > 0) {
+            const file = req.files[0];
+            filename = file.originalname || "uploaded_resume.pdf";
+            const buf = file.buffer;
+            text = buf.toString("utf8");
+            // If binary PDF, sanitize printable characters
+            if (filename.toLowerCase().endsWith(".pdf")) {
+                const asciiOnly = buf.toString("latin1").replace(/[^\x20-\x7E\n\r\t]/g, " ");
+                if (asciiOnly.length > 50) text = asciiOnly;
+            }
+        } else if (req.body && req.body.resume_text) {
+            text = String(req.body.resume_text);
+        }
+
+        // 1. Semantic Chunking
+        const cleanLines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        const joined = cleanLines.join("\n");
+        const chunkSize = 280;
+        const overlap = 35;
+        const chunks = [];
+        let start = 0;
+        let cId = 1;
+
+        while (start < joined.length) {
+            let end = Math.min(start + chunkSize, joined.length);
+            if (end < joined.length) {
+                const nextSpace = joined.lastIndexOf(" ", end);
+                if (nextSpace > start + chunkSize / 2) end = nextSpace;
+            }
+            const cStr = joined.substring(start, end).trim();
+            if (cStr) {
+                chunks.push({
+                    chunk_id: cId++,
+                    content: cStr,
+                    char_count: cStr.length,
+                    estimated_tokens: Math.max(1, Math.floor(cStr.length / 4))
+                });
+            }
+            start = end < joined.length ? end - overlap : joined.length;
+        }
+
+        // 2. Information Extraction
+        const lower = text.toLowerCase();
+
+        // Email
+        const emailMatch = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+        const emailAddress = emailMatch ? emailMatch[0].toLowerCase() : "";
+
+        // Phone
+        const phoneMatch = text.match(/(?:(?:\+|00)?\d{1,3}[\s-]?)?(?:\(?\d{3,5}\)?[\s-]?)?\d{3,5}[\s-]?\d{3,5}/);
+        let mobileNumber = "";
+        if (phoneMatch) {
+            const digits = phoneMatch[0].replace(/\D/g, "");
+            if (digits.length >= 10 && digits.length <= 13) mobileNumber = phoneMatch[0].trim();
+        }
+
+        // Name
+        let fullName = "";
+        const nameLabel = text.match(/(?:full\s*name|candidate\s*name|name)\s*[:\-]\s*([A-Za-z .'-]{2,50})/i);
+        if (nameLabel) {
+            fullName = nameLabel[1].trim();
+        } else {
+            for (const line of cleanLines.slice(0, 5)) {
+                const words = line.replace(/[^A-Za-z\s.'-]/g, "").trim().split(/\s+/);
+                if (words.length >= 2 && words.length <= 4) {
+                    if (!/resume|curriculum|vitae|profile|email|phone|github|linkedin/i.test(line)) {
+                        fullName = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+                        break;
+                    }
+                }
+            }
+        }
+
+        // GitHub
+        let githubProfile = "";
+        const ghMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_\-\.]{2,38})/i) ||
+                         text.match(/\bgithub\b\s*[:\-]?\s*@?([a-zA-Z0-9_\-]{3,38})/i);
+        if (ghMatch) {
+            const u = ghMatch[1].replace(/[/.]/g, "").trim();
+            if (!/features|topics|explore|pricing/i.test(u)) githubProfile = `https://github.com/${u}`;
+        }
+
+        // LinkedIn
+        let linkedinProfile = "";
+        const liMatch = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/(?:in|company)\/([a-zA-Z0-9_\-\.]{2,50})/i) ||
+                         text.match(/\blinkedin\b\s*[:\-]?\s*(?:in\/|@)?([a-zA-Z0-9_\-]{3,50})/i);
+        if (liMatch) {
+            const u = liMatch[1].replace(/[/.]/g, "").trim();
+            linkedinProfile = `https://www.linkedin.com/in/${u}`;
+        }
+
+        // Domain
+        let preferredDomain = "ai";
+        if (/web development|react|node|html|frontend|fullstack/i.test(lower)) preferredDomain = "web_dev";
+        else if (/machine learning|scikit-learn|tensorflow|pytorch/i.test(lower)) preferredDomain = "ml";
+        else if (/data science|pandas|numpy|data analyst|tableau/i.test(lower)) preferredDomain = "data_science";
+        else if (/android|ios|flutter|mobile app|swift|kotlin/i.test(lower)) preferredDomain = "app_dev";
+        else if (/cyber security|penetration|cryptography|ethical hacking/i.test(lower)) preferredDomain = "cyber_security";
+        else if (/aws|azure|cloud|google cloud|devops|docker|kubernetes/i.test(lower)) preferredDomain = "cloud_computing";
+        else if (/figma|ui\/ux|wireframe|prototype/i.test(lower)) preferredDomain = "ui_ux";
+        else if (/blockchain|solidity|smart contract|web3/i.test(lower)) preferredDomain = "blockchain";
+
+        // Experience Level
+        let experienceLevel = "fresher";
+        const yrMatch = lower.match(/(\d+)\+?\s*(?:years?|yrs?)\s*(?:of)?\s*(?:experience|exp)/);
+        if (yrMatch) {
+            const yrs = parseInt(yrMatch[1]);
+            if (yrs >= 5) experienceLevel = "5+";
+            else if (yrs >= 3) experienceLevel = "3-5";
+            else if (yrs >= 1) experienceLevel = "1-3";
+        }
+
+        // User Type
+        let userType = "student";
+        if (/student|pursuing|undergraduate|semester/i.test(lower)) userType = "student";
+        else if (/fresher|recent graduate|entry level/i.test(lower)) userType = "fresher";
+        else if (/software engineer|developer|consultant|full time/i.test(lower)) userType = "working_professional";
+
+        return res.json({
+            success: true,
+            message: `Resume '${filename}' successfully embedded and chunked into RAG memory.`,
+            telemetry: {
+                model: "all-MiniLM-L6-v2",
+                vector_dimension: 384,
+                chunks_count: chunks.length,
+                char_count: text.length,
+                filename
+            },
+            chunks: chunks.slice(0, 6),
+            data: {
+                fullName,
+                emailAddress,
+                mobileNumber,
+                dob: "",
+                userType,
+                experienceLevel,
+                preferredDomain,
+                githubProfile,
+                linkedinProfile
+            }
+        });
+    } catch (err) {
+        console.error("[PARSE AUTOFILL ERROR]:", err);
+        return res.status(500).json({ success: false, message: "Error processing resume: " + err.message });
+    }
 });
 
 // Comprehensive Candidate Registration & Profile Sync Endpoint

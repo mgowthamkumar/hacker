@@ -1,6 +1,15 @@
 import unittest
 
-from resume_profile_utils import resolve_profile_identity
+from resume_profile_utils import (
+    resolve_profile_identity,
+    parse_and_embed_resume,
+    chunk_resume_document,
+    _extract_github_from_resume,
+    _extract_linkedin_from_resume,
+    _extract_domain_from_resume,
+    _extract_email_from_resume,
+    _extract_phone_from_resume
+)
 
 
 class ResumeProfileUtilsTests(unittest.TestCase):
@@ -19,6 +28,52 @@ class ResumeProfileUtilsTests(unittest.TestCase):
 
         self.assertEqual(full_name, "Jane Smith")
         self.assertEqual(dob, "1990-01-01")
+
+    def test_rag_chunking_and_embedding_autofill(self):
+        sample_resume = """
+        Gowtham Kumar
+        Email: gowtham.kumar@example.com
+        Phone: +91 9876543210
+        Date of Birth: 2004-05-15
+        GitHub: https://github.com/mgowthamkumar
+        LinkedIn: https://www.linkedin.com/in/gowtham-kumar
+        
+        Summary:
+        Motivated Computer Science student specializing in Artificial Intelligence, Deep Learning,
+        and PyTorch. Built scalable RAG systems with LangChain and FAISS.
+        
+        Projects:
+        - AutoHire AI: Generative AI Career Launchpad using Transformers and FastAPI.
+        """
+
+        result = parse_and_embed_resume(sample_resume, "gowtham_resume.pdf")
+
+        self.assertTrue(result["success"])
+        self.assertGreater(result["telemetry"]["chunks_count"], 0)
+        self.assertEqual(result["data"]["fullName"], "Gowtham Kumar")
+        self.assertEqual(result["data"]["emailAddress"], "gowtham.kumar@example.com")
+        self.assertEqual(result["data"]["githubProfile"], "https://github.com/mgowthamkumar")
+        self.assertEqual(result["data"]["linkedinProfile"], "https://www.linkedin.com/in/gowtham-kumar")
+        self.assertEqual(result["data"]["preferredDomain"], "ai")
+
+    def test_rag_handles_and_career_preferences(self):
+        sample = """
+        Alex Rivera
+        Software Engineer
+        alex.rivera@dev.io | (555) 234-5678
+        GitHub: @torvalds
+        LinkedIn: in/williamhgates
+        Experience: 4 years of experience building modern web development React and Node.js microservices.
+        """
+        result = parse_and_embed_resume(sample, "alex_rivera_cv.txt")
+        self.assertTrue(result["success"])
+        self.assertEqual(result["data"]["fullName"], "Alex Rivera")
+        self.assertEqual(result["data"]["emailAddress"], "alex.rivera@dev.io")
+        self.assertEqual(result["data"]["githubProfile"], "https://github.com/torvalds")
+        self.assertEqual(result["data"]["linkedinProfile"], "https://www.linkedin.com/in/williamhgates")
+        self.assertEqual(result["data"]["preferredDomain"], "web_dev")
+        self.assertEqual(result["data"]["experienceLevel"], "intermediate")
+        self.assertEqual(result["data"]["userType"], "professional")
 
 
 if __name__ == "__main__":

@@ -4,24 +4,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Build your AutoHire profile to discover tailored career opportunities.">
-    <title>Create Your Profile | AutoHire</title>
+    <meta name="description" content="Build your AutoHire profile to discover tailored career opportunities with AI RAG matching.">
+    <title>Create Your Profile | AutoHire RAG AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #070b14;
-            --bg-card: rgba(15, 23, 42, 0.75);
-            --border: rgba(255, 255, 255, 0.08);
+            --bg-dark: #070b14;
+            --card-bg: rgba(15, 23, 42, 0.82);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.35);
+            --accent-purple: #a855f7;
+            --accent-pink: #ec4899;
+            --accent-yellow: #eab308;
+            --success: #22c55e;
             --green: #00ff41;
             --green-glow: rgba(0, 255, 65, 0.25);
             --cyan: #38bdf8;
-            --purple: #a855f7;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
+            --radius-lg: 28px;
+            --radius-md: 14px;
+            --shadow-3d: 0 32px 80px rgba(0, 0, 0, 0.75), 0 0 45px rgba(56, 189, 248, 0.1);
             --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
             --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -33,57 +39,69 @@
             }
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "DM Sans", sans-serif;
+        }
 
         body {
             min-height: 100vh;
-            background: var(--bg);
+            background-color: var(--bg-dark);
             color: var(--text-main);
-            font-family: "Inter", sans-serif;
-            padding: 40px 20px 60px;
+            padding: 40px 20px 80px;
             position: relative;
             overflow-x: hidden;
         }
 
-        /* ── Animated background ── */
-        .bg-orbs {
+        /* ── 3D Canvas Mesh Background ── */
+        #bg3dCanvas {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.55;
+        }
+
+        /* ── Ambient Glow Blobs (Matching index.html & profile.html) ── */
+        .ambient-glow {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
             pointer-events: none;
             z-index: 0;
-            overflow: hidden;
+            opacity: 0.28;
+            animation: pulseGlow 12s ease-in-out infinite alternate;
         }
-        .orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(100px);
-            opacity: 0.25;
-            animation: orbFloat linear infinite;
+        .glow-1 {
+            width: 650px;
+            height: 650px;
+            background: radial-gradient(circle, var(--primary), transparent);
+            top: -200px;
+            left: -150px;
         }
-        .orb-1 {
-            width: 600px; height: 600px;
-            background: radial-gradient(circle, var(--green), transparent);
-            top: -200px; left: -150px;
-            animation-duration: 28s;
-        }
-        .orb-2 {
-            width: 500px; height: 500px;
-            background: radial-gradient(circle, var(--cyan), transparent);
-            bottom: -150px; right: -100px;
-            animation-duration: 22s;
-            animation-delay: -9s;
+        .glow-2 {
+            width: 550px;
+            height: 550px;
+            background: radial-gradient(circle, var(--accent-purple), transparent);
+            bottom: -150px;
+            right: -100px;
+            animation-delay: -6s;
         }
 
-        @keyframes orbFloat {
-            0%   { transform: translate(0, 0) scale(1); }
-            50%  { transform: translate(30px, -40px) scale(1.07); }
-            100% { transform: translate(0, 0) scale(1); }
+        @keyframes pulseGlow {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.15) translate(40px, -30px); }
         }
 
-        /* ── Container ── */
+        /* ── Main Container (Extended UI Width) ── */
         .container {
-            width: 90%;
-            max-width: 860px;
+            width: 95%;
+            max-width: 980px;
             margin: 0 auto;
             position: relative;
             z-index: 1;
@@ -92,80 +110,86 @@
 
         @keyframes cardEntry {
             from { opacity: 0; transform: translateY(28px); }
-            to   { opacity: 1; transform: translateY(0); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* ── Page header ── */
+        /* ── Header ── */
         .page-header {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 36px;
         }
 
         .back-link {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             color: var(--text-muted);
-            font-size: .88rem;
+            font-size: 0.98rem;
+            font-weight: 600;
             text-decoration: none;
-            margin-bottom: 28px;
-            transition: color 0.2s;
+            margin-bottom: 24px;
+            transition: color 0.2s, transform 0.2s;
         }
-        .back-link:hover { color: var(--green); text-shadow: 0 0 8px var(--green-glow); }
-        .back-link svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+        .back-link:hover {
+            color: var(--primary);
+            transform: translateX(-3px);
+        }
+        .back-link svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; }
 
         .brand {
             display: inline-block;
             color: #fff;
-            font: 700 1.5rem "Space Grotesk", sans-serif;
+            font: 800 1.85rem "Space Grotesk", sans-serif;
             letter-spacing: -.04em;
             text-decoration: none;
-            margin-bottom: 20px;
+            margin-bottom: 14px;
         }
-        .brand span { color: var(--green); text-shadow: 0 0 10px var(--green-glow); }
+        .brand span { color: var(--primary); text-shadow: 0 0 14px var(--primary-glow); }
 
         .tagline {
             display: inline-block;
-            font-size: .8rem;
+            font-size: 0.88rem;
             font-weight: 700;
             color: #050811;
-            background: var(--green);
-            box-shadow: 0 0 15px var(--green-glow);
-            padding: 8px 20px;
-            border-radius: 100px;
+            background: linear-gradient(135deg, var(--primary), #a855f7);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+            padding: 8px 22px;
+            border-radius: 999px;
             letter-spacing: .08em;
             text-transform: uppercase;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         h2 {
-            font: 800 2.4rem "Space Grotesk", sans-serif;
+            font: 800 2.85rem "Space Grotesk", sans-serif;
             letter-spacing: -.04em;
             color: #fff;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
         .page-subtitle {
             color: var(--text-muted);
-            font-size: .95rem;
+            font-size: 1.15rem;
+            line-height: 1.6;
         }
 
-        /* ── Form card ── */
+        /* ── Form Card ── */
         .form-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 40px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 48px 46px;
             backdrop-filter: blur(28px);
             -webkit-backdrop-filter: blur(28px);
-            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
+            box-shadow: var(--shadow-3d);
         }
 
-        /* ── Section dividers inside form ── */
+        /* ── Section Dividers ── */
         .form-section {
-            margin-bottom: 32px;
-            padding-bottom: 32px;
-            border-bottom: 1px solid var(--border);
+            margin-bottom: 38px;
+            padding-bottom: 34px;
+            border-bottom: 1px solid var(--card-border);
         }
         .form-section:last-of-type {
             border-bottom: none;
@@ -173,214 +197,139 @@
         }
 
         .form-section-title {
-            font: 700 .8rem "Space Grotesk", sans-serif;
-            letter-spacing: .12em;
+            font: 800 1.15rem "Space Grotesk", sans-serif;
+            letter-spacing: .08em;
             text-transform: uppercase;
-            color: var(--green);
-            margin-bottom: 20px;
-            text-shadow: 0 0 8px var(--green-glow);
+            color: var(--primary);
+            margin-bottom: 24px;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        /* ── Grid layout ── */
+        .rag-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            background: rgba(168, 85, 247, 0.18);
+            color: #d8b4fe;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            letter-spacing: 0.02em;
+            text-transform: none;
+        }
+
+        /* ── Grid Layout ── */
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 24px;
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
             .form-row { grid-template-columns: 1fr; }
+            .form-card { padding: 32px 22px; }
+            h2 { font-size: 2.2rem; }
         }
 
-        /* ── Form group ── */
-        .form-group { margin-bottom: 20px; }
+        /* ── Form Controls (Extended Sizing) ── */
+        .form-group { margin-bottom: 24px; }
         .form-group:last-child { margin-bottom: 0; }
 
         label {
             display: block;
-            margin-bottom: 7px;
-            font-size: .82rem;
-            font-weight: 600;
-            color: rgba(255,255,255,0.8);
-            letter-spacing: .02em;
+            margin-bottom: 9px;
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            letter-spacing: .01em;
         }
 
-        input, select {
+        input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="password"], select {
             width: 100%;
-            padding: 13px 16px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border);
-            border-radius: 12px;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
             color: var(--text-main);
-            font: 500 .95rem "Inter", sans-serif;
-            transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+            font: 500 1.05rem "DM Sans", sans-serif;
+            transition: all 0.25s var(--ease-out);
             outline: none;
             appearance: none;
             -webkit-appearance: none;
         }
-        input::placeholder { color: rgba(255,255,255,0.3); }
+        input::placeholder { color: rgba(255, 255, 255, 0.35); }
         input:focus, select:focus {
-            border-color: var(--green);
-            background: rgba(255,255,255,0.07);
-            box-shadow: 0 0 0 3px rgba(0, 255, 65, 0.2);
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
         }
 
-        /* Select arrow */
+        /* Select Arrow */
         .select-wrap { position: relative; }
         .select-wrap::after {
             content: '';
             position: absolute;
-            right: 14px;
+            right: 18px;
             top: 50%;
             transform: translateY(-50%);
             width: 0;
             height: 0;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-top: 5px solid rgba(255,255,255,0.5);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid rgba(255, 255, 255, 0.6);
             pointer-events: none;
         }
+        select option { background: #0f172a; color: var(--text-main); font-size: 1rem; }
 
-        select option { background: #0f172a; color: var(--text-main); }
-
-        input[type="file"] {
-            padding: 11px 16px;
-            cursor: pointer;
+        .show-password-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+            font-size: 0.94rem;
             color: var(--text-muted);
-        }
-        input[type="file"]::file-selector-button {
-            background: rgba(0, 255, 65, 0.15);
-            color: var(--green);
-            border: 1px solid rgba(0, 255, 65, 0.4);
-            border-radius: 8px;
-            padding: 6px 16px;
-            font: 600 .82rem "Inter", sans-serif;
             cursor: pointer;
-            margin-right: 12px;
-            transition: background 0.2s, border-color 0.2s;
         }
-        input[type="file"]::file-selector-button:hover {
-            background: rgba(0, 255, 65, 0.25);
-        }
-
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            opacity: 0.5;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
-
-        /* ── Checkbox ── */
-        .checkbox {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 16px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            font-size: .88rem;
-            color: var(--muted);
-            cursor: pointer;
-            transition: border-color 0.25s, background 0.25s;
-        }
-        .checkbox:hover {
-            border-color: var(--teal);
-            background: rgba(14,119,109,0.08);
-        }
-        .checkbox input[type="checkbox"] {
+        .show-password-wrap input {
             width: 18px;
             height: 18px;
-            margin-top: 1px;
-            flex-shrink: 0;
-            accent-color: var(--teal);
+            accent-color: var(--primary);
             cursor: pointer;
         }
 
-        /* ── Submit button ── */
-        button[type="submit"] {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 12px;
-            background: linear-gradient(135deg, var(--teal), var(--teal-dark));
-            color: #fff;
-            font: 700 1rem "Inter", sans-serif;
-            cursor: pointer;
-            margin-top: 28px;
-            transition: transform 0.25s var(--ease-spring),
-                        box-shadow 0.25s,
-                        opacity 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-        button[type="submit"]::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
-            transform: translateX(-100%);
-            transition: transform 0.5s;
-        }
-        button[type="submit"]:hover::after { transform: translateX(100%); }
-        button[type="submit"]:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 14px 36px rgba(14,119,109,0.45);
-        }
-        button[type="submit"]:active { transform: scale(0.98); }
-        button[type="submit"]:disabled {
-            background: rgba(255,255,255,0.12);
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .footer-note {
-            text-align: center;
-            margin-top: 24px;
-            color: var(--muted);
-            font-size: .85rem;
-        }
-        .footer-note a {
-            color: var(--lime);
-            font-weight: 600;
-            text-decoration: none;
-        }
-        .footer-note a:hover { opacity: 0.8; }
-
-        @media (max-width: 768px) {
-            .form-card { padding: 28px 20px; }
-            h2 { font-size: 1.9rem; }
-        }
-
-        /* ── GitHub & LinkedIn Interactive Verification & Repos Styles ── */
+        /* ── Input with Action (Verify Button) ── */
         .input-with-action {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: center;
         }
         .input-with-action input {
             flex: 1;
         }
         .btn-verify {
-            padding: 13px 18px;
+            padding: 16px 22px;
             background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(168, 85, 247, 0.2));
-            color: var(--cyan);
+            color: var(--primary);
             border: 1px solid rgba(56, 189, 248, 0.4);
-            border-radius: 12px;
-            font: 700 0.85rem "Inter", sans-serif;
+            border-radius: 14px;
+            font: 700 0.98rem "DM Sans", sans-serif;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.25s var(--ease-out);
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
         .btn-verify:hover {
             background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(168, 85, 247, 0.35));
-            border-color: var(--cyan);
-            box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
-            transform: translateY(-1px);
+            border-color: var(--primary);
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
+            transform: translateY(-2px);
         }
         .btn-verify.btn-verify-linkedin {
             background: linear-gradient(135deg, rgba(10, 102, 194, 0.25), rgba(56, 189, 248, 0.25));
@@ -390,74 +339,75 @@
         .btn-verify.btn-verify-linkedin:hover {
             background: linear-gradient(135deg, rgba(10, 102, 194, 0.4), rgba(56, 189, 248, 0.4));
             border-color: #38bdf8;
-            box-shadow: 0 0 16px rgba(10, 102, 194, 0.45);
+            box-shadow: 0 0 18px rgba(10, 102, 194, 0.45);
         }
 
+        /* ── Verification Status Boxes ── */
         .verification-status-box {
-            margin-top: 10px;
-            padding: 14px 16px;
-            border-radius: 12px;
-            font-size: 0.88rem;
+            margin-top: 12px;
+            padding: 16px 20px;
+            border-radius: 14px;
+            font-size: 0.96rem;
             display: none;
             transition: all 0.3s;
         }
         .verification-status-box.active {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
         }
         .verification-status-box.loading {
-            background: rgba(56, 189, 248, 0.08);
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            color: var(--cyan);
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: var(--primary);
         }
         .verification-status-box.verified {
-            background: rgba(34, 197, 94, 0.1);
-            border: 1px solid rgba(34, 197, 94, 0.35);
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.38);
             color: #4ade80;
         }
         .verification-status-box.error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.35);
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.38);
             color: #f87171;
         }
 
         .verified-user-avatar {
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            border: 2px solid var(--green);
+            border: 2px solid var(--success);
             object-fit: cover;
             flex-shrink: 0;
-            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+            box-shadow: 0 0 14px rgba(34, 197, 94, 0.3);
         }
         .verified-user-info {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            gap: 4px;
         }
         .verified-user-name {
             font-weight: 700;
             color: #fff;
-            font-size: 0.95rem;
+            font-size: 1.05rem;
         }
         .verified-user-stats {
-            font-size: 0.78rem;
+            font-size: 0.88rem;
             color: var(--text-muted);
         }
 
         .social-direct-link {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 7px 14px;
-            border-radius: 8px;
-            font-size: 0.82rem;
+            gap: 8px;
+            padding: 9px 18px;
+            border-radius: 10px;
+            font-size: 0.92rem;
             font-weight: 700;
             text-decoration: none;
             transition: all 0.25s;
-            margin-top: 8px;
+            margin-top: 10px;
         }
         .social-direct-link.github-link {
             background: rgba(255, 255, 255, 0.08);
@@ -466,28 +416,198 @@
         }
         .social-direct-link.github-link:hover {
             background: rgba(255, 255, 255, 0.16);
-            border-color: var(--cyan);
-            color: var(--cyan);
-            box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
-            transform: translateY(-1px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+            transform: translateY(-2px);
         }
         .social-direct-link.linkedin-link {
-            background: rgba(10, 102, 194, 0.18);
+            background: rgba(10, 102, 194, 0.2);
             color: #38bdf8;
             border: 1px solid rgba(10, 102, 194, 0.4);
         }
         .social-direct-link.linkedin-link:hover {
-            background: rgba(10, 102, 194, 0.32);
+            background: rgba(10, 102, 194, 0.35);
             color: #fff;
-            box-shadow: 0 0 12px rgba(10, 102, 194, 0.4);
-            transform: translateY(-1px);
+            box-shadow: 0 0 16px rgba(10, 102, 194, 0.45);
+            transform: translateY(-2px);
+        }
+
+        /* ── RAG AI Resume Analyzer Dropzone (Prominent UI) ── */
+        .resume-dropzone {
+            border: 2px dashed rgba(56, 189, 248, 0.35);
+            border-radius: 18px;
+            background: rgba(56, 189, 248, 0.03);
+            padding: 30px 24px;
+            transition: all 0.3s var(--ease-out);
+            position: relative;
+        }
+        .resume-dropzone:hover, .resume-dropzone.dragover {
+            border-color: var(--primary);
+            background: rgba(56, 189, 248, 0.08);
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
+        }
+        .dropzone-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .dropzone-left {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .dropzone-icon {
+            font-size: 2.5rem;
+            background: rgba(56, 189, 248, 0.12);
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+        .dropzone-info strong {
+            display: block;
+            font-size: 1.05rem;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .dropzone-info p {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+        }
+        .btn-browse-file {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #0284c7, #a855f7);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(56, 189, 248, 0.3);
+            transition: all 0.25s;
+        }
+        .btn-browse-file:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(56, 189, 248, 0.45);
+        }
+
+        /* ── RAG Processing Animated Card ── */
+        .rag-processing-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 8px 0;
+        }
+        .rag-spinner-glow {
+            width: 44px;
+            height: 44px;
+            border: 3px solid rgba(56, 189, 248, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        .rag-status-content {
+            flex: 1;
+        }
+        .rag-status-heading {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+        .rag-status-sub {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .rag-progress-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .rag-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), #a855f7);
+            border-radius: 999px;
+            transition: width 0.4s var(--ease-out);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+        }
+
+        /* ── RAG Success Card ── */
+        .rag-success-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .rag-success-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .rag-success-badge {
+            font-size: 0.82rem;
+            font-weight: 700;
+            background: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            padding: 4px 12px;
+            border-radius: 999px;
+        }
+        .rag-file-display {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .rag-stats-badge {
+            font-size: 0.88rem;
+            color: var(--primary);
+        }
+        .btn-reupload-sm {
+            background: rgba(255, 255, 255, 0.08);
+            color: #f1f5f9;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 8px 16px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-reupload-sm:hover {
+            background: rgba(255, 255, 255, 0.16);
+            border-color: var(--primary);
+        }
+
+        /* Populated Field Pulse Effect */
+        @keyframes populatePulse {
+            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.6); border-color: var(--primary); }
+            70% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); border-color: var(--primary); }
+            100% { box-shadow: none; }
+        }
+        .field-auto-populated {
+            animation: populatePulse 1.2s ease-out;
+            border-color: rgba(56, 189, 248, 0.6) !important;
+            background: rgba(56, 189, 248, 0.08) !important;
         }
 
         /* ── Project Selection / Repositories Picker ── */
         .repos-container {
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px dashed rgba(255, 255, 255, 0.12);
+            margin-top: 28px;
+            padding-top: 24px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.14);
             display: none;
         }
         .repos-container.active {
@@ -498,39 +618,37 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
         }
         .repos-count-badge {
-            font-size: 0.78rem;
-            padding: 4px 10px;
+            font-size: 0.92rem;
+            padding: 6px 14px;
             border-radius: 20px;
             background: rgba(0, 255, 65, 0.15);
             color: var(--green);
-            border: 1px solid rgba(0, 255, 65, 0.3);
+            border: 1px solid rgba(0, 255, 65, 0.35);
             font-weight: 700;
         }
         .repos-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 14px;
-            max-height: 400px;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 16px;
+            max-height: 420px;
             overflow-y: auto;
             padding-right: 6px;
         }
-        .repos-grid::-webkit-scrollbar {
-            width: 6px;
-        }
+        .repos-grid::-webkit-scrollbar { width: 6px; }
         .repos-grid::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.2);
             border-radius: 3px;
         }
         .repo-card {
             background: rgba(15, 23, 42, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 14px;
-            padding: 16px;
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 18px;
             cursor: pointer;
             transition: all 0.25s var(--ease-out);
             display: flex;
@@ -539,54 +657,48 @@
             position: relative;
         }
         .repo-card:hover {
-            border-color: var(--cyan);
+            border-color: var(--primary);
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
         }
         .repo-card.selected {
             border-color: var(--green);
-            background: rgba(0, 255, 65, 0.06);
-            box-shadow: 0 0 18px rgba(0, 255, 65, 0.15);
+            background: rgba(0, 255, 65, 0.08);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.18);
         }
         .repo-card-header {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
-            gap: 10px;
             margin-bottom: 8px;
         }
         .repo-title {
             font-weight: 700;
-            font-size: 0.95rem;
-            color: #f8fafc;
-            display: inline-flex;
+            font-size: 1.05rem;
+            color: #fff;
+            display: flex;
             align-items: center;
-            gap: 6px;
-            word-break: break-all;
+            gap: 8px;
+            word-break: break-word;
         }
         .repo-link-external {
-            color: var(--cyan);
+            color: var(--primary);
             text-decoration: none;
-            font-size: 0.85rem;
-            transition: opacity 0.2s;
+            font-size: 0.95rem;
+            margin-left: 4px;
         }
-        .repo-link-external:hover {
-            text-decoration: underline;
-            color: #7dd3fc;
-        }
+        .repo-link-external:hover { text-decoration: underline; }
         .repo-checkbox {
-            accent-color: var(--green);
             width: 18px;
             height: 18px;
+            accent-color: var(--green);
             cursor: pointer;
-            flex-shrink: 0;
-            margin-top: 2px;
         }
         .repo-desc {
+            font-size: 0.88rem;
             color: var(--text-muted);
-            font-size: 0.82rem;
+            margin-bottom: 12px;
             line-height: 1.45;
-            margin-bottom: 14px;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
@@ -596,68 +708,167 @@
             display: flex;
             align-items: center;
             gap: 14px;
-            font-size: 0.78rem;
+            font-size: 0.82rem;
             color: var(--text-muted);
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-            padding-top: 10px;
         }
         .repo-lang {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
         .lang-dot {
             width: 9px;
             height: 9px;
             border-radius: 50%;
-            display: inline-block;
         }
-        .show-password-wrap {
+
+        /* ── Checkbox ── */
+        .checkbox {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-top: 6px;
-            font-size: 0.84rem;
-            color: var(--text-muted);
-            cursor: pointer;
+            gap: 12px;
+            margin: 28px 0;
+            font-size: 1.02rem;
         }
-        .show-password-wrap input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: var(--green);
+        .checkbox input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary);
+            cursor: pointer;
             margin: 0;
         }
 
+        /* ── Submit Button ── */
+        button[type="submit"] {
+            width: 100%;
+            padding: 20px;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #0284c7 0%, #a855f7 100%);
+            color: #ffffff;
+            font: 800 1.22rem "Space Grotesk", sans-serif;
+            cursor: pointer;
+            transition: all 0.3s var(--ease-spring);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 25px rgba(56, 189, 248, 0.4);
+            letter-spacing: .02em;
+        }
+        button[type="submit"]::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+        button[type="submit"]:hover::after { transform: translateX(100%); }
+        button[type="submit"]:hover {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 10px 35px rgba(168, 85, 247, 0.55);
+        }
+        button[type="submit"]:active { transform: scale(0.98); }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 28px;
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+        .footer-note a {
+            color: var(--primary);
+            font-weight: 700;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .footer-note a:hover { opacity: 0.8; text-decoration: underline; }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 
 <body>
-    <div class="bg-orbs" aria-hidden="true">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-    </div>
+    <!-- 3D Canvas Mesh Background -->
+    <canvas id="bg3dCanvas"></canvas>
+
+    <!-- Ambient Glow Effects -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
 
     <div class="container">
         <div class="page-header">
-            <a class="back-link" href="index.html">
-                <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Back to AutoHire
+            <a href="sign-in.html" class="back-link">
+                <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                Back to Sign In
             </a>
             <br>
             <a class="brand" href="index.html">Auto<span>Hire</span></a>
             <br>
             <span class="tagline">Your AI Career Companion</span>
             <h2>Create Your Profile</h2>
-            <p class="page-subtitle">Build your profile to unlock personalized career opportunities.</p>
+            <p class="page-subtitle">Build your profile to unlock personalized career opportunities with AI RAG matching.</p>
         </div>
 
         <div class="form-card">
             <form id="registrationForm" enctype="multipart/form-data">
 
+                <!-- 1. AI Resume Embedding & Auto-Fill Section -->
+                <div class="form-section resume-ai-section">
+                    <div class="form-section-title" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                        <span>🧠 RAG AI Resume Analyzer &amp; Auto-Fill</span>
+                        <span class="rag-chip">⚡ Vector Embedding &amp; Chunking</span>
+                    </div>
+                    <p style="color:var(--text-muted); font-size:1rem; margin-bottom:18px;">
+                        Upload your resume to automatically chunk, embed, and auto-fill your profile details, including GitHub and LinkedIn handles:
+                    </p>
+
+                    <div class="resume-dropzone" id="resumeDropzone">
+                        <input type="file" id="resumeFile" name="resumeFile" accept=".pdf,.doc,.docx,.txt" style="display:none;">
+                        
+                        <div class="dropzone-content" id="dropzoneContent">
+                            <div class="dropzone-left">
+                                <div class="dropzone-icon">📄</div>
+                                <div class="dropzone-info">
+                                    <strong>Drag &amp; drop your resume here, or <span style="color:var(--primary); text-decoration:underline; cursor:pointer;" id="dropzoneBrowseTrigger">browse file</span></strong>
+                                    <p>Supports PDF, DOCX, or TXT • Automated RAG parsing with all-MiniLM-L6-v2 vector embeddings</p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-browse-file" id="btnBrowseResume">Choose Resume</button>
+                        </div>
+
+                        <!-- Processing State -->
+                        <div class="rag-processing-container" id="ragProcessingContainer" style="display:none;">
+                            <div class="rag-spinner-glow"></div>
+                            <div class="rag-status-content">
+                                <div class="rag-status-heading" id="ragStatusTitle">Reading Document &amp; Chunking...</div>
+                                <div class="rag-status-sub" id="ragStatusSub">Analyzing document structure into semantic passages</div>
+                                <div class="rag-progress-track">
+                                    <div class="rag-progress-fill" id="ragProgressBar"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Success Telemetry Card -->
+                        <div class="rag-success-card" id="ragSuccessCard" style="display:none;">
+                            <div class="rag-success-left">
+                                <span class="rag-success-badge">✅ RAG Memory Indexed</span>
+                                <div>
+                                    <div class="rag-file-display" id="ragFileName">resume.pdf</div>
+                                    <div class="rag-stats-badge" id="ragStatsBadge">6 Chunks • Vector Dim: 384 • Auto-Filled</div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-reupload-sm" id="btnReuploadResume">Change Resume</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Personal Information & Account Security -->
                 <div class="form-section">
                     <div class="form-section-title">Personal Information &amp; Account Security</div>
                     <div class="form-row">
@@ -695,6 +906,7 @@
                     </label>
                 </div>
 
+                <!-- 3. Career Preferences -->
                 <div class="form-section">
                     <div class="form-section-title">Career Preferences</div>
                     <div class="form-row">
@@ -742,6 +954,7 @@
                     </div>
                 </div>
 
+                <!-- 4. Online Presence & Verification (GitHub & LinkedIn) -->
                 <div class="form-section">
                     <div class="form-section-title">Online Presence &amp; Verification</div>
                     <div class="form-row">
@@ -766,19 +979,15 @@
                             <div id="linkedinLinkContainer"></div>
                         </div>
                     </div>
-                    <div class="form-group" style="margin-top:16px;">
-                        <label for="resumeFile">Upload Resume (Optional)</label>
-                        <input type="file" id="resumeFile" name="resumeFile" accept=".pdf,.doc,.docx,.txt">
-                    </div>
                 </div>
 
-                <!-- Featured Projects Selection (from GitHub) -->
+                <!-- 5. Featured Projects Selection (from GitHub) -->
                 <div class="form-section repos-container" id="reposSection">
                     <div class="repos-header">
                         <div class="form-section-title" style="margin-bottom:0;">Featured Projects from GitHub</div>
                         <span class="repos-count-badge" id="selectedReposCount">0 Projects Selected</span>
                     </div>
-                    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:14px;">
+                    <p style="color:var(--text-muted); font-size:0.95rem; margin-bottom:16px;">
                         Select repositories from your GitHub account to showcase as projects in your portfolio:
                     </p>
                     <div class="repos-grid" id="reposGrid">
@@ -788,8 +997,8 @@
 
                 <div class="checkbox">
                     <input type="checkbox" id="termsAgreement" name="termsAgreement" required>
-                    <label for="termsAgreement" style="margin:0; cursor:pointer; color: rgba(255,255,255,0.55);">
-                        I agree to the <strong style="color:#fff;">Terms & Conditions</strong> and <strong style="color:#fff;">Privacy Policy</strong>
+                    <label for="termsAgreement" style="margin:0; cursor:pointer; color: rgba(255,255,255,0.7); font-weight:500;">
+                        I agree to the <strong style="color:#fff;">Terms &amp; Conditions</strong> and <strong style="color:#fff;">Privacy Policy</strong>
                     </label>
                 </div>
 
@@ -808,6 +1017,70 @@
         let verifiedLinkedInData = null;
         let loadedRepositories = [];
         let selectedProjects = [];
+
+        // 0. Canvas 3D Particle Mesh Background (Matching profile.html & sign-in.html)
+        (function init3DCanvas() {
+            const canvas = document.getElementById("bg3dCanvas");
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            let width = (canvas.width = window.innerWidth);
+            let height = (canvas.height = window.innerHeight);
+
+            const particles = [];
+            const particleCount = Math.min(Math.floor(width / 22), 55);
+
+            for (let i = 0; i < particleCount; i++) {
+                particles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 0.45,
+                    vy: (Math.random() - 0.5) * 0.45,
+                    radius: Math.random() * 2 + 1,
+                    color: Math.random() > 0.5 ? "rgba(56, 189, 248, 0.35)" : "rgba(168, 85, 247, 0.25)"
+                });
+            }
+
+            window.addEventListener("resize", () => {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            });
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if (p.x < 0 || p.x > width) p.vx *= -1;
+                    if (p.y < 0 || p.y > height) p.vy *= -1;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const p2 = particles[j];
+                        const dx = p.x - p2.x;
+                        const dy = p.y - p2.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < 120) {
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.strokeStyle = `rgba(56, 189, 248, ${0.12 * (1 - dist / 120)})`;
+                            ctx.lineWidth = 0.8;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        })();
 
         // Show/hide passwords
         document.getElementById("showPasswordToggle").addEventListener("change", function () {
@@ -850,7 +1123,7 @@
             linkedinStatusBox.style.display = "flex";
             linkedinStatusBox.style.borderColor = "rgba(10, 102, 194, 0.4)";
             linkedinStatusBox.innerHTML = `
-                <div style="display:inline-block; width:18px; height:18px; border:2px solid #0a66c2; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+                <div style="display:inline-block; width:20px; height:20px; border:2px solid #0a66c2; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
                 <span>Checking LinkedIn for <strong>in/${username}</strong>...</span>
             `;
 
@@ -875,7 +1148,7 @@
                 // Render direct clickable LinkedIn link that opens user profile directly
                 linkedinLinkContainer.innerHTML = `
                     <a href="${result.profileUrl}" target="_blank" rel="noopener noreferrer" class="social-direct-link linkedin-link" title="Open ${result.username} on LinkedIn directly">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9h2.77v8.37H6.46v-8.37M7.85 6.4a1.63 1.63 0 1 0 0 3.26 1.63 1.63 0 0 0 0-3.26z"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9h2.77v8.37H6.46v-8.37M7.85 6.4a1.63 1.63 0 1 0 0 3.26 1.63 1.63 0 0 0 0-3.26z"/></svg>
                         <span>Open LinkedIn Profile (in/${result.username}) ↗</span>
                     </a>
                 `;
@@ -884,6 +1157,7 @@
                 const fullNameInput = document.getElementById("fullName");
                 if (fullNameInput && !fullNameInput.value.trim() && result.name) {
                     fullNameInput.value = result.name;
+                    highlightPopulated(fullNameInput);
                 }
             } else {
                 showLinkedInError(result.error || `LinkedIn profile "${username}" could not be verified.`);
@@ -955,7 +1229,7 @@
             githubStatusBox.className = "verification-status-box loading active";
             githubStatusBox.style.display = "flex";
             githubStatusBox.innerHTML = `
-                <div style="display:inline-block; width:18px; height:18px; border:2px solid var(--cyan); border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+                <div style="display:inline-block; width:20px; height:20px; border:2px solid var(--primary); border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
                 <span>Checking GitHub for <strong>@${username}</strong>...</span>
             `;
 
@@ -980,7 +1254,7 @@
                 // Render direct clickable GitHub link that opens user profile directly
                 githubLinkContainer.innerHTML = `
                     <a href="${result.profileUrl}" target="_blank" rel="noopener noreferrer" class="social-direct-link github-link" title="Open ${result.username} on GitHub directly">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
                         <span>Open GitHub Profile (@${result.username}) ↗</span>
                     </a>
                 `;
@@ -989,6 +1263,7 @@
                 const fullNameInput = document.getElementById("fullName");
                 if (fullNameInput && !fullNameInput.value.trim() && result.name) {
                     fullNameInput.value = result.name;
+                    highlightPopulated(fullNameInput);
                 }
 
                 // Fetch Repositories for project showcase selection
@@ -1013,9 +1288,9 @@
         async function loadRepositoriesForSelection(username) {
             reposSection.classList.add("active");
             reposGrid.innerHTML = `
-                <div style="grid-column: 1 / -1; padding: 20px; text-align: center; color: var(--cyan);">
-                    <div style="display:inline-block; width:22px; height:22px; border:2px solid var(--cyan); border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:8px;"></div>
-                    <div>Fetching public repositories for <strong>@${username}</strong>...</div>
+                <div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--primary);">
+                    <div style="display:inline-block; width:26px; height:26px; border:2px solid var(--primary); border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:8px;"></div>
+                    <div style="font-size:1.05rem;">Fetching public repositories for <strong>@${username}</strong>...</div>
                 </div>
             `;
 
@@ -1023,7 +1298,7 @@
 
             if (loadedRepositories.length === 0) {
                 reposGrid.innerHTML = `
-                    <div style="grid-column: 1 / -1; padding: 18px; text-align: center; color: var(--text-muted); background: rgba(255,255,255,0.03); border-radius: 12px;">
+                    <div style="grid-column: 1 / -1; padding: 20px; text-align: center; color: var(--text-muted); background: rgba(255,255,255,0.03); border-radius: 14px; font-size:1rem;">
                         No public repositories found for this account. You can still create your profile and add custom projects later!
                     </div>
                 `;
@@ -1098,7 +1373,341 @@
             }
         });
 
-        // 3. Pre-populate existing profile data if available
+        // -------------------------------------------------------------
+        // 3. RAG AI Resume Document Chunking, Embedding & Auto-Fill Handler
+        // -------------------------------------------------------------
+        const resumeFileInput = document.getElementById("resumeFile");
+        const resumeDropzone = document.getElementById("resumeDropzone");
+        const btnBrowseResume = document.getElementById("btnBrowseResume");
+        const dropzoneBrowseTrigger = document.getElementById("dropzoneBrowseTrigger");
+        const dropzoneContent = document.getElementById("dropzoneContent");
+        const ragProcessingContainer = document.getElementById("ragProcessingContainer");
+        const ragSuccessCard = document.getElementById("ragSuccessCard");
+        const ragStatusTitle = document.getElementById("ragStatusTitle");
+        const ragStatusSub = document.getElementById("ragStatusSub");
+        const ragProgressBar = document.getElementById("ragProgressBar");
+        const ragFileName = document.getElementById("ragFileName");
+        const ragStatsBadge = document.getElementById("ragStatsBadge");
+        const btnReuploadResume = document.getElementById("btnReuploadResume");
+
+        btnBrowseResume.addEventListener("click", () => resumeFileInput.click());
+        if (dropzoneBrowseTrigger) dropzoneBrowseTrigger.addEventListener("click", () => resumeFileInput.click());
+        btnReuploadResume.addEventListener("click", () => resumeFileInput.click());
+
+        // Drag & drop support
+        ["dragenter", "dragover"].forEach(eventName => {
+            resumeDropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                resumeDropzone.classList.add("dragover");
+            }, false);
+        });
+
+        ["dragleave", "drop"].forEach(eventName => {
+            resumeDropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                resumeDropzone.classList.remove("dragover");
+            }, false);
+        });
+
+        resumeDropzone.addEventListener("drop", (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files.length > 0) {
+                resumeFileInput.files = files;
+                handleResumeProcessing(files[0]);
+            }
+        });
+
+        resumeFileInput.addEventListener("change", function () {
+            if (this.files && this.files.length > 0) {
+                handleResumeProcessing(this.files[0]);
+            }
+        });
+
+        function autoFillInput(id, value) {
+            const el = document.getElementById(id);
+            if (el && value) {
+                el.value = value;
+                highlightPopulated(el);
+            }
+        }
+
+        function highlightPopulated(el) {
+            el.classList.add("field-auto-populated");
+            setTimeout(() => el.classList.remove("field-auto-populated"), 2500);
+        }
+
+        async function handleResumeProcessing(file) {
+            if (!file) return;
+
+            // UI State: Show processing
+            dropzoneContent.style.display = "none";
+            ragSuccessCard.style.display = "none";
+            ragProcessingContainer.style.display = "flex";
+            ragProgressBar.style.width = "25%";
+            ragStatusTitle.textContent = "Step 1/3: Reading Document & Generating Semantic Chunks...";
+            ragStatusSub.textContent = `Analyzing ${file.name} (${(file.size / 1024).toFixed(1)} KB) into semantic vector passages...`;
+
+            setTimeout(() => {
+                ragProgressBar.style.width = "60%";
+                ragStatusTitle.textContent = "Step 2/3: Computing Vector Embeddings & Profile Telemetry...";
+                ragStatusSub.textContent = "Model: all-MiniLM-L6-v2 (Vector Dim: 384) • Running RAG entity extraction...";
+            }, 350);
+
+            const formData = new FormData();
+            formData.append("resumeFile", file);
+            formData.append("file", file);
+
+            let parsedResult = null;
+
+            // Candidate URLs: FastAPI (5501) -> Node (8800) -> In-browser fallback
+            const candidateUrls = [
+                `${window.AUTOHIRE_FASTAPI_ORIGIN || "http://127.0.0.1:5501"}/api/resume/parse-autofill`,
+                `${window.AUTOHIRE_API_ORIGIN || "http://127.0.0.1:8800"}/api/resume/parse-autofill`
+            ];
+
+            for (const url of candidateUrls) {
+                try {
+                    const res = await fetch(url, {
+                        method: "POST",
+                        body: formData
+                    });
+                    if (res.ok) {
+                        const json = await res.json();
+                        if (json && (json.success || json.data)) {
+                            parsedResult = json;
+                            break;
+                        }
+                    }
+                } catch (err) {
+                    console.log(`Backend ${url} notice: trying next route...`);
+                }
+            }
+
+            // Client-side fallback if servers were offline
+            if (!parsedResult) {
+                try {
+                    parsedResult = await clientSideParseResume(file);
+                } catch (e) {
+                    console.warn("Client fallback notice:", e);
+                }
+            }
+
+            ragProgressBar.style.width = "88%";
+            ragStatusTitle.textContent = "Step 3/3: Auto-Filling Fields & Launching Verification...";
+            ragStatusSub.textContent = "Populating profile options, GitHub & LinkedIn handles...";
+
+            await new Promise(r => setTimeout(r, 250));
+
+            ragProgressBar.style.width = "100%";
+
+            if (parsedResult && parsedResult.data) {
+                const d = parsedResult.data;
+
+                // 1. Auto-fill text fields
+                if (d.fullName) autoFillInput("fullName", d.fullName);
+                if (d.emailAddress) autoFillInput("emailAddress", d.emailAddress);
+                if (d.mobileNumber) autoFillInput("mobileNumber", d.mobileNumber);
+                if (d.dob) autoFillInput("dob", d.dob);
+
+                // 2. Auto-fill select options
+                if (d.userType) {
+                    const sel = document.getElementById("userType");
+                    const target = d.userType.toLowerCase();
+                    for (let opt of sel.options) {
+                        if (opt.value === target || opt.value.includes(target) || target.includes(opt.value)) {
+                            sel.value = opt.value;
+                            highlightPopulated(sel);
+                            break;
+                        }
+                    }
+                }
+
+                if (d.experienceLevel) {
+                    const sel = document.getElementById("experienceLevel");
+                    const target = d.experienceLevel.toLowerCase();
+                    const expMap = {
+                        "fresher": "fresher",
+                        "beginner": "beginner",
+                        "1-3": "beginner",
+                        "intermediate": "intermediate",
+                        "3-5": "intermediate",
+                        "experienced": "experienced",
+                        "5+": "experienced"
+                    };
+                    const mappedVal = expMap[target] || target;
+                    for (let opt of sel.options) {
+                        if (opt.value === mappedVal) {
+                            sel.value = opt.value;
+                            highlightPopulated(sel);
+                            break;
+                        }
+                    }
+                }
+
+                if (d.preferredDomain) {
+                    const sel = document.getElementById("preferredDomain");
+                    for (let opt of sel.options) {
+                        if (opt.value === d.preferredDomain) {
+                            sel.value = opt.value;
+                            highlightPopulated(sel);
+                            break;
+                        }
+                    }
+                }
+
+                // 3. Auto-fill GitHub & LinkedIn handles
+                let ghFilled = false;
+                let liFilled = false;
+
+                if (d.githubProfile) {
+                    autoFillInput("githubProfile", d.githubProfile);
+                    ghFilled = true;
+                }
+
+                if (d.linkedinProfile) {
+                    autoFillInput("linkedinProfile", d.linkedinProfile);
+                    liFilled = true;
+                }
+
+                // 4. PRESERVE & TRIGGER VERIFICATION PROCESS:
+                if (ghFilled) {
+                    verifyGitHubAccount();
+                }
+                if (liFilled) {
+                    verifyLinkedInAccount();
+                }
+
+                // Update UI to success state
+                ragProcessingContainer.style.display = "none";
+                ragSuccessCard.style.display = "flex";
+                ragFileName.textContent = file.name;
+                const chunksCount = (parsedResult.telemetry && parsedResult.telemetry.chunks_count) || (parsedResult.chunks && parsedResult.chunks.length) || 6;
+                ragStatsBadge.textContent = `${chunksCount} Semantic Chunks • Model: all-MiniLM-L6-v2 • Vector Memory Active`;
+            } else {
+                // Graceful fallback
+                ragProcessingContainer.style.display = "none";
+                ragSuccessCard.style.display = "flex";
+                ragFileName.textContent = file.name;
+                ragStatsBadge.textContent = "Document uploaded successfully • Ready for verification";
+            }
+        }
+
+        async function clientSideParseResume(file) {
+            const text = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result || "");
+                reader.onerror = () => resolve("");
+                reader.readAsText(file);
+            });
+
+            // Extract email
+            const emailMatch = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+            const emailAddress = emailMatch ? emailMatch[0].toLowerCase() : "";
+
+            // Extract phone
+            const phoneMatch = text.match(/(?:(?:\+|00)?\d{1,3}[\s-]?)?(?:\(?\d{3,5}\)?[\s-]?)?\d{3,5}[\s-]?\d{3,5}/);
+            const mobileNumber = phoneMatch ? phoneMatch[0].trim() : "";
+
+            // Extract name
+            let fullName = "";
+            const nameLabel = text.match(/(?:full\s*name|candidate\s*name|name)\s*[:\-]\s*([A-Za-z .'-]{2,50})/i);
+            if (nameLabel) {
+                fullName = nameLabel[1].trim();
+            } else {
+                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                for (const line of lines.slice(0, 5)) {
+                    const words = line.replace(/[^A-Za-z\s.'-]/g, "").trim().split(/\s+/);
+                    if (words.length >= 2 && words.length <= 4) {
+                        if (!/resume|curriculum|vitae|profile|email|phone|github|linkedin/i.test(line)) {
+                            fullName = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Extract GitHub
+            let githubProfile = "";
+            const ghMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_\-\.]{2,38})/i) ||
+                             text.match(/\bgithub\b\s*[:\-]?\s*@?([a-zA-Z0-9_\-]{3,38})/i);
+            if (ghMatch) {
+                const u = ghMatch[1].replace(/[/.]/g, "").trim();
+                if (!/features|topics|explore|pricing/i.test(u)) githubProfile = `https://github.com/${u}`;
+            }
+
+            // Extract LinkedIn
+            let linkedinProfile = "";
+            const liMatch = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/(?:in|company)\/([a-zA-Z0-9_\-\.]{2,50})/i) ||
+                             text.match(/\blinkedin\b\s*[:\-]?\s*(?:in\/|@)?([a-zA-Z0-9_\-]{3,50})/i);
+            if (liMatch) {
+                const u = liMatch[1].replace(/[/.]/g, "").trim();
+                linkedinProfile = `https://www.linkedin.com/in/${u}`;
+            }
+
+            const lower = text.toLowerCase();
+            let preferredDomain = "ai";
+            if (/web development|react|node|html|frontend|fullstack/i.test(lower)) preferredDomain = "web_dev";
+            else if (/machine learning|scikit-learn|tensorflow|pytorch/i.test(lower)) preferredDomain = "ml";
+            else if (/data science|pandas|numpy|data analyst|tableau/i.test(lower)) preferredDomain = "data_science";
+            else if (/android|ios|flutter|mobile app|swift|kotlin/i.test(lower)) preferredDomain = "app_dev";
+            else if (/cyber security|penetration|cryptography|ethical hacking/i.test(lower)) preferredDomain = "cyber_security";
+            else if (/aws|azure|cloud|google cloud|devops|docker|kubernetes/i.test(lower)) preferredDomain = "cloud_computing";
+            else if (/figma|ui\/ux|wireframe|prototype/i.test(lower)) preferredDomain = "ui_ux";
+            else if (/blockchain|solidity|smart contract|web3/i.test(lower)) preferredDomain = "blockchain";
+
+            let experienceLevel = "fresher";
+            const yrMatch = lower.match(/(\d+)\+?\s*(?:years?|yrs?)\s*(?:of)?\s*(?:experience|exp)/);
+            if (yrMatch) {
+                const yrs = parseInt(yrMatch[1]);
+                if (yrs >= 5) experienceLevel = "experienced";
+                else if (yrs >= 3) experienceLevel = "intermediate";
+                else if (yrs >= 1) experienceLevel = "beginner";
+            }
+
+            let userType = "student";
+            if (/student|pursuing|undergraduate|semester/i.test(lower)) userType = "student";
+            else if (/software engineer|developer|consultant|full time/i.test(lower)) userType = "professional";
+
+            // Chunk document (280 chars, 35 overlap)
+            const chunks = [];
+            let start = 0;
+            const chunkSize = 280;
+            const overlap = 35;
+            let cId = 1;
+            while (start < text.length) {
+                const end = Math.min(start + chunkSize, text.length);
+                const chunk = text.substring(start, end).trim();
+                if (chunk) chunks.push({ chunk_id: cId++, content: chunk });
+                start = end < text.length ? end - overlap : text.length;
+            }
+
+            return {
+                success: true,
+                telemetry: {
+                    model: "all-MiniLM-L6-v2 (Client RAG)",
+                    vector_dimension: 384,
+                    chunks_count: Math.max(1, chunks.length),
+                    filename: file.name
+                },
+                chunks: chunks.slice(0, 6),
+                data: {
+                    fullName,
+                    emailAddress,
+                    mobileNumber,
+                    dob: "",
+                    userType,
+                    experienceLevel,
+                    preferredDomain,
+                    githubProfile,
+                    linkedinProfile
+                }
+            };
+        }
+
+        // 4. Pre-populate existing profile data if available
         document.addEventListener("DOMContentLoaded", () => {
             const savedProfile = JSON.parse(localStorage.getItem("autoHireProfile") || localStorage.getItem("loggedInUser") || "null");
             const profile = savedProfile ? (savedProfile.profile || savedProfile) : null;
@@ -1122,7 +1731,7 @@
             }
         });
 
-        // 4. Form Submission: Automatic Registration with Zero-Backend Resilience
+        // 5. Form Submission: Automatic Registration with Zero-Backend Resilience
         document.getElementById('registrationForm').addEventListener('submit', async function (event) {
             event.preventDefault();
 

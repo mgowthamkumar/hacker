@@ -4,8 +4,9 @@ from typing import Optional
 from fastapi import FastAPI, Form, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import re
 
-from resume_profile_utils import resolve_profile_identity
+from resume_profile_utils import resolve_profile_identity, parse_and_embed_resume
 
 # LangChain & Vector Store Imports
 from langchain_core.documents import Document
@@ -49,6 +50,44 @@ vector_db = FAISS.from_documents(initial_docs, embedding_model)
 class RAGQueryRequest(BaseModel):
     query: str
     top_k: Optional[int] = 3
+
+
+# ---------------------------------------------------------
+# STEP 2.5: Resume Auto-fill & Document Chunking / Embedding
+# ---------------------------------------------------------
+@app.post("/api/resume/parse-autofill")
+@app.post("/api/rag/resume-autofill")
+async def app_parse_autofill_resume(
+    resumeFile: Optional[UploadFile] = File(None),
+    file: Optional[UploadFile] = File(None),
+    resume_text: Optional[str] = Form("")
+):
+    target = resumeFile or file
+    text = (resume_text or "").strip()
+    filename = "resume.pdf"
+    if target:
+        filename = target.filename or "resume.pdf"
+        try:
+            content_bytes = await target.read()
+            ext = (filename.split(".")[-1] or "").lower()
+            if ext == "pdf":
+                try:
+                    import io
+                    from pypdf import PdfReader
+                    reader = PdfReader(io.BytesIO(content_bytes))
+                    extracted = "\n".join([page.extract_text() or "" for page in reader.pages])
+                    if extracted.strip():
+                        text = (extracted + "\n" + text).strip()
+                except Exception:
+                    clean = re.sub(r"[^\x20-\x7E\n\r\t]", " ", content_bytes.decode("latin1", errors="ignore"))
+                    if len(clean) > 30:
+                        text = (clean + "\n" + text).strip()
+            else:
+                text = (content_bytes.decode("utf-8", errors="ignore") + "\n" + text).strip()
+        except Exception as e:
+            print("[APP PARSE ERROR]:", e)
+
+    return parse_and_embed_resume(text, filename=filename)
 
 
 # ---------------------------------------------------------
@@ -170,7 +209,55 @@ async def query_rag_system(request: RAGQueryRequest):
 
 
 # ---------------------------------------------------------
-# STEP 5: Execution Entry Point
+# STEP 5: API Endpoint - Resume Embedding, Chunking & Auto-Fill
+# ---------------------------------------------------------
+@app.post("/api/resume/parse-autofill")
+@app.post("/api/rag/resume-autofill")
+async def app_parse_autofill_resume(
+    resumeFile: Optional[UploadFile] = File(None),
+    file: Optional[UploadFile] = File(None),
+    resume_text: Optional[str] = Form("")
+):
+    """
+    RAG & Vector Embedding endpoint for uploaded resumes:
+    - Extracts text from PDF or raw input
+    - Chunks document into semantic vector passages
+    - Generates embeddings and extracts candidate profile telemetry
+    - Auto-detects GitHub, LinkedIn, and career options
+    """
+    import re
+    target_file = resumeFile or file
+    text = (resume_text or "").strip()
+    filename = "uploaded_resume.txt"
+
+    if target_file:
+        filename = target_file.filename or "uploaded_resume.pdf"
+        try:
+            content_bytes = await target_file.read()
+            ext = (filename.split(".")[-1] or "").lower()
+            if ext == "pdf":
+                try:
+                    import io
+                    from pypdf import PdfReader
+                    reader = PdfReader(io.BytesIO(content_bytes))
+                    extracted = "\n".join([page.extract_text() or "" for page in reader.pages])
+                    if extracted.strip():
+                        text = (extracted + "\n" + text).strip()
+                except Exception:
+                    clean = re.sub(r"[^\x20-\x7E\n\r\t]", " ", content_bytes.decode("latin1", errors="ignore"))
+                    if len(clean) > 30:
+                        text = (clean + "\n" + text).strip()
+            else:
+                text = (content_bytes.decode("utf-8", errors="ignore") + "\n" + text).strip()
+        except Exception as e:
+            print("[APP PARSE-AUTOFILL ERROR]:", e)
+
+    result = parse_and_embed_resume(text, filename=filename)
+    return result
+
+
+# ---------------------------------------------------------
+# STEP 6: Execution Entry Point
 # ---------------------------------------------------------
 if __name__ == "__main__":
     uvicorn.run("app:app", host="127.0.0.1", port=int(os.getenv("PORT", "5502")), root_path="/", reload=True)

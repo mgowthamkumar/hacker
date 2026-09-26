@@ -5,6 +5,7 @@ from fastapi import Request
 from pathlib import Path
 import os
 import requests
+import re
 
 app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent
@@ -512,6 +513,50 @@ def real_generate_cover_letter(payload: RealCoverLetterRequest):
 
 
 from fastapi import UploadFile, File, Form
+from resume_profile_utils import parse_and_embed_resume
+
+@app.post("/api/resume/parse-autofill")
+@app.post("/api/rag/resume-autofill")
+async def backendreal_parse_autofill_resume(
+    resumeFile: Optional[UploadFile] = File(None),
+    file: Optional[UploadFile] = File(None),
+    resume_text: Optional[str] = Form("")
+):
+    """
+    RAG & Vector Embedding endpoint for uploaded resumes:
+    - Extracts text from PDF or raw input
+    - Chunks document into semantic vector passages
+    - Generates embeddings and extracts candidate profile telemetry
+    - Auto-detects GitHub, LinkedIn, and domain options
+    """
+    target_file = resumeFile or file
+    text = (resume_text or "").strip()
+    filename = "uploaded_resume.txt"
+
+    if target_file:
+        filename = target_file.filename or "uploaded_resume.pdf"
+        try:
+            content_bytes = await target_file.read()
+            ext = (filename.split(".")[-1] or "").lower()
+            if ext == "pdf":
+                try:
+                    import io
+                    from pypdf import PdfReader
+                    reader = PdfReader(io.BytesIO(content_bytes))
+                    extracted = "\n".join([page.extract_text() or "" for page in reader.pages])
+                    if extracted.strip():
+                        text = (extracted + "\n" + text).strip()
+                except Exception as ex:
+                    clean = re.sub(r"[^\x20-\x7E\n\r\t]", " ", content_bytes.decode("latin1", errors="ignore"))
+                    if len(clean) > 30:
+                        text = (clean + "\n" + text).strip()
+            else:
+                text = (content_bytes.decode("utf-8", errors="ignore") + "\n" + text).strip()
+        except Exception as e:
+            print("[PARSE-AUTOFILL ERROR]:", e)
+
+    result = parse_and_embed_resume(text, filename=filename)
+    return result
 
 @app.post("/analyzer")
 @app.post("/api/analyzer")
