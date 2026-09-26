@@ -382,6 +382,16 @@
             box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
             transform: translateY(-1px);
         }
+        .btn-verify.btn-verify-linkedin {
+            background: linear-gradient(135deg, rgba(10, 102, 194, 0.25), rgba(56, 189, 248, 0.25));
+            border-color: rgba(10, 102, 194, 0.5);
+            color: #38bdf8;
+        }
+        .btn-verify.btn-verify-linkedin:hover {
+            background: linear-gradient(135deg, rgba(10, 102, 194, 0.4), rgba(56, 189, 248, 0.4));
+            border-color: #38bdf8;
+            box-shadow: 0 0 16px rgba(10, 102, 194, 0.45);
+        }
 
         .verification-status-box {
             margin-top: 10px;
@@ -746,8 +756,13 @@
                             <div id="githubLinkContainer"></div>
                         </div>
                         <div class="form-group">
-                            <label for="linkedinProfile">LinkedIn Profile</label>
-                            <input type="text" id="linkedinProfile" name="linkedinProfile" placeholder="https://linkedin.com/in/username">
+                            <label for="linkedinProfile">LinkedIn Profile / Username</label>
+                            <div class="input-with-action">
+                                <input type="text" id="linkedinProfile" name="linkedinProfile" placeholder="https://linkedin.com/in/username or username">
+                                <button type="button" class="btn-verify btn-verify-linkedin" id="btnVerifyLinkedIn">🔍 Verify</button>
+                            </div>
+                            <!-- Live Verification Status Box -->
+                            <div class="verification-status-box" id="linkedinStatusBox"></div>
                             <div id="linkedinLinkContainer"></div>
                         </div>
                     </div>
@@ -790,6 +805,7 @@
     <script>
         const apiOrigin = window.AUTOHIRE_API_ORIGIN;
         let verifiedGitHubData = null;
+        let verifiedLinkedInData = null;
         let loadedRepositories = [];
         let selectedProjects = [];
 
@@ -800,31 +816,112 @@
             document.getElementById("confirmPassword").type = type;
         });
 
-        // 1. Live LinkedIn URL Formatting & Direct Clickable Link
+        // 1. Live LinkedIn URL Formatting, Live Verification & Telemetry
         const linkedinInput = document.getElementById("linkedinProfile");
+        const btnVerifyLinkedIn = document.getElementById("btnVerifyLinkedIn");
+        const linkedinStatusBox = document.getElementById("linkedinStatusBox");
         const linkedinLinkContainer = document.getElementById("linkedinLinkContainer");
 
-        function updateLinkedInDisplay() {
+        async function verifyLinkedInAccount() {
             const rawVal = linkedinInput.value.trim();
             if (!rawVal) {
+                verifiedLinkedInData = null;
+                linkedinStatusBox.className = "verification-status-box";
+                linkedinStatusBox.style.display = "none";
                 linkedinLinkContainer.innerHTML = "";
                 return;
             }
-            const canonicalUrl = AutoHireGitHub.formatLinkedInUrl(rawVal);
+
             const username = AutoHireGitHub.extractLinkedInUsername(rawVal);
-            if (canonicalUrl && username) {
+            if (!username) {
+                showLinkedInError("Please enter a valid LinkedIn profile URL or username.");
+                return;
+            }
+
+            const isCompany = rawVal.toLowerCase().includes("/company/");
+            const canonicalUrl = isCompany
+                ? `https://www.linkedin.com/company/${username}`
+                : `https://www.linkedin.com/in/${username}`;
+
+            linkedinInput.value = canonicalUrl;
+
+            // Show loading state
+            linkedinStatusBox.className = "verification-status-box loading active";
+            linkedinStatusBox.style.display = "flex";
+            linkedinStatusBox.style.borderColor = "rgba(10, 102, 194, 0.4)";
+            linkedinStatusBox.innerHTML = `
+                <div style="display:inline-block; width:18px; height:18px; border:2px solid #0a66c2; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+                <span>Checking LinkedIn for <strong>in/${username}</strong>...</span>
+            `;
+
+            const result = await AutoHireGitHub.verifyLinkedInUser(rawVal);
+
+            if (result.success && result.exists) {
+                verifiedLinkedInData = result;
+
+                // Show verified status box with avatar and live LinkedIn link
+                linkedinStatusBox.className = "verification-status-box verified active";
+                linkedinStatusBox.style.borderColor = "rgba(10, 102, 194, 0.45)";
+                linkedinStatusBox.innerHTML = `
+                    <img src="${result.avatar}" class="verified-user-avatar" style="border-color:#0a66c2; box-shadow:0 0 10px rgba(10,102,194,0.4);" alt="${result.username}">
+                    <div class="verified-user-info">
+                        <div class="verified-user-name">✅ Verified: ${result.name} (in/${result.username})</div>
+                        <div class="verified-user-stats">
+                            <span style="color:#38bdf8;">💼 ${result.headline}</span> • <span>🌐 Public Profile</span>
+                        </div>
+                    </div>
+                `;
+
+                // Render direct clickable LinkedIn link that opens user profile directly
                 linkedinLinkContainer.innerHTML = `
-                    <a href="${canonicalUrl}" target="_blank" rel="noopener noreferrer" class="social-direct-link linkedin-link" title="Open LinkedIn profile directly">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9h2.77v8.37H6.46v-8.37M7.85 6.4a1.63 1.63 0 1 0 0 3.26 1.63 1.63 0 0 0 0-3.26z"/></svg>
-                        <span>View LinkedIn (${username}) ↗</span>
+                    <a href="${result.profileUrl}" target="_blank" rel="noopener noreferrer" class="social-direct-link linkedin-link" title="Open ${result.username} on LinkedIn directly">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9h2.77v8.37H6.46v-8.37M7.85 6.4a1.63 1.63 0 1 0 0 3.26 1.63 1.63 0 0 0 0-3.26z"/></svg>
+                        <span>Open LinkedIn Profile (in/${result.username}) ↗</span>
                     </a>
                 `;
+
+                // Auto-fill full name if not yet provided
+                const fullNameInput = document.getElementById("fullName");
+                if (fullNameInput && !fullNameInput.value.trim() && result.name) {
+                    fullNameInput.value = result.name;
+                }
             } else {
-                linkedinLinkContainer.innerHTML = "";
+                showLinkedInError(result.error || `LinkedIn profile "${username}" could not be verified.`);
             }
         }
-        linkedinInput.addEventListener("input", updateLinkedInDisplay);
-        linkedinInput.addEventListener("blur", updateLinkedInDisplay);
+
+        function showLinkedInError(msg) {
+            verifiedLinkedInData = null;
+            linkedinStatusBox.className = "verification-status-box error active";
+            linkedinStatusBox.style.display = "flex";
+            linkedinStatusBox.style.borderColor = "";
+            linkedinStatusBox.innerHTML = `
+                <span style="font-size:1.2rem;">⚠️</span>
+                <span>${msg}</span>
+            `;
+            linkedinLinkContainer.innerHTML = "";
+        }
+
+        btnVerifyLinkedIn.addEventListener("click", verifyLinkedInAccount);
+        linkedinInput.addEventListener("blur", () => {
+            if (linkedinInput.value.trim() && !verifiedLinkedInData) {
+                verifyLinkedInAccount();
+            }
+        });
+        linkedinInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                verifyLinkedInAccount();
+            }
+        });
+        linkedinInput.addEventListener("input", () => {
+            if (!linkedinInput.value.trim()) {
+                verifiedLinkedInData = null;
+                linkedinStatusBox.className = "verification-status-box";
+                linkedinStatusBox.style.display = "none";
+                linkedinLinkContainer.innerHTML = "";
+            }
+        });
 
         // 2. Live GitHub Username Extraction, Live API Verification & Repos Fetching
         const githubInput = document.getElementById("githubProfile");
@@ -1020,7 +1117,7 @@
                 }
                 if (profile.linkedinProfile) {
                     document.getElementById("linkedinProfile").value = profile.linkedinProfile;
-                    updateLinkedInDisplay();
+                    verifyLinkedInAccount();
                 }
             }
         });
@@ -1063,7 +1160,9 @@
             const canonicalGithubUrl = AutoHireGitHub.formatGitHubUrl(githubVal);
             const canonicalLinkedinUrl = AutoHireGitHub.formatLinkedInUrl(linkedinVal);
 
-            const userPicture = (verifiedGitHubData && verifiedGitHubData.avatar) ? verifiedGitHubData.avatar : "";
+            const userPicture = (verifiedGitHubData && verifiedGitHubData.avatar)
+                ? verifiedGitHubData.avatar
+                : ((verifiedLinkedInData && verifiedLinkedInData.avatar) ? verifiedLinkedInData.avatar : "");
 
             const profileData = {
                 fullName,
@@ -1114,7 +1213,12 @@
             }
 
             // 3. User feedback and workspace launch
-            alert(`🎉 Profile Created Successfully!\n\nWelcome ${fullName}! Your profile, verified GitHub account (@${githubUsername || "candidate"}), and ${selectedProjects.length} selected project(s) have been configured. You can also sign in anytime directly from the login page!`);
+            const verifiedAccountsList = [];
+            if (githubUsername) verifiedAccountsList.push(`GitHub (@${githubUsername})`);
+            if (linkedinUsername) verifiedAccountsList.push(`LinkedIn (in/${linkedinUsername})`);
+            const accountsMsg = verifiedAccountsList.length ? `verified ${verifiedAccountsList.join(" & ")}` : "profile credentials";
+
+            alert(`🎉 Profile Created Successfully!\n\nWelcome ${fullName}! Your profile, ${accountsMsg}, and ${selectedProjects.length} selected project(s) have been configured. You can also sign in anytime directly from the login page!`);
 
             window.location.assign("dashboard.html");
         });

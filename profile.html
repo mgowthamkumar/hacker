@@ -579,10 +579,14 @@
                     <div class="verification-status-box" id="profile-gh-status"></div>
                 </div>
 
-                <!-- LinkedIn Profile Input -->
+                <!-- LinkedIn Profile Verification Input -->
                 <div class="info-card">
-                    <label>LinkedIn Profile URL</label>
-                    <input type="text" id="input-linkedin" placeholder="https://linkedin.com/in/username" oninput="updateProfileLinkedInDisplay()">
+                    <label>LinkedIn Profile / Username</label>
+                    <div class="input-with-action">
+                        <input type="text" id="input-linkedin" placeholder="https://linkedin.com/in/username or username" oninput="updateProfileLinkedInDisplay()">
+                        <button type="button" class="btn-verify-sm" id="btn-verify-profile-li" onclick="verifyLinkedInInProfile()">🔍 Verify</button>
+                    </div>
+                    <div class="verification-status-box" id="profile-li-status"></div>
                     <div id="profile-li-preview" style="margin-top:6px;"></div>
                 </div>
             </div>
@@ -752,6 +756,9 @@
             if (profile.githubProfile) {
                 verifyGitHubInProfile(false);
             }
+            if (profile.linkedinProfile) {
+                verifyLinkedInInProfile(false);
+            }
 
             if (window.AutoHireDeviceAuth) {
                 window.AutoHireDeviceAuth.renderTrustedDevicesSection();
@@ -841,6 +848,71 @@
                 previewEl.innerHTML = "";
             }
             updateSocialBadges({ linkedinProfile: raw });
+        }
+
+        // 4b. Live LinkedIn Verification inside Profile
+        async function verifyLinkedInInProfile(showLoading = true) {
+            const input = document.getElementById("input-linkedin");
+            const statusBox = document.getElementById("profile-li-status");
+            const rawVal = input.value.trim();
+
+            if (!rawVal) {
+                statusBox.className = "verification-status-box";
+                statusBox.style.display = "none";
+                updateSocialBadges({});
+                return;
+            }
+
+            const username = AutoHireGitHub.extractLinkedInUsername(rawVal);
+            if (!username) {
+                statusBox.className = "verification-status-box error active";
+                statusBox.style.background = "";
+                statusBox.style.borderColor = "";
+                statusBox.style.color = "";
+                statusBox.innerHTML = `<span>⚠️ Please enter a valid LinkedIn profile URL or username.</span>`;
+                return;
+            }
+
+            const isCompany = rawVal.toLowerCase().includes("/company/");
+            const canonical = isCompany
+                ? `https://www.linkedin.com/company/${username}`
+                : `https://www.linkedin.com/in/${username}`;
+            input.value = canonical;
+
+            if (showLoading) {
+                statusBox.className = "verification-status-box active";
+                statusBox.style.background = "rgba(10, 102, 194, 0.15)";
+                statusBox.style.borderColor = "rgba(10, 102, 194, 0.4)";
+                statusBox.style.color = "#38bdf8";
+                statusBox.innerHTML = `<span>⏳ Verifying LinkedIn in/${username}...</span>`;
+            }
+
+            const result = await AutoHireGitHub.verifyLinkedInUser(rawVal);
+
+            if (result.success && result.exists) {
+                statusBox.className = "verification-status-box verified active";
+                statusBox.style.background = "rgba(10, 102, 194, 0.12)";
+                statusBox.style.borderColor = "rgba(10, 102, 194, 0.4)";
+                statusBox.style.color = "#38bdf8";
+                statusBox.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span>✅</span>
+                        <div>
+                            <strong>in/${result.username}</strong> verified (${result.headline})
+                            <a href="${result.profileUrl}" target="_blank" rel="noopener noreferrer" style="color:#fff; margin-left:6px; font-weight:700;">Open Profile ↗</a>
+                        </div>
+                    </div>
+                `;
+
+                updateSocialBadges({ linkedinProfile: result.profileUrl });
+                updateProfileLinkedInDisplay();
+            } else {
+                statusBox.className = "verification-status-box error active";
+                statusBox.style.background = "";
+                statusBox.style.borderColor = "";
+                statusBox.style.color = "";
+                statusBox.innerHTML = `<span>❌ ${result.error || `LinkedIn profile "${username}" could not be verified.`}</span>`;
+            }
         }
 
         // 5. Live GitHub Verification inside Profile
